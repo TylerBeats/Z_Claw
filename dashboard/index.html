@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>OpenClaw // J_Claw Dashboard</title>
+  <title>OpenClaw // Mission Control</title>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
   <style>
     :root {
@@ -54,6 +54,61 @@
     .tag-purple { border-color: var(--purple); color: var(--purple); }
     .tag-blue   { border-color: var(--blue);   color: var(--blue); }
 
+    /* ── Alert Bar ── */
+    #alert-bar {
+      display: none;
+      background: var(--red);
+      color: #1e1e2e;
+      border: 2px solid #ff0000;
+      box-shadow: 4px 4px 0 #7a1a1a;
+      padding: 8px 14px;
+      margin-bottom: 12px;
+      animation: alert-pulse 1.5s step-end infinite;
+      font-size: 9px;
+      letter-spacing: 1px;
+    }
+
+    #alert-bar.active { display: flex; align-items: center; justify-content: space-between; }
+
+    @keyframes alert-pulse {
+      0%, 100% { border-color: #ff0000; }
+      50%       { border-color: var(--red); }
+    }
+
+    /* ── Alerts Panel ── */
+    #alerts-panel {
+      display: none;
+      margin-bottom: 12px;
+    }
+
+    #alerts-panel.active { display: block; }
+
+    .alert-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid var(--overlay);
+      padding: 6px 0;
+      font-size: 8px;
+    }
+
+    .alert-row:last-child { border-bottom: none; }
+    .alert-time { color: var(--subtext); flex-shrink: 0; }
+    .alert-msg  { color: var(--red); flex: 1; }
+
+    .dismiss-btn {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--subtext);
+      font-family: 'Press Start 2P', monospace;
+      font-size: 7px;
+      padding: 2px 6px;
+      cursor: pointer;
+      box-shadow: 2px 2px 0 #000;
+    }
+
+    .dismiss-btn:hover { border-color: var(--red); color: var(--red); }
+
     /* ── Header ── */
     header {
       display: flex;
@@ -73,16 +128,11 @@
 
     .logo span { color: var(--text); }
 
-    .header-meta {
-      text-align: right;
-      color: var(--subtext);
-      font-size: 8px;
-    }
+    .header-meta { text-align: right; color: var(--subtext); font-size: 8px; }
 
     .status-dot {
       display: inline-block;
-      width: 8px;
-      height: 8px;
+      width: 8px; height: 8px;
       background: var(--green);
       border: 1px solid var(--green);
       box-shadow: 0 0 6px var(--green);
@@ -96,27 +146,9 @@
       50%       { opacity: 0.2; }
     }
 
-    /* ── Grid Layout ── */
-    .grid-2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-bottom: 12px;
-    }
-
-    .grid-3 {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 12px;
-      margin-bottom: 12px;
-    }
-
-    .grid-4 {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 12px;
-      margin-bottom: 12px;
-    }
+    /* ── Grids ── */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 12px; }
 
     /* ── Section Headers ── */
     .section-header {
@@ -134,28 +166,17 @@
       border: 2px solid var(--border);
       box-shadow: 4px 4px 0 var(--overlay);
       padding: 12px;
+      transition: border-color 0.1s step-end, box-shadow 0.1s step-end;
     }
 
-    .division-card .div-name {
-      font-size: 9px;
-      color: var(--blue);
-      margin-bottom: 8px;
-      letter-spacing: 1px;
+    .division-card.error {
+      border-color: var(--red);
+      box-shadow: 4px 4px 0 #7a1a1a;
     }
 
-    .division-card .div-status {
-      margin-bottom: 8px;
-    }
-
-    .division-card .div-row {
-      color: var(--subtext);
-      font-size: 8px;
-      margin-bottom: 4px;
-    }
-
-    .division-card .div-row strong {
-      color: var(--text);
-    }
+    .division-card .div-name { font-size: 9px; color: var(--blue); margin-bottom: 8px; letter-spacing: 1px; }
+    .division-card .div-row  { color: var(--subtext); font-size: 8px; margin-bottom: 4px; }
+    .division-card .div-row strong { color: var(--text); }
 
     .agent-list { margin-top: 10px; }
 
@@ -172,8 +193,7 @@
     .agent-row .agent-name { color: var(--text); }
 
     .toggle {
-      width: 24px;
-      height: 12px;
+      width: 24px; height: 12px;
       border: 2px solid var(--border);
       background: var(--overlay);
       cursor: pointer;
@@ -182,33 +202,38 @@
       box-shadow: 2px 2px 0 #000;
     }
 
-    .toggle.on {
-      border-color: var(--green);
-      background: #2a3d2a;
-    }
+    .toggle.on { border-color: var(--green); background: #2a3d2a; }
 
     .toggle::after {
       content: '';
       position: absolute;
-      top: 1px;
-      left: 1px;
-      width: 6px;
-      height: 6px;
+      top: 1px; left: 1px;
+      width: 6px; height: 6px;
       background: var(--border);
       transition: left 0.1s step-end;
     }
 
-    .toggle.on::after {
-      left: 13px;
-      background: var(--green);
+    .toggle.on::after { left: 13px; background: var(--green); }
+
+    /* ── Stats Bar ── */
+    .stats-bar {
+      display: flex;
+      gap: 16px;
+      background: var(--surface);
+      border: 2px solid var(--border);
+      box-shadow: 4px 4px 0 var(--overlay);
+      padding: 10px 14px;
+      margin-bottom: 12px;
+      align-items: center;
+      flex-wrap: wrap;
     }
 
+    .stat-item { display: flex; flex-direction: column; gap: 4px; }
+    .stat-label { color: var(--subtext); font-size: 7px; }
+    .stat-value { font-size: 11px; }
+
     /* ── Task Queue ── */
-    .queue-list {
-      list-style: none;
-      max-height: 200px;
-      overflow-y: auto;
-    }
+    .queue-list { list-style: none; max-height: 200px; overflow-y: auto; }
 
     .queue-list li {
       display: flex;
@@ -220,7 +245,6 @@
     }
 
     .queue-list li:last-child { border-bottom: none; }
-
     .queue-task { color: var(--text); }
     .queue-time { color: var(--subtext); }
 
@@ -232,19 +256,11 @@
       padding: 10px;
       height: 220px;
       overflow-y: auto;
-      font-family: 'Press Start 2P', monospace;
       font-size: 8px;
     }
 
-    .log-line {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 4px;
-      line-height: 1.6;
-    }
-
+    .log-line { display: flex; gap: 8px; margin-bottom: 4px; line-height: 1.6; }
     .log-time { color: var(--subtext); flex-shrink: 0; }
-    .log-div  { flex-shrink: 0; }
     .log-msg  { color: var(--text); }
 
     /* ── Briefing ── */
@@ -260,13 +276,7 @@
       white-space: pre-wrap;
     }
 
-    .briefing-meta {
-      color: var(--subtext);
-      font-size: 7px;
-      margin-top: 8px;
-      border-top: 1px solid var(--overlay);
-      padding-top: 6px;
-    }
+    .briefing-meta { color: var(--subtext); font-size: 7px; margin-top: 8px; border-top: 1px solid var(--overlay); padding-top: 6px; }
 
     /* ── Scrollbars ── */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -284,27 +294,6 @@
       color: var(--subtext);
       font-size: 7px;
     }
-
-    /* ── Stats bar ── */
-    .stats-bar {
-      display: flex;
-      gap: 16px;
-      background: var(--surface);
-      border: 2px solid var(--border);
-      box-shadow: 4px 4px 0 var(--overlay);
-      padding: 10px 14px;
-      margin-bottom: 12px;
-      align-items: center;
-    }
-
-    .stat-item {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .stat-label { color: var(--subtext); font-size: 7px; }
-    .stat-value { font-size: 11px; }
   </style>
 </head>
 <body>
@@ -312,19 +301,29 @@
   <!-- ── Header ── -->
   <header>
     <div>
-      <div class="logo">OPEN<span>CLAW</span> // J_CLAW</div>
-      <div style="color: var(--subtext); font-size: 8px; margin-top: 6px;">
-        <span class="status-dot"></span>OPERATOR: MATTHEW
+      <div class="logo">OPEN<span>CLAW</span> // MISSION CONTROL</div>
+      <div style="color:var(--subtext);font-size:8px;margin-top:6px;">
+        <span class="status-dot"></span>J_CLAW // OPERATOR: MATTHEW
       </div>
     </div>
     <div class="header-meta">
       <div id="clock">--:--:--</div>
       <div id="datestamp" style="margin-top:4px;">----</div>
-      <div style="margin-top:6px;">
-        <span class="tag tag-green">ONLINE</span>
-      </div>
+      <div style="margin-top:6px;" id="last-refresh-label">LAST SYNC: —</div>
     </div>
   </header>
+
+  <!-- ── Alert Bar ── -->
+  <div id="alert-bar">
+    <span id="alert-bar-text">⚠ ATTENTION REQUIRED</span>
+    <span style="font-size:8px;color:#1e1e2e;">▼ SEE ALERTS BELOW</span>
+  </div>
+
+  <!-- ── Alerts Panel ── -->
+  <div id="alerts-panel">
+    <div class="section-header">// ALERTS — ACTION REQUIRED</div>
+    <div class="pixel-box" id="alerts-list"></div>
+  </div>
 
   <!-- ── Stats Bar ── -->
   <div class="stats-bar">
@@ -339,6 +338,10 @@
     <div class="stat-item">
       <div class="stat-label">APPLIED</div>
       <div class="stat-value" style="color:var(--green);" id="stat-applied">0</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-label">INTERVIEWS</div>
+      <div class="stat-value" style="color:var(--teal);" id="stat-interviews">0</div>
     </div>
     <div class="stat-item">
       <div class="stat-label">TOTAL TRADES</div>
@@ -360,115 +363,62 @@
 
   <!-- ── Division Status Cards ── -->
   <div class="section-header">// DIVISION STATUS</div>
-  <div class="grid-4" id="division-grid">
+  <div class="grid-4">
 
     <!-- Trading -->
-    <div class="division-card">
+    <div class="division-card" id="card-trading">
       <div class="div-name">[ TRADING ]</div>
-      <div class="div-status"><span class="tag tag-green" id="trading-status">IDLE</span></div>
+      <div style="margin-bottom:8px;"><span class="tag tag-green" id="trading-status">IDLE</span></div>
       <div class="div-row">LAST RUN: <strong id="trading-last">—</strong></div>
-      <div class="div-row">NEXT: <strong id="trading-next">—</strong></div>
-      <div class="agent-list" id="trading-agents">
-        <div class="agent-row">
-          <span class="agent-name">market-scan</span>
-          <span class="tag tag-blue" style="font-size:7px;">1h</span>
-          <div class="toggle on" title="market-scan"></div>
-        </div>
-        <div class="agent-row">
-          <span class="agent-name">backtester</span>
-          <span class="tag tag-blue" style="font-size:7px;">18:00</span>
-          <div class="toggle on" title="backtester"></div>
-        </div>
-        <div class="agent-row">
-          <span class="agent-name">report</span>
-          <span class="tag tag-blue" style="font-size:7px;">18:00</span>
-          <div class="toggle on" title="report"></div>
-        </div>
+      <div class="div-row">NEXT: <strong>18:00 daily</strong></div>
+      <div class="agent-list">
+        <div class="agent-row"><span class="agent-name">market-scan</span><span class="tag tag-blue" style="font-size:7px;">1h</span><div class="toggle on" title="market-scan"></div></div>
+        <div class="agent-row"><span class="agent-name">backtester</span><span class="tag tag-blue" style="font-size:7px;">18:00</span><div class="toggle on" title="backtester"></div></div>
+        <div class="agent-row"><span class="agent-name">report</span><span class="tag tag-blue" style="font-size:7px;">18:00</span><div class="toggle on" title="report"></div></div>
       </div>
     </div>
 
     <!-- Opportunity -->
-    <div class="division-card">
+    <div class="division-card" id="card-opportunity">
       <div class="div-name">[ OPPORTUNITY ]</div>
-      <div class="div-status"><span class="tag tag-green" id="opportunity-status">IDLE</span></div>
+      <div style="margin-bottom:8px;">
+        <span class="tag tag-green" id="opportunity-status">IDLE</span>
+        <span class="tag tag-yellow" id="pending-badge" style="display:none;margin-left:4px;">0 PENDING</span>
+      </div>
       <div class="div-row">LAST RUN: <strong id="opportunity-last">—</strong></div>
-      <div class="div-row">NEXT: <strong id="opportunity-next">—</strong></div>
+      <div class="div-row">NEXT: <strong>every 3h</strong></div>
       <div class="agent-list">
-        <div class="agent-row">
-          <span class="agent-name">job-intake</span>
-          <span class="tag tag-blue" style="font-size:7px;">3h</span>
-          <div class="toggle on" title="job-intake"></div>
-        </div>
-        <div class="agent-row">
-          <span class="agent-name">hard-filter</span>
-          <span class="tag tag-blue" style="font-size:7px;">auto</span>
-          <div class="toggle on" title="hard-filter"></div>
-        </div>
-        <div class="agent-row">
-          <span class="agent-name">funding-finder</span>
-          <span class="tag tag-blue" style="font-size:7px;">14:00</span>
-          <div class="toggle on" title="funding-finder"></div>
-        </div>
+        <div class="agent-row"><span class="agent-name">job-intake</span><span class="tag tag-blue" style="font-size:7px;">3h</span><div class="toggle on" title="job-intake"></div></div>
+        <div class="agent-row"><span class="agent-name">hard-filter</span><span class="tag tag-blue" style="font-size:7px;">auto</span><div class="toggle on" title="hard-filter"></div></div>
+        <div class="agent-row"><span class="agent-name">funding-finder</span><span class="tag tag-blue" style="font-size:7px;">14:00</span><div class="toggle on" title="funding-finder"></div></div>
       </div>
     </div>
 
     <!-- Dev Automation -->
-    <div class="division-card">
+    <div class="division-card" id="card-dev_automation">
       <div class="div-name">[ DEV AUTO ]</div>
-      <div class="div-status"><span class="tag tag-green" id="dev_automation-status">IDLE</span></div>
+      <div style="margin-bottom:8px;"><span class="tag tag-green" id="dev_automation-status">IDLE</span></div>
       <div class="div-row">LAST RUN: <strong id="dev_automation-last">—</strong></div>
-      <div class="div-row">NEXT: <strong id="dev_automation-next">—</strong></div>
+      <div class="div-row">NEXT: <strong>every 3h</strong></div>
       <div class="agent-list">
-        <div class="agent-row">
-          <span class="agent-name">repo-monitor</span>
-          <span class="tag tag-blue" style="font-size:7px;">3h</span>
-          <div class="toggle on" title="repo-monitor"></div>
-        </div>
-        <div class="agent-row">
-          <span class="agent-name">debug-agent</span>
-          <span class="tag tag-yellow" style="font-size:7px;">err</span>
-          <div class="toggle on" title="debug-agent"></div>
-        </div>
-        <div class="agent-row">
-          <span class="agent-name">refactor-scan</span>
-          <span class="tag tag-blue" style="font-size:7px;">wkly</span>
-          <div class="toggle on" title="refactor-scan"></div>
-        </div>
-        <div class="agent-row">
-          <span class="agent-name">security-scan</span>
-          <span class="tag tag-blue" style="font-size:7px;">wkly</span>
-          <div class="toggle on" title="security-scan"></div>
-        </div>
+        <div class="agent-row"><span class="agent-name">repo-monitor</span><span class="tag tag-blue" style="font-size:7px;">3h</span><div class="toggle on" title="repo-monitor"></div></div>
+        <div class="agent-row"><span class="agent-name">debug-agent</span><span class="tag tag-yellow" style="font-size:7px;">err</span><div class="toggle on" title="debug-agent"></div></div>
+        <div class="agent-row"><span class="agent-name">refactor-scan</span><span class="tag tag-blue" style="font-size:7px;">wkly</span><div class="toggle on" title="refactor-scan"></div></div>
+        <div class="agent-row"><span class="agent-name">security-scan</span><span class="tag tag-blue" style="font-size:7px;">wkly</span><div class="toggle on" title="security-scan"></div></div>
       </div>
     </div>
 
     <!-- Personal -->
-    <div class="division-card">
+    <div class="division-card" id="card-personal">
       <div class="div-name">[ PERSONAL ]</div>
-      <div class="div-status"><span class="tag tag-green" id="personal-status">IDLE</span></div>
+      <div style="margin-bottom:8px;"><span class="tag tag-green" id="personal-status">IDLE</span></div>
       <div class="div-row">LAST RUN: <strong id="personal-last">—</strong></div>
-      <div class="div-row">NEXT: <strong id="personal-next">—</strong></div>
+      <div class="div-row">NEXT: <strong>18:00 daily</strong></div>
       <div class="agent-list">
-        <div class="agent-row">
-          <span class="agent-name">health-logger</span>
-          <span class="tag tag-blue" style="font-size:7px;">18:00</span>
-          <div class="toggle on" title="health-logger"></div>
-        </div>
-        <div class="agent-row">
-          <span class="agent-name">trade-tracker</span>
-          <span class="tag tag-blue" style="font-size:7px;">manual</span>
-          <div class="toggle on" title="trade-tracker"></div>
-        </div>
-        <div class="agent-row">
-          <span class="agent-name">perf-correlation</span>
-          <span class="tag tag-blue" style="font-size:7px;">20:00</span>
-          <div class="toggle on" title="perf-correlation"></div>
-        </div>
-        <div class="agent-row">
-          <span class="agent-name">burnout-monitor</span>
-          <span class="tag tag-blue" style="font-size:7px;">daily</span>
-          <div class="toggle on" title="burnout-monitor"></div>
-        </div>
+        <div class="agent-row"><span class="agent-name">health-logger</span><span class="tag tag-blue" style="font-size:7px;">18:00</span><div class="toggle on" title="health-logger"></div></div>
+        <div class="agent-row"><span class="agent-name">trade-tracker</span><span class="tag tag-blue" style="font-size:7px;">manual</span><div class="toggle on" title="trade-tracker"></div></div>
+        <div class="agent-row"><span class="agent-name">perf-correlation</span><span class="tag tag-blue" style="font-size:7px;">20:00</span><div class="toggle on" title="perf-correlation"></div></div>
+        <div class="agent-row"><span class="agent-name">burnout-monitor</span><span class="tag tag-blue" style="font-size:7px;">daily</span><div class="toggle on" title="burnout-monitor"></div></div>
       </div>
     </div>
 
@@ -476,58 +426,34 @@
 
   <!-- ── Task Queue + Briefing ── -->
   <div class="grid-2">
-
     <div>
       <div class="section-header">// TASK QUEUE</div>
       <div class="pixel-box">
         <ul class="queue-list" id="task-queue">
-          <li>
-            <span class="queue-task"><span class="tag tag-blue" style="font-size:7px;">SCH</span> &nbsp;job-intake</span>
-            <span class="queue-time">next 3h cycle</span>
-          </li>
-          <li>
-            <span class="queue-task"><span class="tag tag-blue" style="font-size:7px;">SCH</span> &nbsp;repo-monitor</span>
-            <span class="queue-time">next 3h cycle</span>
-          </li>
-          <li>
-            <span class="queue-task"><span class="tag tag-blue" style="font-size:7px;">SCH</span> &nbsp;funding-finder</span>
-            <span class="queue-time">14:00</span>
-          </li>
-          <li>
-            <span class="queue-task"><span class="tag tag-purple" style="font-size:7px;">SCH</span> &nbsp;health-logger</span>
-            <span class="queue-time">18:00</span>
-          </li>
-          <li>
-            <span class="queue-task"><span class="tag tag-purple" style="font-size:7px;">SCH</span> &nbsp;trading-report</span>
-            <span class="queue-time">18:00</span>
-          </li>
-          <li>
-            <span class="queue-task"><span class="tag tag-purple" style="font-size:7px;">SCH</span> &nbsp;perf-correlation</span>
-            <span class="queue-time">20:00</span>
-          </li>
-          <li>
-            <span class="queue-task"><span class="tag tag-green" style="font-size:7px;">SCH</span> &nbsp;daily briefing</span>
-            <span class="queue-time">21:00</span>
-          </li>
+          <li><span class="queue-task"><span class="tag tag-blue" style="font-size:7px;">SCH</span> &nbsp;job-intake</span><span class="queue-time">next 3h cycle</span></li>
+          <li><span class="queue-task"><span class="tag tag-blue" style="font-size:7px;">SCH</span> &nbsp;repo-monitor</span><span class="queue-time">next 3h cycle</span></li>
+          <li><span class="queue-task"><span class="tag tag-blue" style="font-size:7px;">SCH</span> &nbsp;funding-finder</span><span class="queue-time">14:00</span></li>
+          <li><span class="queue-task"><span class="tag tag-purple" style="font-size:7px;">SCH</span> &nbsp;health-logger</span><span class="queue-time">18:00</span></li>
+          <li><span class="queue-task"><span class="tag tag-purple" style="font-size:7px;">SCH</span> &nbsp;trading-report</span><span class="queue-time">18:00</span></li>
+          <li><span class="queue-task"><span class="tag tag-purple" style="font-size:7px;">SCH</span> &nbsp;perf-correlation</span><span class="queue-time">20:00</span></li>
+          <li><span class="queue-task"><span class="tag tag-green" style="font-size:7px;">SCH</span> &nbsp;daily briefing</span><span class="queue-time">21:00</span></li>
         </ul>
       </div>
     </div>
 
     <div>
       <div class="section-header">// DAILY BRIEFING</div>
-      <div class="briefing-box" id="briefing-text">J_Claw // Morning Briefing
+      <div class="briefing-box" id="briefing-text">J_Claw // Briefing
 ━━━━━━━━━━━━━━━━━━━━━━━━
 
-Waiting for first boot...
+Waiting for first briefing...
 
-Run J_Claw to generate your first
-executive briefing. It will appear
-here after the 06:00 AM cycle.
+J_Claw will populate this panel
+at 09:00 PM each night.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━</div>
       <div class="briefing-meta" id="briefing-meta">Last briefing: not yet generated</div>
     </div>
-
   </div>
 
   <!-- ── Live Log Feed ── -->
@@ -536,24 +462,14 @@ here after the 06:00 AM cycle.
     <div class="log-line">
       <span class="log-time">--:--:--</span>
       <span class="log-div"><span class="tag tag-purple" style="font-size:7px;">SYS</span></span>
-      <span class="log-msg">OpenClaw dashboard loaded. Awaiting agent data...</span>
-    </div>
-    <div class="log-line">
-      <span class="log-time">--:--:--</span>
-      <span class="log-div"><span class="tag tag-blue" style="font-size:7px;">SYS</span></span>
-      <span class="log-msg">Tip: Open state/ JSON files are read via local fetch.</span>
-    </div>
-    <div class="log-line">
-      <span class="log-time">--:--:--</span>
-      <span class="log-div"><span class="tag tag-green" style="font-size:7px;">SYS</span></span>
-      <span class="log-msg">Run dashboard from a local server to enable live state reads.</span>
+      <span class="log-msg">OpenClaw Mission Control loaded.</span>
     </div>
   </div>
 
   <!-- ── Footer ── -->
   <footer>
     <div>OPENCLAW v1.0.0 // J_CLAW // OPERATOR: MATTHEW</div>
-    <div id="uptime-display">UPTIME: —</div>
+    <div id="refresh-counter">NEXT REFRESH: 30s</div>
     <div>CAMPBELLTON, NB</div>
   </footer>
 
@@ -561,13 +477,19 @@ here after the 06:00 AM cycle.
     // ── Clock ──
     function updateClock() {
       const now = new Date();
-      document.getElementById('clock').textContent =
-        now.toTimeString().slice(0,8);
-      document.getElementById('datestamp').textContent =
-        now.toISOString().slice(0,10);
+      document.getElementById('clock').textContent = now.toTimeString().slice(0,8);
+      document.getElementById('datestamp').textContent = now.toISOString().slice(0,10);
     }
     setInterval(updateClock, 1000);
     updateClock();
+
+    // ── Refresh countdown ──
+    let refreshIn = 30;
+    setInterval(() => {
+      refreshIn--;
+      if (refreshIn <= 0) refreshIn = 30;
+      document.getElementById('refresh-counter').textContent = `NEXT REFRESH: ${refreshIn}s`;
+    }, 1000);
 
     // ── Toggle interaction ──
     document.querySelectorAll('.toggle').forEach(el => {
@@ -592,14 +514,60 @@ here after the 06:00 AM cycle.
       feed.scrollTop = feed.scrollHeight;
     }
 
+    // ── Alert system ──
+    const dismissedAlerts = new Set();
+
+    function updateAlerts(alerts) {
+      const active = alerts.filter(a => !dismissedAlerts.has(a.id));
+      const bar    = document.getElementById('alert-bar');
+      const panel  = document.getElementById('alerts-panel');
+      const list   = document.getElementById('alerts-list');
+
+      if (active.length === 0) {
+        bar.classList.remove('active');
+        panel.classList.remove('active');
+        return;
+      }
+
+      bar.classList.add('active');
+      panel.classList.add('active');
+      document.getElementById('alert-bar-text').textContent =
+        `⚠ ${active.length} ALERT${active.length > 1 ? 'S' : ''} — ACTION REQUIRED`;
+
+      list.innerHTML = '';
+      active.forEach(a => {
+        const row = document.createElement('div');
+        row.className = 'alert-row';
+        row.innerHTML = `
+          <span class="log-time alert-time">${a.time}</span>
+          <span class="log-div"><span class="tag tag-${a.color}" style="font-size:7px;">${a.division}</span></span>
+          <span class="alert-msg">${a.message}</span>
+          <button class="dismiss-btn" onclick="dismissAlert('${a.id}')">DISMISS</button>
+        `;
+        list.appendChild(row);
+      });
+    }
+
+    function dismissAlert(id) {
+      dismissedAlerts.add(id);
+      addLog('SYS', 'Alert dismissed: ' + id, 'subtext');
+      loadState();
+    }
+
     // ── Division status helpers ──
     const statusColors = { idle: 'green', running: 'yellow', error: 'red' };
 
     function setDivisionStatus(div, status) {
-      const el = document.getElementById(`${div}-status`);
+      const el   = document.getElementById(`${div}-status`);
+      const card = document.getElementById(`card-${div}`);
       if (!el) return;
       el.textContent = status.toUpperCase();
       el.className = 'tag tag-' + (statusColors[status] || 'blue');
+      if (status === 'error') {
+        card.classList.add('error');
+      } else {
+        card.classList.remove('error');
+      }
     }
 
     function setDivisionLastRun(div, ts) {
@@ -609,21 +577,33 @@ here after the 06:00 AM cycle.
 
     // ── Load state files ──
     async function loadState() {
+      const now = new Date();
+      const alerts = [];
+
       // Orchestrator state
       try {
         const res = await fetch('../state/orchestrator-state.json');
         if (res.ok) {
           const data = await res.json();
-          ['trading', 'opportunity', 'dev_automation', 'personal'].forEach(div => {
+          const divs = ['trading', 'opportunity', 'dev_automation', 'personal'];
+          divs.forEach(div => {
             const d = data.divisions[div];
             if (!d) return;
             setDivisionStatus(div, d.status || 'idle');
             setDivisionLastRun(div, d.last_run);
+            if (d.status === 'error') {
+              alerts.push({
+                id: `error-${div}`,
+                division: div.toUpperCase().replace('_', ' '),
+                message: `Division in error state — check logs`,
+                color: 'red',
+                time: now.toTimeString().slice(0,8)
+              });
+            }
           });
-          addLog('SYS', 'Orchestrator state loaded.', 'green');
         }
-      } catch (e) {
-        addLog('SYS', 'orchestrator-state.json: using defaults (serve from local server to enable live reads).', 'yellow');
+      } catch(e) {
+        addLog('SYS', 'State file read requires local server (npx serve).', 'yellow');
       }
 
       // Jobs seen
@@ -640,8 +620,25 @@ here after the 06:00 AM cycle.
         const res = await fetch('../state/applications.json');
         if (res.ok) {
           const data = await res.json();
-          document.getElementById('stat-pending').textContent = data.stats.pending_review || 0;
+          const pending = data.stats.pending_review || 0;
+          document.getElementById('stat-pending').textContent = pending;
           document.getElementById('stat-applied').textContent = data.stats.applied || 0;
+          document.getElementById('stat-interviews').textContent = data.stats.interviews || 0;
+
+          const badge = document.getElementById('pending-badge');
+          if (pending > 0) {
+            badge.style.display = 'inline-block';
+            badge.textContent = `${pending} PENDING`;
+            alerts.push({
+              id: `pending-jobs-${pending}`,
+              division: 'OPPS',
+              message: `${pending} job${pending > 1 ? 's' : ''} waiting for your review — Tier A/B`,
+              color: 'yellow',
+              time: now.toTimeString().slice(0,8)
+            });
+          } else {
+            badge.style.display = 'none';
+          }
         }
       } catch(e) {}
 
@@ -663,26 +660,45 @@ here after the 06:00 AM cycle.
         const res = await fetch('../state/health-log.json');
         if (res.ok) {
           const data = await res.json();
-          document.getElementById('stat-health').textContent =
-            data.last_logged ? new Date(data.last_logged).toLocaleDateString() : '—';
+          const lastLogged = data.last_logged;
+          if (lastLogged) {
+            document.getElementById('stat-health').textContent =
+              new Date(lastLogged).toLocaleDateString();
+            const hoursAgo = (now - new Date(lastLogged)) / 3600000;
+            if (hoursAgo > 24) {
+              alerts.push({
+                id: 'health-overdue',
+                division: 'PERSONAL',
+                message: `Health log overdue — last logged ${Math.floor(hoursAgo)}h ago`,
+                color: 'yellow',
+                time: now.toTimeString().slice(0,8)
+              });
+            }
+          } else {
+            document.getElementById('stat-health').textContent = '—';
+          }
         }
       } catch(e) {}
+
+      updateAlerts(alerts);
+      document.getElementById('last-refresh-label').textContent =
+        'LAST SYNC: ' + now.toTimeString().slice(0,8);
     }
 
     // ── Boot sequence ──
     setTimeout(() => {
-      addLog('SYS', 'OpenClaw v1.0.0 initializing...', 'purple');
-      setTimeout(() => addLog('TRADING', 'Division ready.', 'blue'), 400);
-      setTimeout(() => addLog('OPPS', 'Division ready.', 'blue'), 700);
-      setTimeout(() => addLog('DEV', 'Division ready.', 'blue'), 1000);
-      setTimeout(() => addLog('PERSONAL', 'Division ready.', 'purple'), 1300);
+      addLog('SYS', 'Mission Control v1.0.0 initializing...', 'purple');
+      setTimeout(() => addLog('TRADING',  'Division standing by.', 'blue'),   400);
+      setTimeout(() => addLog('OPPS',     'Division standing by.', 'blue'),   700);
+      setTimeout(() => addLog('DEV',      'Division standing by.', 'blue'),  1000);
+      setTimeout(() => addLog('PERSONAL', 'Division standing by.', 'purple'),1300);
       setTimeout(() => {
-        addLog('SYS', 'All divisions online. Awaiting first scheduled run.', 'green');
+        addLog('SYS', 'All divisions online. Loading state...', 'green');
         loadState();
       }, 1800);
     }, 300);
 
-    // Refresh state every 30 seconds
+    // Refresh every 30 seconds
     setInterval(loadState, 30000);
   </script>
 </body>
