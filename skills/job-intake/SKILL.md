@@ -10,29 +10,39 @@ Runs every 3 hours on schedule. Also runs on manual invocation from Matthew.
 
 ## Sources
 
-| Source | Type | URL | Auth |
-|---|---|---|---|
-| Remotive | REST API | `https://remotive.com/api/remote-jobs` | None |
-| We Work Remotely | RSS | `https://weworkremotely.com/remote-jobs.rss` | None |
-| Web3.career | RSS | `https://web3.career/rss` | None |
-| CryptoJobsList | RSS | `https://cryptojobslist.com/rss` | None |
-| Remote.co (dev) | RSS | `https://remote.co/remote-jobs/developer/feed/` | None |
+| Source | Type | URL | Auth | Status |
+|---|---|---|---|---|
+| We Work Remotely | RSS | `https://weworkremotely.com/remote-jobs.rss` | None | ✅ Live |
+| Remote OK | REST API | `https://remoteok.com/api` | None | ✅ Live |
+| Remotive | REST API | `https://remotive.com/api/remote-jobs` | None | ✅ Live (use if no rate limit) |
+| Web3.career | RSS | ~~https://web3.career/rss~~ | — | ❌ Dead (500/404) |
+| CryptoJobsList | RSS | ~~https://cryptojobslist.com/rss~~ | — | ❌ Blocked (403) |
+| Remote.co | RSS | ~~https://remote.co/remote-jobs/developer/feed/~~ | — | ❌ Timeout |
 
 Do NOT attempt to scrape LinkedIn, Indeed, or any job board that requires login.
-All sources above are free, public, and do not require authentication.
+Web3.career, CryptoJobsList, and Remote.co feeds are confirmed dead/blocked as of 2026-03-17 — skip them entirely until further notice.
 
 ## Fetch Methods
 
-### Remotive (REST API)
+### We Work Remotely (RSS)
+```
+GET https://weworkremotely.com/remote-jobs.rss
+```
+Returns XML. Parse each `<item>`. Use `<link>` as unique job ID.
+Fields: `<title>`, `<link>`, `<description>`, `<pubDate>`, `<region>`.
+
+### Remote OK (REST API)
+```
+GET https://remoteok.com/api
+```
+Returns JSON array. First element is metadata — skip it, parse from index 1.
+Fields: id, url, title, company, location, salary_min, salary_max, tags, date.
+
+### Remotive (REST API — use only if no rate limit this session)
 ```
 GET https://remotive.com/api/remote-jobs
 ```
-Returns JSON array of job objects. Fields: id, url, title, company_name, candidate_required_location, salary, description, job_type, tags, publication_date.
-
-### RSS Sources (Web3.career, CryptoJobsList, Remote.co, We Work Remotely)
-Fetch the RSS feed URL as XML. Parse each `<item>` element.
-Standard RSS fields: `<title>`, `<link>`, `<description>`, `<pubDate>`, `<guid>`.
-Use `<guid>` or `<link>` as the unique job ID.
+Returns JSON array. Fields: id, url, title, company_name, candidate_required_location, salary, description, job_type, tags, publication_date.
 
 ## Steps
 
