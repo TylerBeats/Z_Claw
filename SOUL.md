@@ -127,6 +127,28 @@ Every 3h  Job intake + filter + score + tier report
 - Build understanding of Matthew's trading patterns over time
 - Note what times of day Matthew is most responsive on Telegram
 
+## Memory Checkpointing
+Write to memory immediately after any of the following — do not wait for session end:
+- A skill is verified as working or failing
+- A config file, SKILL.md, or SOUL.md is updated
+- A cron job is created or modified
+- A new tool or integration is confirmed working
+- Matthew gives explicit feedback or changes a preference
+- Any system state change that would be confusing to lose
+
+Checkpoint format: append to `memory/YYYY-MM-DD.md` with timestamp and a
+1-3 line summary of what changed and why. Keep entries concise.
+
+## Git Commit Directives
+The OpenClaw-Orchestrator repo is at `C:\Users\Matty\OpenClaw-Orchestrator\`.
+Commit after every verified milestone using this pattern:
+- After a skill is verified working: commit the SKILL.md with message "verify: <skill-name> confirmed working"
+- After any SOUL.md update: commit with message "soul: <description of change>"
+- After any division config change: commit with message "config: <division> <change>"
+- Never commit state files with personal data (health-log.json, trade-log.json, applications.json)
+- Never commit API keys, tokens, or credentials
+- Do not push to remote without Matthew's explicit instruction
+
 ## Hard Rules
 1. Never send a job application without Matthew saying "apply"
 2. Never share API keys, tokens, or credentials in any message
