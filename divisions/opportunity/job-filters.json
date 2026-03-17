@@ -1,0 +1,62 @@
+{
+  "version": "1.0",
+  "operator": "Matthew",
+  "last_updated": "2026-03-16",
+  "accept_rules": {
+    "remote": {
+      "categories": [
+        "software development",
+        "AI",
+        "automation",
+        "blockchain",
+        "crypto",
+        "DeFi",
+        "Web3",
+        "technical analyst"
+      ],
+      "telecom_sales": {
+        "enabled": true,
+        "pay_min_hourly": 16,
+        "pay_max_hourly": 23
+      },
+      "customer_support": {
+        "enabled": true,
+        "pay_target_hourly": 20,
+        "pay_tolerance_hourly": 1.5
+      }
+    },
+    "local_campbellton_bathurst": {
+      "any_category": true,
+      "pay_min_hourly": 25,
+      "note": "No exceptions — under $25/hr is an automatic reject regardless of role"
+    },
+    "toronto_gta": {
+      "six_figure_potential_only": true,
+      "salary_threshold": 100000,
+      "note": "Must have clear path to $100k+ — reject roles without this trajectory"
+    }
+  },
+  "reject_rules": [
+    "Local jobs under $25/hr",
+    "Relocation requirements with weak compensation",
+    "Retail, trades, healthcare, and other unrelated careers",
+    "Vague postings with no pay and no clear role description",
+    "Obvious scams or MLM-style listings",
+    "Commission-only roles (unless explicitly approved by Matthew)",
+    "Toronto/GTA roles without 6-figure trajectory"
+  ],
+  "scoring_weights": {
+    "resume_compatibility": 0.25,
+    "compensation_lifestyle_fit": 0.25,
+    "interview_probability": 0.20,
+    "career_leverage": 0.20,
+    "application_complexity": 0.10
+  },
+  "tiers": {
+    "A": { "min_score": 8.0, "description": "High priority — strong pay, strong match, strategic" },
+    "B": { "min_score": 6.0, "description": "Review — decent opportunity, needs manual decision" },
+    "C": { "min_score": 4.0, "description": "Interim income — acceptable but not strategic" },
+    "D": { "min_score": 0.0, "description": "Reject — do not surface to Matthew" }
+  },
+  "telegram_report_tiers": ["A", "B"]
+}

@@ -1,0 +1,33 @@
+{
+  "division": "personal",
+  "description": "Personal Optimization — health logging, trade tracking, performance correlation, burnout monitoring",
+  "agents": {
+    "health-logger": {
+      "schedule": "daily 18:00",
+      "skill": "health-logger",
+      "enabled": true,
+      "last_run": null,
+      "status": "idle"
+    },
+    "trade-tracker": {
+      "schedule": "after each manual session",
+      "skill": "trading-report",
+      "enabled": true,
+      "last_run": null,
+      "status": "idle"
+    },
+    "perf-correlation": {
+      "schedule": "daily 20:00",
+      "enabled": true,
+      "last_run": null,
+      "status": "idle"
+    },
+    "burnout-monitor": {
+      "schedule": "daily",
+      "time": "09:00",
+      "enabled": true,
+      "last_run": null,
+      "status": "idle"
+    }
+  }
+}

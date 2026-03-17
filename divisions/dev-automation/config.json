@@ -1,0 +1,41 @@
+{
+  "division": "dev-automation",
+  "description": "Dev Automation — repo monitoring, debugging, refactoring, docs, and security",
+  "agents": {
+    "repo-monitor": {
+      "schedule": "every 3 hours",
+      "skill": "repo-monitor",
+      "telegram_send_at": "15:00",
+      "enabled": true,
+      "last_run": null,
+      "status": "idle"
+    },
+    "debug-agent": {
+      "schedule": "on-error trigger",
+      "enabled": true,
+      "last_run": null,
+      "status": "idle"
+    },
+    "refactor-scan": {
+      "schedule": "weekly",
+      "day": "monday",
+      "enabled": true,
+      "last_run": null,
+      "status": "idle"
+    },
+    "doc-update": {
+      "schedule": "weekly",
+      "day": "wednesday",
+      "enabled": true,
+      "last_run": null,
+      "status": "idle"
+    },
+    "security-scan": {
+      "schedule": "weekly",
+      "day": "friday",
+      "enabled": true,
+      "last_run": null,
+      "status": "idle"
+    }
+  }
+}

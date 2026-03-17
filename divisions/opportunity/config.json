@@ -1,0 +1,32 @@
+{
+  "division": "opportunity",
+  "description": "Opportunity Discovery — job intake, filtering, and funding discovery",
+  "agents": {
+    "job-intake": {
+      "schedule": "every 3 hours",
+      "skill": "job-intake",
+      "enabled": true,
+      "last_run": null,
+      "status": "idle"
+    },
+    "hard-filter": {
+      "schedule": "after each job-intake run",
+      "skill": "hard-filter",
+      "enabled": true,
+      "last_run": null,
+      "status": "idle"
+    },
+    "funding-finder": {
+      "schedule": "daily 14:00",
+      "enabled": true,
+      "last_run": null,
+      "status": "idle"
+    },
+    "tier-report": {
+      "schedule": "after each intake run",
+      "enabled": true,
+      "last_run": null,
+      "status": "idle"
+    }
+  }
+}

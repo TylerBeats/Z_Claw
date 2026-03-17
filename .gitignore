@@ -1,0 +1,17 @@
+# State files — contain personal data, health logs, trade data
+state/health-log.json
+state/trade-log.json
+state/applications.json
+
+# Logs
+logs/
+
+# Reports — generated output, not source
+reports/
+
+# Dashboard node_modules if ever added
+dashboard/node_modules/
+
+# OS
+.DS_Store
+Thumbs.db

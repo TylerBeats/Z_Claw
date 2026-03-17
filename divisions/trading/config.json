@@ -1,0 +1,26 @@
+{
+  "division": "trading",
+  "description": "Trading Intelligence — market scans, backtesting, and daily performance reports",
+  "agents": {
+    "market-scan": {
+      "schedule": "every 1 hour",
+      "active_hours": "market_hours",
+      "enabled": true,
+      "last_run": null,
+      "status": "idle"
+    },
+    "backtester": {
+      "schedule": "daily 18:00",
+      "enabled": true,
+      "last_run": null,
+      "status": "idle"
+    },
+    "report": {
+      "schedule": "daily 18:00",
+      "skill": "trading-report",
+      "enabled": true,
+      "last_run": null,
+      "status": "idle"
+    }
+  }
+}
