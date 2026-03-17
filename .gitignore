@@ -1,3 +1,6 @@
+# Secrets — never commit
+.env
+
 # State files — contain personal data, health logs, trade data
 state/health-log.json
 state/trade-log.json

@@ -10,17 +10,19 @@ Runs every 3 hours on schedule. Also runs on manual invocation from Matthew.
 
 ## Sources
 
-| Source | Type | URL | Auth | Status |
+| Source | Type | Coverage | Salary | Status |
 |---|---|---|---|---|
-| We Work Remotely | RSS | `https://weworkremotely.com/remote-jobs.rss` | None | ✅ Live |
-| Remote OK | REST API | `https://remoteok.com/api` | None | ✅ Live |
-| Remotive | REST API | `https://remotive.com/api/remote-jobs` | None | ✅ Live (use if no rate limit) |
-| Web3.career | RSS | ~~https://web3.career/rss~~ | — | ❌ Dead (500/404) |
-| CryptoJobsList | RSS | ~~https://cryptojobslist.com/rss~~ | — | ❌ Blocked (403) |
-| Remote.co | RSS | ~~https://remote.co/remote-jobs/developer/feed/~~ | — | ❌ Timeout |
+| We Work Remotely | RSS | Remote global | No | ✅ Live |
+| Remote OK | REST API | Remote global | Yes | ✅ Live |
+| Remotive | REST API | Remote global | Partial | ✅ Live (rate-limit aware) |
+| Adzuna | REST API | Canada — NB, Toronto, Remote | Yes | ✅ Live (API key required) |
+| Web3.career | RSS | — | — | ❌ Dead (500/404) |
+| CryptoJobsList | RSS | — | — | ❌ Blocked (403) |
+| Remote.co | RSS | — | — | ❌ Timeout |
 
 Do NOT attempt to scrape LinkedIn, Indeed, or any job board that requires login.
-Web3.career, CryptoJobsList, and Remote.co feeds are confirmed dead/blocked as of 2026-03-17 — skip them entirely until further notice.
+Web3.career, CryptoJobsList, and Remote.co are confirmed dead/blocked as of 2026-03-17.
+Adzuna credentials are stored in `C:\Users\Matty\OpenClaw-Orchestrator\.env` — load from there, never hardcode.
 
 ## Fetch Methods
 
@@ -43,6 +45,37 @@ Fields: id, url, title, company, location, salary_min, salary_max, tags, date.
 GET https://remotive.com/api/remote-jobs
 ```
 Returns JSON array. Fields: id, url, title, company_name, candidate_required_location, salary, description, job_type, tags, publication_date.
+
+### Adzuna (REST API — Canadian coverage)
+Credentials: load `ADZUNA_APP_ID` and `ADZUNA_APP_KEY` from `C:\Users\Matty\OpenClaw-Orchestrator\.env`
+
+Run all three queries per cycle:
+
+**Query 1 — Remote Web3/tech roles:**
+```
+GET http://api.adzuna.com/v1/api/jobs/ca/search/1
+  ?app_id={ADZUNA_APP_ID}&app_key={ADZUNA_APP_KEY}
+  &what=blockchain+OR+solidity+OR+web3+OR+defi+OR+AI+developer
+  &where=remote&salary_min=60000&results_per_page=50&sort_by=date
+```
+
+**Query 2 — Toronto/GTA 6-figure roles:**
+```
+GET http://api.adzuna.com/v1/api/jobs/ca/search/1
+  ?app_id={ADZUNA_APP_ID}&app_key={ADZUNA_APP_KEY}
+  &what=software+developer+OR+engineer+OR+technical+analyst
+  &where=toronto&salary_min=100000&results_per_page=50&sort_by=date
+```
+
+**Query 3 — Campbellton/NB local roles ($25/hr = ~$52k/yr):**
+```
+GET http://api.adzuna.com/v1/api/jobs/ca/search/1
+  ?app_id={ADZUNA_APP_ID}&app_key={ADZUNA_APP_KEY}
+  &what=developer+OR+analyst+OR+support
+  &where=new+brunswick&salary_min=52000&results_per_page=20&sort_by=date
+```
+
+Returns JSON. Fields: id, title, company.display_name, location.display_name, salary_min, salary_max, redirect_url, created.
 
 ## Steps
 
