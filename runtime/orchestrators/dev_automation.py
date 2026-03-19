@@ -1,20 +1,21 @@
 """
-Dev Automation Division Orchestrator — LLM agent (Qwen2.5 14B → 7B fallback).
-Skills handle individual analysis (repo scan, security, refactor, debug, docs).
-The orchestrator synthesizes across skills to produce the dev health executive summary.
+Dev Automation Division Orchestrator — code-specialized model routing.
+Skills: repo-monitor, refactor-scan, security-scan → Coder 7B (local).
+        debug-agent, doc-update → Coder 14B (friend's 9070 XT, Coder 7B fallback).
+Orchestrator synthesis (dev-digest) → Llama 3.1 8B (local prose, not code analysis).
 """
 
 import logging
 from datetime import datetime, timezone
 
-from runtime.config import SKILL_MODELS, MODEL_14B_HOST, MODEL_7B, OLLAMA_HOST
+from runtime.config import SKILL_MODELS, MODEL_14B_HOST, MODEL_CODER_7B, MODEL_8B, OLLAMA_HOST
 from runtime.ollama_client import chat, is_available
 from runtime.skills import repo_monitor, debug_agent, refactor_scan, security_scan, doc_update, artifact_manager
 from runtime import packet
 from runtime.tools.xp import grant_skill_xp
 
 log   = logging.getLogger(__name__)
-MODEL = SKILL_MODELS["repo-monitor"]
+MODEL = SKILL_MODELS["dev-digest"]   # Llama 3.1 8B — synthesis only, not code analysis
 
 
 # ── Orchestrator reasoning ─────────────────────────────────────────────────────
@@ -38,11 +39,11 @@ def _synthesize_dev_state(
         + repo_pkt.get("metrics", {}).get("flags_medium", 0)
     ) if repo_pkt else 0
 
-    # Tier 2 → Tier 1 fallback
-    if is_available(MODEL, host=MODEL_14B_HOST):
-        use_model, use_host = MODEL, MODEL_14B_HOST
-    elif is_available(MODEL_7B, host=OLLAMA_HOST):
-        use_model, use_host = MODEL_7B, OLLAMA_HOST
+    # Always local — synthesis is text aggregation, not code reasoning
+    if is_available(MODEL, host=OLLAMA_HOST):
+        use_model, use_host = MODEL, OLLAMA_HOST
+    elif is_available(MODEL_CODER_7B, host=OLLAMA_HOST):
+        use_model, use_host = MODEL_CODER_7B, OLLAMA_HOST
     else:
         parts = [s for s in [repo_summary, security_summary, refactor_summary] if s and "No " not in s]
         return " | ".join(parts) if parts else "Dev automation scan complete."
