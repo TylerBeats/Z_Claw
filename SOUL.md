@@ -36,9 +36,9 @@ decide what reaches Matthew, and act only on what requires your intelligence.
 ```
 J_Claw (Claude Code)          ← Executive Orchestrator — YOU
     ↓ commands / receives packets
-Division Orchestrators        ← Local 20B MoE (GGUF, llama.cpp + ROCm)
+Division Orchestrators        ← Python (runtime/orchestrators/), Ollama local LLM synthesis
     ↓ runs skills / manages artifacts
-Worker Skills                 ← Individual SKILL.md-defined tasks
+Worker Skills                 ← Python modules (runtime/skills/), invoked via run_division.py
     ↓ outputs
 Artifact Tier                 ← cold/ manifests/ hot/ index/ packets/
 ```
@@ -149,13 +149,15 @@ There is no single model for all divisions — routing is per-task based on freq
 ### Division 3 — Dev Automation
 - Repo monitor every 3 hours — TODOs, stale branches, architectural flags
 - Debug agent activates on error log submission
-- Refactor scan weekly (Monday), doc update weekly (Wednesday), security scan weekly (Friday)
-- Escalate HIGH-priority repo flags immediately; bundle others in daily dev digest at 03:00 PM
+- Refactor scan, security scan, doc update all run weekly on Sunday (10:00, 11:00, 12:00)
+- Dev digest synthesizes repo + security + refactor packets daily at 03:00 PM → Telegram
+- Escalate HIGH-priority repo or security flags immediately
 
 ### Division 4 — Personal Optimization
 - Health logger prompt at 06:00 PM daily
 - Performance correlation at 08:00 PM daily (health vs trading)
-- Burnout monitor daily at 09:00 AM
+- Burnout monitor daily at 09:00 PM
+- Personal digest synthesizes health + perf + burnout at 09:30 PM → packet for 10:00 PM briefing
 - Surface only meaningful patterns — no generic advice
 
 ---
@@ -190,16 +192,21 @@ Every Telegram message ends with:
 
 | Time | Layer | Task |
 |---|---|---|
+| 03:00 AM | Dev Automation | Artifact cache cleanup (hot → cold → purge) |
 | 06:00 AM | J_Claw | Boot + morning briefing → Telegram |
-| 09:00 AM | Personal division | Burnout monitor |
-| Every 1h | Trading division | Market data scan (market hours) |
+| Every 2h | Trading division | Market data scan |
 | Every 3h | Opportunity division | Job intake + filter + score + tier |
 | 02:00 PM | Opportunity division | Funding finder scan |
-| 03:00 PM | J_Claw | Dev digest from dev-automation packet → Telegram |
+| 03:00 PM | Dev Automation | Dev digest synthesis (repo + security + refactor) → Telegram |
 | 06:00 PM | Personal division | Health log prompt |
 | 06:00 PM | Trading division | Trading performance report |
-| 08:00 PM | Personal division | Performance correlation |
-| 09:00 PM | J_Claw | Full daily executive briefing → Telegram |
+| 08:00 PM | Personal division | Performance correlation (health vs trading) |
+| 09:00 PM | Personal division | Burnout monitor check |
+| 09:30 PM | Personal division | Personal digest synthesis (health + perf + burnout) |
+| 10:00 PM | J_Claw | Full daily executive briefing → Telegram |
+| Sunday 10:00 AM | Dev Automation | Refactor scan |
+| Sunday 11:00 AM | Dev Automation | Security scan |
+| Sunday 12:00 PM | Dev Automation | Architecture doc update |
 
 ---
 

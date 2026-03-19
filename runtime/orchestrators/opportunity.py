@@ -8,8 +8,9 @@ import logging
 
 from runtime.config import SKILL_MODELS
 from runtime.ollama_client import chat, is_available
-from runtime.skills import job_intake, hard_filter
+from runtime.skills import job_intake, hard_filter, funding_finder
 from runtime import packet
+from runtime.tools.xp import grant_skill_xp
 
 log = logging.getLogger(__name__)
 
@@ -68,7 +69,11 @@ def _interpret_results(intake_result: dict, filter_result: dict) -> str:
         },
         {"role": "user", "content": context},
     ]
-    return chat(MODEL, messages, temperature=0.2, max_tokens=150)
+    result = chat(MODEL, messages, temperature=0.2, max_tokens=150)
+    lines = result.strip().splitlines()
+    if lines and lines[0].rstrip().endswith(":"):
+        result = "\n".join(lines[1:]).lstrip()
+    return result
 
 
 # ── Main run ──────────────────────────────────────────────────────────────────
@@ -152,8 +157,74 @@ def run_job_intake() -> dict:
     )
 
     packet.write(pkt)
+    grant_skill_xp("job-intake")
+    grant_skill_xp("hard-filter")
     log.info(
         "Opportunity packet written. Status=%s Escalate=%s A=%d B=%d",
         status, escalate, counts.get("tier_a", 0), counts.get("tier_b", 0)
     )
+    return pkt
+
+
+def run_funding_finder() -> dict:
+    """Daily 14:00 — scan grant sources, score opportunities, write packet."""
+    log.info("=== Opportunity Division: funding-finder run ===")
+
+    result = funding_finder.run()
+
+    if result["all_failed"]:
+        pkt = packet.build(
+            division="opportunity",
+            skill="funding-finder",
+            status="failed",
+            summary="All funding sources failed.",
+            escalate=True,
+            escalation_reason=f"Sources failed: {result['source_errors']}",
+        )
+        packet.write(pkt)
+        return pkt
+
+    opps   = result["opportunities"]
+    counts = result["counts"]
+
+    # Build action items for qualifying opportunities
+    action_items = []
+    for opp in sorted(opps, key=lambda o: o.get("composite", 0), reverse=True):
+        amount   = opp.get("amount", "amount unspecified")
+        deadline = opp.get("deadline", "no deadline listed")
+        score    = opp.get("composite", 0)
+        action_items.append(packet.action_item(
+            f"[{score:.1f}/10] {opp['name']} | {amount} | Deadline: {deadline} "
+            f"| {opp.get('eligibility_notes','')} | {opp.get('url', opp.get('source',''))}",
+            priority="medium",
+            requires_matthew=True,
+        ))
+
+    if opps:
+        top = opps[0]
+        summary = (
+            f"{counts['opportunities_found']} new funding opportunit"
+            f"{'y' if counts['opportunities_found'] == 1 else 'ies'} found. "
+            f"Top: {top['name']} — {top.get('amount','?')} (score {top.get('composite',0):.1f}/10)."
+        )
+    else:
+        summary = "No new funding opportunities found this run."
+
+    pkt = packet.build(
+        division="opportunity",
+        skill="funding-finder",
+        status="success" if not result["source_errors"] else "partial",
+        summary=summary,
+        action_items=action_items,
+        metrics={
+            "funding_opportunities": counts["opportunities_found"],
+            "sources_failed":        counts["sources_failed"],
+            "model_available":       result["model_available"],
+        },
+        artifact_refs=[{"bundle_id": f"funding-{__import__('datetime').date.today()}", "location": "hot"}],
+    )
+
+    packet.write(pkt)
+    grant_skill_xp("funding-finder")
+    log.info("Funding-finder packet written. Found=%d", counts["opportunities_found"])
     return pkt

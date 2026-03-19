@@ -240,7 +240,7 @@ def fetch_adzuna() -> tuple[list, list[str]]:
 
 # ── Main fetch entry point ────────────────────────────────────────────────────
 
-def fetch_all_jobs() -> tuple[list, dict]:
+def fetch_all_jobs() -> tuple[list, dict, list]:
     """
     Fetch from all active sources. Returns (all_listings, source_status).
     source_status maps source name → 'ok' | 'failed' | 'rate_limited'.
