@@ -30,42 +30,42 @@ ROUTING_TABLE: dict[str, list[str]] = {
     # ── Opportunity ──────────────────────────────────────────────────────────
     "hard-filter":           ["ollama:qwen2.5:7b-instruct-q4_K_M",          "deterministic"],
     "job-intake":            ["deterministic"],                              # pure HTTP fetch
-    "funding-finder":        ["ollama:qwen2.5:7b-instruct-q4_K_M",          "gemini"],
+    "funding-finder":        ["ollama:qwen2.5:7b-instruct-q4_K_M",          "groq", "deepseek"],
 
     # ── Trading ──────────────────────────────────────────────────────────────
-    "market-scan":           ["ollama:qwen2.5:7b-instruct-q4_K_M",          "gemini"],
-    "trading-report":        ["ollama:qwen2.5:7b-instruct-q4_K_M",          "gemini"],
+    "market-scan":           ["ollama:qwen2.5:7b-instruct-q4_K_M",          "groq", "deepseek"],
+    "trading-report":        ["ollama:qwen2.5:7b-instruct-q4_K_M",          "groq", "deepseek"],
 
     # ── Personal (health-logger is LOCAL ONLY — never cloud fallback) ────────
-    "health-logger":         ["ollama:llama3.2:3b"],
-    "perf-correlation":      ["ollama:qwen2.5:7b-instruct-q4_K_M"],
-    "burnout-monitor":       ["ollama:qwen2.5:7b-instruct-q4_K_M"],
+    "health-logger":         ["ollama:llama3.2:3b"],                        # LOCAL ONLY
+    "perf-correlation":      ["ollama:qwen2.5:7b-instruct-q4_K_M"],         # LOCAL ONLY
+    "burnout-monitor":       ["ollama:qwen2.5:7b-instruct-q4_K_M"],         # LOCAL ONLY
 
     # ── Dev Automation ───────────────────────────────────────────────────────
-    "repo-monitor":          ["ollama:qwen2.5-coder:7b-instruct-q4_K_M",    "gemini"],
-    "debug-agent":           ["ollama:qwen2.5-coder:14b-instruct-q4_K_M",   "gemini", "claude"],
-    "refactor-scan":         ["ollama:qwen2.5-coder:7b-instruct-q4_K_M",    "gemini"],
-    "doc-update":            ["ollama:qwen2.5-coder:14b-instruct-q4_K_M",   "gemini"],
-    "opsec-scan":            ["ollama:qwen2.5-coder:7b-instruct-q4_K_M",    "gemini"],
+    "repo-monitor":          ["ollama:qwen2.5-coder:7b-instruct-q4_K_M",    "groq", "deepseek"],
+    "debug-agent":           ["ollama:qwen2.5-coder:14b-instruct-q4_K_M",   "groq", "deepseek"],
+    "refactor-scan":         ["ollama:qwen2.5-coder:7b-instruct-q4_K_M",    "groq", "deepseek"],
+    "doc-update":            ["ollama:qwen2.5-coder:14b-instruct-q4_K_M",   "groq", "deepseek"],
+    "opsec-scan":            ["ollama:qwen2.5-coder:7b-instruct-q4_K_M",    "groq", "deepseek"],
 
     # ── Dev Pipeline ─────────────────────────────────────────────────────────
-    "dev-generate":          ["ollama:qwen2.5-coder:7b-instruct-q4_K_M",    "gemini"],
-    "dev-review":            ["ollama:qwen2.5-coder:14b-instruct-q4_K_M",   "gemini"],
+    "dev-generate":          ["ollama:qwen2.5-coder:7b-instruct-q4_K_M",    "groq", "deepseek"],
+    "dev-review":            ["ollama:qwen2.5-coder:14b-instruct-q4_K_M",   "groq", "deepseek"],
     "dev-test":              ["deterministic", "ollama:qwen2.5-coder:7b-instruct-q4_K_M"],
-    "dev-summarize":         ["ollama:qwen2.5:7b-instruct-q4_K_M",          "gemini"],
-    "dev-finalize":          ["ollama:qwen2.5-coder:14b-instruct-q4_K_M",   "claude"],
+    "dev-summarize":         ["ollama:qwen2.5:7b-instruct-q4_K_M",          "groq", "deepseek"],
+    "dev-finalize":          ["ollama:qwen2.5-coder:14b-instruct-q4_K_M",   "groq", "deepseek"],
 
-    # ── Architecture / Escalation (Claude optional) ─────────────────────────
-    "architecture-review":   ["claude", "gemini"],
-    "escalation-reason":     ["claude", "gemini"],
+    # ── Architecture / Escalation — Groq 70B primary, DeepSeek backup ───────
+    "architecture-review":   ["groq", "deepseek", "gemini"],
+    "escalation-reason":     ["groq", "deepseek", "gemini"],
 
     # ── OP-Sec ───────────────────────────────────────────────────────────────
     "device-posture":        ["deterministic"],
     "breach-check":          ["deterministic"],
-    "threat-surface":        ["ollama:qwen2.5-coder:7b-instruct-q4_K_M",    "gemini"],
-    "cred-audit":            ["ollama:qwen2.5-coder:7b-instruct-q4_K_M",    "gemini"],
-    "privacy-scan":          ["ollama:qwen2.5:7b-instruct-q4_K_M",          "gemini"],
-    "security-scan":         ["ollama:qwen2.5-coder:7b-instruct-q4_K_M",    "gemini"],
+    "threat-surface":        ["ollama:qwen2.5-coder:7b-instruct-q4_K_M",    "groq", "deepseek"],
+    "cred-audit":            ["ollama:qwen2.5-coder:7b-instruct-q4_K_M",    "groq", "deepseek"],
+    "privacy-scan":          ["ollama:qwen2.5:7b-instruct-q4_K_M",          "groq", "deepseek"],
+    "security-scan":         ["ollama:qwen2.5-coder:7b-instruct-q4_K_M",    "groq", "deepseek"],
 
     # ── Sentinel (health monitoring) ─────────────────────────────────────────
     "sentinel-health":       ["deterministic"],
@@ -73,12 +73,12 @@ ROUTING_TABLE: dict[str, list[str]] = {
     "agent-health":          ["deterministic"],
 
     # ── Operator Chat ────────────────────────────────────────────────────────
-    "chat-operator":         ["ollama:qwen2.5:7b-instruct-q4_K_M",          "claude"],
+    "chat-operator":         ["ollama:qwen2.5:7b-instruct-q4_K_M",          "groq", "deepseek"],
 
     # ── Digest synthesis ─────────────────────────────────────────────────────
-    "dev-digest":            ["ollama:qwen2.5:7b-instruct-q4_K_M",          "gemini"],
-    "personal-digest":       ["ollama:qwen2.5:7b-instruct-q4_K_M",          "gemini"],
-    "opsec-digest":          ["ollama:qwen2.5:7b-instruct-q4_K_M",          "gemini"],
+    "dev-digest":            ["ollama:qwen2.5:7b-instruct-q4_K_M",          "groq", "deepseek"],
+    "personal-digest":       ["ollama:qwen2.5:7b-instruct-q4_K_M",          "groq", "deepseek"],
+    "opsec-digest":          ["ollama:qwen2.5:7b-instruct-q4_K_M",          "groq", "deepseek"],
 }
 
 
@@ -95,6 +95,14 @@ def _build_provider(key: str) -> BaseProvider:
     if key == "gemini":
         from providers.gemini_provider import GeminiProvider
         return GeminiProvider()
+
+    if key == "groq":
+        from providers.groq_provider import GroqProvider
+        return GroqProvider()
+
+    if key == "deepseek":
+        from providers.deepseek_provider import DeepSeekProvider
+        return DeepSeekProvider()
 
     if key.startswith("ollama:"):
         model = key[len("ollama:"):]
