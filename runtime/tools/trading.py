@@ -14,7 +14,7 @@ from runtime.config import ROOT
 
 log = logging.getLogger(__name__)
 
-AGENT_NETWORK = Path("C:/Users/Matty/agent-network/state")
+AGENT_NETWORK = Path("C:/Users/Tyler/agent-network/state")
 ALPACA_STATE  = AGENT_NETWORK / "alpaca_paper_state.json"
 VIRTUAL_ACCT  = AGENT_NETWORK / "virtual_account.json"
 HOT_DIR       = ROOT / "divisions" / "trading" / "hot"
