@@ -12,6 +12,7 @@ from pathlib import Path
 from runtime.config import SKILL_MODELS
 from runtime.ollama_client import chat, is_available
 from runtime.tools.state import load_health_log, STATE_DIR
+from runtime.tools.trading import load_all_time_trades
 
 log = logging.getLogger(__name__)
 MODEL = SKILL_MODELS["perf-correlation"]
@@ -41,7 +42,35 @@ def run() -> dict:
     # Load state
     health_state  = load_health_log()
     health_entries = _last_n_days(health_state.get("entries", []))
-    trade_sessions = _last_n_days(_load_trade_log())
+
+    # Prefer agent-network's rich historical trade data; fall back to Z_Claw trade-log
+    agent_trades = load_all_time_trades(days=14)
+    if agent_trades:
+        # Convert to session-like format grouped by date for compatibility
+        from collections import defaultdict
+        by_date = defaultdict(list)
+        for t in agent_trades:
+            by_date[t["date"]].append(t)
+        trade_sessions = []
+        for d, trades in sorted(by_date.items()):
+            wins = sum(1 for t in trades if t["result"] == "win")
+            losses = sum(1 for t in trades if t["result"] == "loss")
+            total = len(trades)
+            pnls = [t["pnl"] for t in trades if t.get("pnl") is not None]
+            rs = [t["r_multiple"] for t in trades if t.get("r_multiple") is not None]
+            trade_sessions.append({
+                "date": d,
+                "stats": {
+                    "total_trades": total,
+                    "wins": wins,
+                    "losses": losses,
+                    "win_rate": round(wins / total * 100, 1) if total else None,
+                    "avg_r": round(sum(rs) / len(rs), 2) if rs else None,
+                    "total_pnl": round(sum(pnls), 2) if pnls else None,
+                }
+            })
+    else:
+        trade_sessions = _last_n_days(_load_trade_log())
 
     today_health = next(
         (e for e in health_entries if e.get("date") == today), None
@@ -88,7 +117,7 @@ def run() -> dict:
             "role": "system",
             "content": (
                 "You are the Personal Division orchestrator for J_Claw. "
-                "Analyze the correlation between Matthew's health data and trading performance. "
+                "Analyze the correlation between Tyler's health data and trading performance. "
                 "\n\nRules:"
                 "\n- Only report patterns that appear in ≥3 data points"
                 "\n- Be specific to Matthew's data — no generic health advice"

@@ -12,6 +12,7 @@ from runtime.ollama_client import chat, is_available
 from runtime.skills import trading_report, market_scan
 from runtime import packet
 from runtime.tools.xp import grant_skill_xp
+from runtime.tools.trading import load_cycle_state, load_active_strategy
 
 log   = logging.getLogger(__name__)
 MODEL = SKILL_MODELS["trading-report"]
@@ -114,6 +115,22 @@ def run_trading_report() -> dict:
         summary = _synthesize_trading_session(result, market_pkt)
         status  = result["status"]
 
+    # Enrich with agent-network cycle state
+    cycle = load_cycle_state()
+    active_strat = load_active_strategy()
+    cycle_metrics = {}
+    if cycle:
+        cycle_metrics = {
+            "cycle_number":    cycle.get("cycle_number"),
+            "risk_multiplier": cycle.get("risk_multiplier", 1.0),
+        }
+    if active_strat:
+        cycle_metrics["active_strategy"] = active_strat.get("strategy_name", "")
+        cycle_metrics["strategy_sharpe"]  = active_strat.get("sharpe")
+        cycle_metrics["strategy_win_rate_pct"] = round(
+            (active_strat.get("win_rate") or 0) * 100, 1
+        )
+
     pkt = packet.build(
         division="trading",
         skill="trading-report",
@@ -130,6 +147,7 @@ def run_trading_report() -> dict:
             "total_pnl":      stats.get("total_pnl"),
             "source":         result.get("source", "none"),
             "market_context": bool(market_pkt),
+            **cycle_metrics,
         },
         artifact_refs=[{"bundle_id": "trade-session-today", "location": "hot"}],
         escalate=result.get("escalate", False),

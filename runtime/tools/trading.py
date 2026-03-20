@@ -1,11 +1,12 @@
 """
 Trading data tools — pure Python, no LLM.
-Reads Alpaca paper state files and calculates session stats.
+Reads agent-network state files and calculates session stats.
+Bridges Z_Claw's trading division with the agent-network trading system.
 """
 
 import json
 import logging
-from datetime import datetime, date, timezone
+from datetime import datetime, date, timedelta, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -14,10 +15,13 @@ from runtime.config import ROOT
 
 log = logging.getLogger(__name__)
 
-AGENT_NETWORK = Path("C:/Users/Tyler/agent-network/state")
-ALPACA_STATE  = AGENT_NETWORK / "alpaca_paper_state.json"
-VIRTUAL_ACCT  = AGENT_NETWORK / "virtual_account.json"
-HOT_DIR       = ROOT / "divisions" / "trading" / "hot"
+AGENT_NETWORK_ROOT  = Path("C:/Users/Tyler/agent-network")
+AGENT_NETWORK_STATE = AGENT_NETWORK_ROOT / "state"
+AGENT_NETWORK_ENV   = AGENT_NETWORK_ROOT / ".env"
+
+ALPACA_STATE = AGENT_NETWORK_STATE / "alpaca_paper_state.json"
+VIRTUAL_ACCT = AGENT_NETWORK_STATE / "virtual_account.json"
+HOT_DIR      = ROOT / "divisions" / "trading" / "hot"
 
 
 def _load_state_file(path: Path) -> Optional[dict]:
@@ -33,6 +37,98 @@ def _load_state_file(path: Path) -> Optional[dict]:
 
 def _today_str() -> str:
     return date.today().isoformat()
+
+
+def _read_agent_env() -> dict:
+    """Read agent-network .env for active asset config."""
+    env = {}
+    try:
+        for line in AGENT_NETWORK_ENV.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                k, v = line.split("=", 1)
+                env[k.strip()] = v.strip().strip('"').strip("'")
+    except Exception:
+        pass
+    return env
+
+
+# ── Agent-network cycle state ─────────────────────────────────────────────────
+
+def load_cycle_state() -> Optional[dict]:
+    """
+    Load the agent-network cycle state for the active asset.
+    Contains: active_strategy, trade_log (exits), weekly/monthly reviews,
+    performance_history, risk_multiplier, cycle_number.
+    """
+    env = _read_agent_env()
+    asset_chain = env.get("ASSET_CHAIN", "spx500")
+
+    # Primary: asset-named state file
+    candidate = AGENT_NETWORK_STATE / f"{asset_chain}_cycle_state.json"
+    if not candidate.exists():
+        # Fallback: any *_cycle_state.json, most recently modified
+        files = list(AGENT_NETWORK_STATE.glob("*_cycle_state.json"))
+        if not files:
+            log.warning("No cycle state file found in agent-network/state/")
+            return None
+        candidate = max(files, key=lambda p: p.stat().st_mtime)
+
+    state = _load_state_file(candidate)
+    if state:
+        log.info("Loaded cycle state: %s (cycle %s)", candidate.name, state.get("cycle_number", "?"))
+    return state
+
+
+def load_active_strategy() -> Optional[dict]:
+    """Return the currently active trading strategy from agent-network."""
+    state = load_cycle_state()
+    return state.get("active_strategy") if state else None
+
+
+def load_recent_weekly_reviews(n: int = 4) -> list:
+    """Return the last N weekly performance reviews from agent-network."""
+    state = load_cycle_state()
+    if not state:
+        return []
+    return state.get("weekly_reviews", [])[-n:]
+
+
+def load_recent_monthly_reviews(n: int = 3) -> list:
+    """Return the last N monthly performance reviews from agent-network."""
+    state = load_cycle_state()
+    if not state:
+        return []
+    return state.get("monthly_reviews", [])[-n:]
+
+
+def load_all_time_trades(days: int = 90) -> list:
+    """
+    Load historical exit trades from agent-network cycle state.
+    Used by perf-correlation for long-range health vs trading patterns.
+    Returns list of dicts with 'date', 'pnl', 'r_multiple', 'result', 'strategy_id'.
+    """
+    state = load_cycle_state()
+    if not state:
+        return []
+    cutoff = (date.today() - timedelta(days=days)).isoformat()
+    result = []
+    for t in state.get("trade_log", []):
+        ts = t.get("timestamp", 0)
+        if not ts:
+            continue
+        trade_date = datetime.fromtimestamp(ts / 1000, tz=timezone.utc).date().isoformat()
+        if trade_date >= cutoff:
+            result.append({
+                "date":        trade_date,
+                "pnl":         t.get("pnl", 0),
+                "r_multiple":  t.get("r_multiple", 0),
+                "result":      "win" if (t.get("pnl") or 0) > 0 else "loss",
+                "strategy_id": t.get("strategy_id", ""),
+                "symbol":      t.get("symbol", ""),
+                "reason":      t.get("reason", ""),
+            })
+    return result
 
 
 def load_today_trades() -> tuple[list, str]:
@@ -63,7 +159,22 @@ def load_today_trades() -> tuple[list, str]:
         log.info("Loaded %d trades from virtual_account.json", len(trades))
         return trades, "dry_run"
 
-    log.warning("No Alpaca state files found — trading system not activated")
+    # Last resort: read today's exit trades from cycle state trade_log
+    cycle = load_cycle_state()
+    if cycle:
+        today = _today_str()
+        trades = []
+        for t in cycle.get("trade_log", []):
+            ts = t.get("timestamp", 0)
+            if ts:
+                trade_date = datetime.fromtimestamp(ts / 1000, tz=timezone.utc).date().isoformat()
+                if trade_date == today:
+                    trades.append(t)
+        if trades:
+            log.info("Loaded %d trades from cycle state trade_log", len(trades))
+            return trades, "cycle_state"
+
+    log.warning("No trade data found — trading system not yet activated")
     return [], "none"
 
 

@@ -9,7 +9,8 @@ import logging
 from runtime.config import SKILL_MODELS
 from runtime.tools.trading import (
     load_today_trades, pair_trades, calc_session_stats,
-    save_session, append_to_trade_log
+    save_session, append_to_trade_log, load_active_strategy,
+    load_recent_weekly_reviews,
 )
 from runtime.ollama_client import chat, is_available
 
@@ -103,6 +104,27 @@ def _interpret(stats: dict, trades: list, source: str) -> str:
         for t in trades[:10]
     )
 
+    # Enrich prompt with active strategy context from agent-network
+    strategy_ctx = ""
+    strategy = load_active_strategy()
+    if strategy:
+        strategy_ctx = (
+            f"\nActive strategy: {strategy.get('strategy_name','?')} "
+            f"(backtest win_rate={strategy.get('win_rate',0)*100:.0f}% "
+            f"avg_r={strategy.get('avg_r','?')} sharpe={strategy.get('sharpe','?')})"
+        )
+
+    weekly = load_recent_weekly_reviews(2)
+    weekly_ctx = ""
+    if weekly:
+        last = weekly[-1]
+        weekly_ctx = (
+            f"\nLast weekly review: {last.get('week','?')} — "
+            f"health={last.get('health_tier','?')} "
+            f"pnl={last.get('pnl_pct','?')}% "
+            f"win_rate={last.get('win_rate','?')}"
+        )
+
     messages = [
         {
             "role": "system",
@@ -111,13 +133,14 @@ def _interpret(stats: dict, trades: list, source: str) -> str:
                 "Analyze today's trading session and write a 1–3 sentence interpretation "
                 "for the executive briefing. Be specific: mention win rate, R multiples, "
                 "any patterns across trades, risk discipline, or concerns. "
+                "Compare against the active strategy's backtest projections if available. "
                 "Do not pad. No generic advice."
             ),
         },
         {
             "role": "user",
             "content": (
-                f"Source: {source}\n"
+                f"Source: {source}{strategy_ctx}{weekly_ctx}\n"
                 f"Stats: total={stats.get('total_trades')} wins={stats.get('wins')} "
                 f"losses={stats.get('losses')} win_rate={stats.get('win_rate')}% "
                 f"avg_r={stats.get('avg_r')} best_r={stats.get('best_r')} "
