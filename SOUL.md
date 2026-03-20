@@ -293,7 +293,7 @@ The orchestrator copy is the source of truth for editing and git. The workspace 
 ---
 
 ## Git Commit Directives
-The OpenClaw-Orchestrator repo is at `C:\Users\Tyler\Desktop\J_Claw_Reborn\`.
+The Z_Claw repo is at `C:\Users\Tyler\Desktop\J_Claw_Reborn\`.
 Commit after every verified milestone using this pattern:
 - After a skill is verified working: commit the SKILL.md with message "verify: <skill-name> confirmed working"
 - After any SOUL.md update: commit with message "soul: <description of change>"
