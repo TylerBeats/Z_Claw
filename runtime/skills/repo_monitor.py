@@ -19,11 +19,23 @@ HOT_DIR = ROOT / "divisions" / "dev-automation" / "hot"
 SEVERITY = {"HIGH": 3, "MEDIUM": 2, "LOW": 1}
 
 
+def _gh_exe() -> str:
+    """Resolve gh executable — falls back to full Windows path if not on PATH."""
+    import shutil
+    if shutil.which("gh"):
+        return "gh"
+    # GitHub CLI default install location on Windows
+    candidate = r"C:\Program Files\GitHub CLI\gh.exe"
+    if __import__("os").path.exists(candidate):
+        return candidate
+    return "gh"  # let it fail naturally with a clear error
+
+
 def _gh(*args) -> tuple[str, bool]:
     """Run a gh CLI command. Returns (output, success)."""
     try:
         result = subprocess.run(
-            ["gh"] + list(args),
+            [_gh_exe()] + list(args),
             capture_output=True, text=True, timeout=30
         )
         if result.returncode != 0:
