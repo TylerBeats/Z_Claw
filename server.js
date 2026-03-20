@@ -330,6 +330,71 @@ function handleGrantStatus(grantId, body, res) {
   jsonOk(res, { ok: true, id: grantId, status });
 }
 
+// GET /api/jobs  — returns pending/applied jobs for dashboard
+function handleGetJobs(res) {
+  const apps = readState('applications.json') || { pipeline: [], stats: {} };
+  const pending = apps.pipeline.filter(j => j.status === 'pending_review');
+  const applied = apps.pipeline.filter(j => ['applied','interview','rejected'].includes(j.status));
+  jsonOk(res, { pending, applied, stats: apps.stats });
+}
+
+// GET /api/grants  — returns pending grants for dashboard
+function handleGetGrants(res) {
+  const fp = readState('funding-pipeline.json') || { pipeline: [], stats: {} };
+  const pending = fp.pipeline.filter(g => g.status === 'pending_review');
+  const applied = fp.pipeline.filter(g => g.status === 'applied');
+  jsonOk(res, { pending, applied, stats: fp.stats });
+}
+
+// GET /api/trading/cycle  — returns agent-network cycle state for dashboard
+function handleGetTradingCycle(res) {
+  try {
+    const agentNetworkState = 'C:/Users/Tyler/agent-network/state';
+    const fs2 = require('fs');
+    const path2 = require('path');
+
+    // Find most recent cycle state file
+    let cycleData = null;
+    try {
+      const files = fs2.readdirSync(agentNetworkState)
+        .filter(f => f.endsWith('_cycle_state.json'))
+        .map(f => ({ f, mtime: fs2.statSync(path2.join(agentNetworkState, f)).mtimeMs }))
+        .sort((a, b) => b.mtime - a.mtime);
+      if (files.length) {
+        cycleData = JSON.parse(fs2.readFileSync(path2.join(agentNetworkState, files[0].f), 'utf8'));
+      }
+    } catch(e) {}
+
+    if (!cycleData) return jsonOk(res, { available: false });
+
+    const strat = cycleData.active_strategy || {};
+    const recentTrades = (cycleData.trade_log || []).slice(-10).reverse();
+    const weekly = (cycleData.weekly_reviews || []).slice(-3);
+
+    jsonOk(res, {
+      available: true,
+      cycle_number:     cycleData.cycle_number,
+      risk_multiplier:  cycleData.risk_multiplier,
+      active_strategy: {
+        name:      strat.strategy_name || 'None',
+        sharpe:    strat.sharpe,
+        win_rate:  strat.win_rate ? Math.round(strat.win_rate * 100) : null,
+        avg_r:     strat.avg_r,
+      },
+      recent_trades: recentTrades.map(t => ({
+        symbol:     t.symbol,
+        pnl:        t.pnl,
+        r_multiple: t.r_multiple,
+        reason:     t.reason,
+        date: t.timestamp ? new Date(t.timestamp).toISOString().slice(0,10) : null,
+      })),
+      weekly_reviews: weekly,
+    });
+  } catch(e) {
+    jsonOk(res, { available: false, error: e.message });
+  }
+}
+
 // POST /api/agents/toggle  { division: "opportunity", agent: "job-intake" }
 function handleToggle(body, res) {
   const { division, agent } = body;
@@ -830,6 +895,9 @@ const server = http.createServer(async (req, res) => {
       if (method === 'POST' && reqPath === '/api/control') {
         const body = await parseBody(req); return handleControl(body, res);
       }
+      if (method === 'GET' && reqPath === '/api/jobs') { return handleGetJobs(res); }
+      if (method === 'GET' && reqPath === '/api/grants') { return handleGetGrants(res); }
+      if (method === 'GET' && reqPath === '/api/trading/cycle') { return handleGetTradingCycle(res); }
       if (method === 'POST' && reqPath.startsWith('/api/applications/') && reqPath.endsWith('/status')) {
         const parts = reqPath.split('/');
         const jobId = decodeURIComponent(parts[3]);

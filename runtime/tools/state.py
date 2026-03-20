@@ -75,9 +75,18 @@ def save_applications(state: dict) -> None:
 
 
 def add_to_pipeline(state: dict, jobs: list) -> dict:
-    existing_ids = {j["id"] for j in state["pipeline"]}
-    new = [j for j in jobs if j["id"] not in existing_ids]
-    state["pipeline"].extend(new)
+    existing = {j["id"]: i for i, j in enumerate(state["pipeline"])}
+    for job in jobs:
+        if job["id"] in existing:
+            # Update tier/score fields on existing job (hard_filter enrichment)
+            idx = existing[job["id"]]
+            state["pipeline"][idx].update({
+                k: v for k, v in job.items()
+                if k in ("tier", "score", "composite_score", "scores", "resume", "fit_reason")
+                and v is not None
+            })
+        else:
+            state["pipeline"].append(job)
     state["stats"]["pending_review"] = sum(
         1 for j in state["pipeline"] if j.get("status") == "pending_review"
     )
