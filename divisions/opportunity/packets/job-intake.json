@@ -1,16 +1,16 @@
 {
   "division": "opportunity",
-  "generated_at": "2026-03-21T03:07:33.058528+00:00",
+  "generated_at": "2026-03-21T15:08:47.661085+00:00",
   "skill": "job-intake",
   "status": "success",
-  "summary": "All sourcing platforms (WeWorkRemotely, RemoteOK, Remotive) reported \"ok,\" but Adzuna had partial data. No new jobs were fetched, and there are currently no opportunities in the A, B, C, or D scoring categories.",
+  "summary": "The job intake run from sources including WeWorkRemotely, RemoteOK, and Remotive shows stable health with no critical issues. Notable finds include three new opportunities, but concerns remain due to partial data from Adzuna.",
   "action_items": [],
   "metrics": {
-    "new_jobs_found": 0,
+    "new_jobs_found": 3,
     "tier_a": 0,
     "tier_b": 0,
-    "tier_c": 0,
-    "tier_d": 0,
+    "tier_c": 1,
+    "tier_d": 2,
     "source_status": {
       "WeWorkRemotely": "ok",
       "RemoteOK": "ok",
@@ -31,7 +31,7 @@
   "confidence": null,
   "urgency": "normal",
   "recommended_action": "",
-  "provider_used": "deterministic",
+  "provider_used": "ollama:qwen2.5:7b-instruct-q4_K_M",
   "approval_required": false,
   "approval_status": ""
 }
