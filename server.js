@@ -2227,6 +2227,68 @@ function handleMobileTasks(req, res) {
   }
 }
 
+function handleMobileBattlesToday(res) {
+  try {
+    const fs2 = require('fs');
+    const histPath = path.join(STATE_DIR, 'xp-history.jsonl');
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const SKILL_META = {
+      'trading-report':   { label: 'Trading Report',   icon: '⚡', anim: 'slash'   },
+      'market-scan':      { label: 'Market Scan',      icon: '📡', anim: 'scan'    },
+      'virtual-trader':   { label: 'Virtual Trader',   icon: '⚔', anim: 'slash'   },
+      'job-intake':       { label: 'Job Intake',       icon: '🗡', anim: 'arrow'   },
+      'refactor-scan':    { label: 'Refactor Scan',    icon: '⚙', anim: 'circuit' },
+      'repo-monitor':     { label: 'Repo Monitor',     icon: '⚙', anim: 'circuit' },
+      'dev-digest':       { label: 'Dev Digest',       icon: '⚙', anim: 'circuit' },
+      'doc-update':       { label: 'Doc Update',       icon: '⚙', anim: 'circuit' },
+      'artifact-manager': { label: 'Artifact Manager', icon: '⚙', anim: 'circuit' },
+      'security-scan':    { label: 'Security Scan',    icon: '🛡', anim: 'shield'  },
+      'device-posture':   { label: 'Device Posture',   icon: '🛡', anim: 'shield'  },
+      'breach-check':     { label: 'Breach Check',     icon: '🛡', anim: 'shield'  },
+      'cred-audit':       { label: 'Cred Audit',       icon: '🛡', anim: 'shield'  },
+      'threat-surface':   { label: 'Threat Surface',   icon: '🛡', anim: 'shield'  },
+      'privacy-scan':     { label: 'Privacy Scan',     icon: '🛡', anim: 'shield'  },
+      'opsec-digest':     { label: 'OpSec Digest',     icon: '🛡', anim: 'shield'  },
+      'health-logger':    { label: 'Health Logger',    icon: '💫', anim: 'sparkle' },
+      'perf-correlation': { label: 'Perf Correlation', icon: '💫', anim: 'sparkle' },
+      'burnout-monitor':  { label: 'Burnout Monitor',  icon: '💫', anim: 'sparkle' },
+      'personal-digest':  { label: 'Personal Digest',  icon: '💫', anim: 'sparkle' },
+      'provider-health':  { label: 'Provider Health',  icon: '👁', anim: 'scan'    },
+      'queue-monitor':    { label: 'Queue Monitor',    icon: '👁', anim: 'scan'    },
+    };
+    const DIV_NAMES = {
+      trading: 'Trading', dev_automation: 'Dev', op_sec: 'Op-Sec',
+      opportunity: 'Opportunity', personal: 'Personal', sentinel: 'Sentinel',
+    };
+    let battles = [];
+    try {
+      const lines = fs2.readFileSync(histPath, 'utf8').split('\n').filter(Boolean);
+      battles = lines
+        .map(l => { try { return JSON.parse(l); } catch(e) { return null; } })
+        .filter(e => e && e.event === 'skill_complete' && e.ts && e.ts.slice(0, 10) === todayStr)
+        .map(e => {
+          const meta = SKILL_META[e.skill] || { label: e.skill, icon: '⚔', anim: 'slash' };
+          return {
+            skill:    e.skill,
+            label:    meta.label,
+            icon:     meta.icon,
+            anim:     meta.anim,
+            division: e.div,
+            div_name: DIV_NAMES[e.div] || e.div,
+            xp:       e.xp || 0,
+            multiplier: e.multiplier || 1,
+            streak:   e.streak || 0,
+            time:     e.ts,
+          };
+        })
+        .reverse(); // most recent first
+    } catch(e) {}
+    jsonOk(res, { available: true, battles, date: todayStr });
+  } catch(e) {
+    jsonOk(res, { available: false, error: e.message });
+  }
+}
+
 function handleMobileTrading(res) {
   // Reuse the existing desktop trading handler — same data, mobile just
   // reads fewer fields. The handler already returns structured JSON.
@@ -2568,6 +2630,9 @@ const server = http.createServer(async (req, res) => {
       }
       if (method === 'GET' && reqPath === '/mobile/api/trading') {
         return handleMobileTrading(res);
+      }
+      if (method === 'GET' && reqPath === '/mobile/api/battles/today') {
+        return handleMobileBattlesToday(res);
       }
 
       // ── PIN: server-side PIN storage (works over plain HTTP, no crypto.subtle needed) ──
