@@ -1245,12 +1245,15 @@ function _connectGamifStream() {
         } else if (evt.event === 'rank_up') {
           const label = evt.division ? `⚔ ${evt.division.toUpperCase()} RANK UP` : '⚔ RANK UP';
           showRankUpBanner(`${label}\n${evt.new_rank}`); _playChime();
+          triggerSpriteAnim('rankup');
           if (_onGamifTab) refreshCurrent();
         } else if (evt.event === 'achievement_unlock') {
           showRankUpBanner(`🏆 ${evt.achievement.replace(/_/g,' ').toUpperCase()}`); _playChime();
+          triggerSpriteAnim('achievement');
           if (_onGamifTab) refreshCurrent();
         } else if (evt.event === 'streak_milestone') {
           showToast(`🔥 ${evt.division} streak: ${evt.streak} days!`);
+          triggerSpriteAnim('power-surge');
         } else if (evt.event === 'prestige') {
           showRankUpBanner(`⭐ PRESTIGE ${evt.prestige}\n+${Math.round((evt.multiplier-1)*100)}% PERMANENT XP`);
           _playChime(); if (_onGamifTab) refreshCurrent();
@@ -1262,6 +1265,15 @@ function _connectGamifStream() {
       setTimeout(_connectGamifStream, 20000);
     };
   } catch(e) {}
+}
+
+function triggerSpriteAnim(type) {
+  const sprite = document.getElementById('jclaw-sprite');
+  if (!sprite) return;
+  sprite.classList.remove('sprite-power-surge', 'sprite-achievement', 'sprite-rankup');
+  void sprite.offsetWidth; // force reflow to restart animation
+  sprite.classList.add('sprite-' + type);
+  setTimeout(() => sprite.classList.remove('sprite-' + type), 1500);
 }
 
 function showRankUpBanner(text) {
@@ -1528,9 +1540,42 @@ async function loadStatsTab() {
     }
 
     el.innerHTML = html;
+
+    // ── Today's Battles (async, appended after main render) ──
+    _loadBattles(el);
   } catch(e) {
     el.innerHTML = '<div class="card"><div class="card-body" style="color:var(--subtext)">Failed to load J_Claw</div></div>';
   }
+}
+
+async function _loadBattles(el) {
+  try {
+    const data = await api('/mobile/api/battles/today');
+    const battles = (data.battles || []).filter(b => b.xp > 0 || true); // show all, but XP>0 first
+    if (!battles.length) return;
+
+    let html = `<div class="jclaw-section-title" style="margin-top:4px;">⚔ Today's Battles</div>`;
+    for (const b of battles) {
+      const timeStr = b.time ? new Date(b.time).toLocaleTimeString('en-CA', {hour:'2-digit', minute:'2-digit', hour12:false}) : '';
+      const xpLabel = b.xp > 0 ? `+${b.xp} XP${b.multiplier > 1 ? ' ×'+b.multiplier : ''}` : '—';
+      html += `<div class="battle-card battle-div-${b.division}">
+        <div class="battle-anim-wrap anim-${b.anim}">
+          <div class="battle-anim-icon">${b.icon}</div>
+          <div class="battle-effect"></div>
+        </div>
+        <div class="battle-info">
+          <div class="battle-skill-name">${escHtml(b.label)}</div>
+          <div class="battle-div-label">${escHtml(b.div_name)}${b.streak > 1 ? ` · 🔥${b.streak}d` : ''}</div>
+          ${timeStr ? `<div class="battle-time">${timeStr}</div>` : ''}
+        </div>
+        <div class="battle-xp${b.xp <= 0 ? ' no-xp' : ''}">${xpLabel}</div>
+      </div>`;
+    }
+
+    const section = document.createElement('div');
+    section.innerHTML = html;
+    el.appendChild(section);
+  } catch(e) {}
 }
 
 // ── Toast ─────────────────────────────────────────────────
