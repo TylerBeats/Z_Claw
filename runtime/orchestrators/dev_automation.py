@@ -2,7 +2,7 @@
 Dev Automation Division Orchestrator — code-specialized model routing.
 Skills: repo-monitor, refactor-scan, security-scan → Coder 7B (local).
         debug-agent, doc-update → Coder 14B (friend's 9070 XT, Coder 7B fallback).
-Orchestrator synthesis (dev-digest) → Llama 3.1 8B (local prose, not code analysis).
+Orchestrator synthesis (dev-digest) → Qwen2.5 7B (local prose, not code analysis).
 """
 
 import logging

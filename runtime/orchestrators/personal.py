@@ -1,5 +1,5 @@
 """
-Personal Division Orchestrator — LLM agent (Llama 3.1 8B, strictly local).
+Personal Division Orchestrator — LLM agent (Qwen2.5 7B, strictly local).
 Health data never leaves the machine — no external API calls, ever.
 The orchestrator synthesizes across health, performance, and burnout signals
 to give J_Claw a single coherent picture of Matthew's daily state.

@@ -27,7 +27,7 @@ OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
 # ── Ollama models (all run on your 9070 XT via ROCm) ─────────────────────────
 # Tier 1 (7B/8B) — fast, daily workhorses; Tier 2 (14B) — deep reasoning only
 MODEL_7B        = os.getenv("MODEL_7B",        "qwen2.5:7b-instruct-q4_K_M")
-MODEL_8B        = os.getenv("MODEL_8B",        "llama3.2:3b")
+MODEL_8B        = os.getenv("MODEL_8B",        "qwen2.5:7b-instruct-q4_K_M")
 MODEL_CODER_7B  = os.getenv("MODEL_CODER_7B",  "qwen2.5-coder:7b-instruct-q4_K_M")
 MODEL_CODER_14B = os.getenv("MODEL_CODER_14B", "qwen2.5-coder:14b-instruct-q4_K_M")
 MODEL_14B_HOST  = os.getenv("MODEL_14B_HOST",  "http://localhost:11434")
