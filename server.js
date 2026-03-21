@@ -17,6 +17,9 @@ const PORT      = 3000;
 // ── Mobile SSE subscribers ──
 const _mobileAlertSubscribers = new Set();
 
+// ── Gamification SSE subscribers (PC + mobile) ──
+const _gamifSubscribers = new Set();
+
 // ── Pending coding approvals: sessionId → { preSessionHead, filesChanged, diffStat, timer } ──
 const _pendingCodingApprovals = new Map();
 
@@ -183,8 +186,15 @@ function rankForLevel(level) {
   return (BASE_RANKS.find(r => level >= r.minLevel && level <= r.maxLevel) || BASE_RANKS[0]).title;
 }
 
+// XP required to advance FROM each level (index = level).
+// Calibrated for ~2 months to reach Level 10 at 100-150 XP/day.
+// Total XP to reach Level 10: 7,480 XP.
+const XP_PER_LEVEL = [0, 100, 180, 300, 450, 650, 900, 1200, 1600, 2100];
+
 function xpForNextLevel(level) {
-  return level * 100;
+  if (level < XP_PER_LEVEL.length) return XP_PER_LEVEL[level];
+  // Level 10+: geometric growth (~30% harder per level)
+  return Math.round(2100 * Math.pow(1.3, level - 9));
 }
 
 function applyXP(stats, amount) {

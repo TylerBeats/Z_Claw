@@ -167,7 +167,15 @@
     {
       "role": "assistant",
       "content": "No change since last update. Still waiting on one thing:\n\n## Still Pending Tyler\n\n**`pm2 restart openclaw`** -- activates both:\n1. Groq fallback (so Ollama 500s don't break mobile chat)\n2. Trading division fix (so AI in chat can actually see trade data)\n\n## Everything Else\n\n- Biometric auth: ready to build (Tailscale HTTPS is live)\n- Divisions: all running normally per status panel\n- Ollama: still intermittently 500ing\n\nHas Tyler had a chance to restart PM2 yet?"
+    },
+    {
+      "role": "user",
+      "content": "It’s done!"
+    },
+    {
+      "role": "assistant",
+      "content": "Both fixes are now live:\n\n- **Groq fallback** -- Ollama 500s will silently switch to Groq instead of erroring\n- **Trading division** -- mobile chat AI can now see actual trade data\n\nGive mobile J_Claw chat a test message -- ideally when Ollama is busy so you can see the Groq fallback kick in with the ☁️ banner. What's next?"
     }
   ],
-  "last_updated": "2026-03-21T07:57:22.509Z"
+  "last_updated": "2026-03-21T07:57:46.763Z"
 }
