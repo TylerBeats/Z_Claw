@@ -1048,9 +1048,6 @@ async function handleMobileChatCoding(body, res) {
   try {
     const headResult = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: ROOT, encoding: 'utf8', timeout: 5000 });
     preSessionHead = (headResult.stdout || '').trim();
-    // Commit any uncommitted changes so we have a clean baseline to diff against
-    spawnSync('git', ['add', '-A'], { cwd: ROOT, timeout: 8000 });
-    spawnSync('git', ['commit', '--allow-empty-message', '-m', `pre-mobile-session ${sessionId}`], { cwd: ROOT, timeout: 15000 });
   } catch(e) {}
 
   // ── Spawn Claude in restricted agent mode (no Bash, no shell execution) ──
@@ -1112,8 +1109,10 @@ async function handleMobileChatCoding(body, res) {
       let diffStat = '', diffFull = '', filesChanged = 0, sensitiveHit = [];
 
       if (preSessionHead) {
-        const statResult = spawnSync('git', ['diff', preSessionHead, '--stat'], { cwd: ROOT, encoding: 'utf8', timeout: 15000 });
-        const fullResult = spawnSync('git', ['diff', preSessionHead, '--'], { cwd: ROOT, encoding: 'utf8', timeout: 20000 });
+        // Stage all changes including new files so diff captures everything Claude touched
+        spawnSync('git', ['add', '-A'], { cwd: ROOT, timeout: 8000 });
+        const statResult = spawnSync('git', ['diff', '--cached', preSessionHead, '--stat'], { cwd: ROOT, encoding: 'utf8', timeout: 15000 });
+        const fullResult = spawnSync('git', ['diff', '--cached', preSessionHead, '--'], { cwd: ROOT, encoding: 'utf8', timeout: 20000 });
         diffStat = (statResult.stdout || '').slice(0, 3000);
         diffFull = fullResult.stdout || '';
         filesChanged = (diffFull.match(/^diff --git/gm) || []).length;
@@ -1248,20 +1247,20 @@ const _mobileChallenges = new Map();
 
 function issueMobileChallenge(action) {
   const id      = crypto.randomBytes(16).toString('hex');
-  const expires = Date.now() + 30_000;
+  const expires = Date.now() + 90_000;
   _mobileChallenges.set(id, { action, expires, used: false });
   // Clean up expired entries (avoid unbounded growth)
   for (const [k, v] of _mobileChallenges) {
     if (v.expires < Date.now()) _mobileChallenges.delete(k);
   }
-  return { challenge_id: id, expires_in: 30, action };
+  return { challenge_id: id, expires_in: 90, action };
 }
 
 function consumeMobileChallenge(id, action) {
   const ch = _mobileChallenges.get(id);
   if (!ch)       return { ok: false, reason: 'Unknown or expired challenge' };
   if (ch.used)   return { ok: false, reason: 'Challenge already used' };
-  if (ch.expires < Date.now()) return { ok: false, reason: 'Challenge expired (30s window)' };
+  if (ch.expires < Date.now()) return { ok: false, reason: 'Challenge expired (90s window)' };
   if (ch.action !== action)    return { ok: false, reason: `Challenge is for "${ch.action}", not "${action}"` };
   ch.used = true;
   return { ok: true };
@@ -1381,10 +1380,14 @@ function mobileApproveCoding(sessionId) {
   if (!pending) return { ok: false, message: 'Session not found or already resolved' };
   clearTimeout(pending.timer);
   _pendingCodingApprovals.delete(sessionId);
-  logActivity('OP_SEC', `[MOBILE] Coding session ${sessionId} approved — ${pending.filesChanged} file(s) kept`, 'green');
+  // Commit the staged changes (staged by close handler's git add -A)
+  try {
+    spawnSync('git', ['commit', '-m', `mobile-session ${sessionId} [approved]`], { cwd: ROOT, timeout: 15000 });
+  } catch(e) {}
+  logActivity('OP_SEC', `[MOBILE] Coding session ${sessionId} approved — ${pending.filesChanged} file(s) committed`, 'green');
   mobileAuditLog({ action: 'coding_approved', session_id: sessionId, files_changed: pending.filesChanged });
   _broadcastCodingEvent({ type: 'coding_resolved', session_id: sessionId, decision: 'approved' });
-  return { ok: true, message: `Changes approved — ${pending.filesChanged} file(s) kept` };
+  return { ok: true, message: `Changes approved — ${pending.filesChanged} file(s) committed` };
 }
 
 function mobileRevertCoding(sessionId) {
@@ -1394,6 +1397,7 @@ function mobileRevertCoding(sessionId) {
   _pendingCodingApprovals.delete(sessionId);
   try {
     spawnSync('git', ['reset', '--hard', pending.preSessionHead], { cwd: ROOT, timeout: 15000 });
+    spawnSync('git', ['clean', '-fd'], { cwd: ROOT, timeout: 10000 });
     logActivity('OP_SEC', `[MOBILE] Coding session ${sessionId} reverted — reset to ${pending.preSessionHead.slice(0,7)}`, 'yellow');
     mobileAuditLog({ action: 'coding_reverted', session_id: sessionId, reverted_to: pending.preSessionHead });
   } catch(e) {
@@ -2073,7 +2077,29 @@ const server = http.createServer(async (req, res) => {
         return handleMobileTrading(res);
       }
 
-      // ── Challenge: issue a 30s single-use token for Operator actions ───────
+      // ── PIN: server-side PIN storage (works over plain HTTP, no crypto.subtle needed) ──
+      if (method === 'POST' && reqPath === '/mobile/api/pin/set') {
+        const body = await parseBody(req);
+        const hash = (body.hash || '').trim();
+        if (!hash || hash.length < 8) return jsonError(res, 400, 'Invalid PIN hash');
+        try {
+          writeState('mobile-pin.json', { hash, updated: new Date().toISOString() });
+          return jsonOk(res, { ok: true, message: 'PIN updated' });
+        } catch(e) {
+          return jsonError(res, 500, 'Failed to save PIN: ' + e.message);
+        }
+      }
+
+      if (method === 'POST' && reqPath === '/mobile/api/pin/verify') {
+        const body = await parseBody(req);
+        const hash = (body.hash || '').trim();
+        const stored = readState('mobile-pin.json');
+        if (!stored || !stored.hash) return jsonError(res, 400, 'No PIN configured — set one in Settings');
+        if (stored.hash === hash) return jsonOk(res, { ok: true });
+        return jsonOk(res, { ok: false, reason: 'Incorrect PIN' });
+      }
+
+      // ── Challenge: issue a 90s single-use token for Operator actions ───────
       if (method === 'GET' && reqPath === '/mobile/api/challenge') {
         const params  = new url.URL('http://x' + req.url).searchParams;
         const action  = params.get('action') || '';
