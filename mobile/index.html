@@ -1045,6 +1045,7 @@ function init() {
 
 let _alertSSE = null;
 let _alertSSERetry = null;
+let _approvalCount = 0; // tracked globally so SSE badge includes approvals
 
 function _connectAlertStream() {
   if (_alertSSE) { try { _alertSSE.close(); } catch(e) {} }
@@ -1057,7 +1058,7 @@ function _connectAlertStream() {
         const data = JSON.parse(e.data);
         if (data.type === 'init' || data.type === 'update') {
           const alerts = data.alerts || [];
-          updateBadge('alert-badge', alerts.length);
+          updateBadge('alert-badge', alerts.length + _approvalCount);
           if (_currentTab === 'alerts') loadAlerts(true);
         }
         if (data.type === 'coding_approval') {
@@ -1502,7 +1503,7 @@ async function loadOverview(silent = false) {
 
     const alertCount    = (d.alerts || []).length;
     const approvalCount = (d.approvals || []).length;
-    updateBadge('alert-badge', alertCount);
+    updateBadge('alert-badge', alertCount + approvalCount);
 
     let html = '';
 
@@ -1678,6 +1679,7 @@ async function loadAlerts(silent = false) {
     const alerts    = alertsData.alerts    || [];
     const approvals = approvalsData.approvals || [];
 
+    _approvalCount = approvals.length; // keep global in sync for SSE badge
     updateBadge('alert-badge', alerts.length + approvals.length);
 
     let html = '';

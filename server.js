@@ -1955,7 +1955,7 @@ function _collectMobileAlerts() {
             division:         div,
             skill:            id,
             message:          pkt.escalation_reason,
-            severity:         'HIGH',
+            severity:         /\bHIGH\b/i.test(pkt.escalation_reason) ? 'HIGH' : /\bMEDIUM\b/i.test(pkt.escalation_reason) ? 'MEDIUM' : /\bLOW\b/i.test(pkt.escalation_reason) ? 'LOW' : 'HIGH',
             generated_at:     pkt.generated_at || null,
           });
         }
