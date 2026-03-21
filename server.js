@@ -7,12 +7,15 @@ const fs     = require('fs');
 const path   = require('path');
 const url    = require('url');
 const crypto = require('crypto');
-const { spawn } = require('child_process');
+const { spawn, spawnSync } = require('child_process');
 const cron   = require('node-cron');
 
 const ROOT      = __dirname;
 const STATE_DIR = path.join(ROOT, 'state');
 const PORT      = 3000;
+
+// ── Mobile SSE subscribers ──
+const _mobileAlertSubscribers = new Set();
 
 // ── Load .env into process.env ──
 function loadEnv() {
@@ -162,6 +165,7 @@ const SKILL_TASK_MAP = {
   'artifact-manager': { divState: 'dev_automation', division: 'dev-automation', task: 'artifact-manager' },
   'dev-digest':       { divState: 'dev_automation', division: 'dev-automation', task: 'dev-digest'       },
   // OP-Sec Division
+  'mobile-audit-review': { divState: 'op_sec', division: 'op-sec', task: 'mobile-audit-review' },
   'device-posture':   { divState: 'op_sec', division: 'op-sec', task: 'device-posture'  },
   'breach-check':     { divState: 'op_sec', division: 'op-sec', task: 'breach-check'    },
   'threat-surface':   { divState: 'op_sec', division: 'op-sec', task: 'threat-surface'  },
@@ -913,6 +917,274 @@ function handleChatClear(res) {
   jsonOk(res, { ok: true });
 }
 
+// ── Mobile Chat: J_Claw mode (Ollama only — no Claude fallback) ───────────────
+async function handleMobileChatJClaw(body, res) {
+  const message = (body.message || '').trim();
+  if (!message) return jsonError(res, 400, 'message required');
+
+  let soul = '';
+  try { soul = fs.readFileSync(path.join(ROOT, 'SOUL.md'), 'utf8'); } catch(e) {}
+  soul = stripSoulForChat(soul);
+  const context = buildContext();
+  const systemPrompt = soul + '\n\nIMPORTANT: You are speaking with Matthew — the creator of J_Claw, accessing from mobile. Tyler is Matthew\'s partner who uses the desktop.\n\n---\n\n' + context;
+
+  const hist = readState('chat-history.json') || { messages: [], last_updated: null };
+  let history = (hist.messages || []).slice(-20);
+  if (history.length > 0 && history[0].role !== 'user') history = history.slice(1);
+
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Access-Control-Allow-Origin': '*',
+    'Connection': 'keep-alive',
+  });
+
+  const ollamaHost = process.env.OLLAMA_HOST || 'http://localhost:11434';
+  const chatModel  = process.env.MODEL_7B || 'qwen2.5:7b-instruct-q4_K_M';
+  const ollamaMessages = [
+    { role: 'system', content: systemPrompt },
+    ...history.map(m => ({ role: m.role, content: m.content })),
+    { role: 'user', content: message },
+  ];
+
+  try {
+    await new Promise((resolve, reject) => {
+      const ollamaUrl = new url.URL(ollamaHost + '/api/chat');
+      const lib = ollamaUrl.protocol === 'https:' ? https : http;
+      const reqBody = JSON.stringify({ model: chatModel, messages: ollamaMessages, stream: true });
+      const req = lib.request({
+        hostname: ollamaUrl.hostname, port: ollamaUrl.port || 80,
+        path: ollamaUrl.pathname, method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(reqBody) },
+      }, (ollamaRes) => {
+        if (ollamaRes.statusCode !== 200) { reject(new Error(`Ollama HTTP ${ollamaRes.statusCode}`)); return; }
+        let fullOllamaResponse = '';
+        let buf = '';
+        ollamaRes.on('data', chunk => {
+          buf += chunk.toString();
+          const lines = buf.split('\n');
+          buf = lines.pop();
+          for (const line of lines) {
+            if (!line.trim()) continue;
+            try {
+              const evt = JSON.parse(line);
+              const text = evt.message && evt.message.content;
+              if (text) {
+                fullOllamaResponse += text;
+                res.write(`data: ${JSON.stringify({ type: 'content_block_delta', delta: { type: 'text_delta', text } })}\n\n`);
+              }
+            } catch(e) {}
+          }
+        });
+        ollamaRes.on('end', () => {
+          if (fullOllamaResponse) {
+            try {
+              const hist2 = readState('chat-history.json') || { messages: [], last_updated: null };
+              hist2.messages.push({ role: 'user', content: message });
+              hist2.messages.push({ role: 'assistant', content: fullOllamaResponse });
+              if (hist2.messages.length > 100) hist2.messages = hist2.messages.slice(-100);
+              hist2.last_updated = new Date().toISOString();
+              writeState('chat-history.json', hist2);
+            } catch(e) {}
+          }
+          resolve();
+        });
+        ollamaRes.on('error', reject);
+      });
+      req.on('error', reject);
+      req.setTimeout(60000, () => { req.destroy(); reject(new Error('timeout')); });
+      req.write(reqBody);
+      req.end();
+    });
+  } catch(e) {
+    const errEvt = { type: 'content_block_delta', delta: { type: 'text_delta', text: `J_Claw (local AI) is offline: ${e.message}` } };
+    res.write(`data: ${JSON.stringify(errEvt)}\n\n`);
+  }
+  res.end();
+}
+
+// ── Mobile Chat: Coding mode (Claude CLI only — no Ollama) ────────────────────
+async function handleMobileChatCoding(body, res) {
+  const message = (body.message || '').trim();
+  if (!message) return jsonError(res, 400, 'message required');
+
+  const context = buildContext();
+  const systemPrompt = `You are Claude, an AI coding assistant helping Matthew manage and improve J_Claw — a personal AI orchestration system running on Windows 11. Matthew is the creator of J_Claw and is accessing from mobile. Tyler is Matthew's partner who uses the desktop. You have full context about the system below. Help with code changes, debugging, planning, and answering questions. You CAN make real file edits using your Edit, Write, Read, Glob, and Grep tools. Be direct and concise.\n\n${context}`;
+
+  const hist = readState('coding-history.json') || { messages: [], last_updated: null };
+  let history = (hist.messages || []).slice(-20);
+  if (history.length > 0 && history[0].role !== 'user') history = history.slice(1);
+
+  let conversationText = '';
+  history.forEach(m => {
+    conversationText += (m.role === 'user' ? 'Matthew: ' : 'Claude: ') + m.content + '\n\n';
+  });
+  conversationText += 'Matthew: ' + message;
+
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Access-Control-Allow-Origin': '*',
+    'Connection': 'keep-alive',
+  });
+
+  const sanitize = s => s.replace(/[^\x00-\x7F]/g, c => {
+    const map = { '\u2190':'<-','\u2192':'->','\u2014':'--','\u2013':'-','\u2018':"'",'\u2019':"'",'\u201c':'"','\u201d':'"','\u2022':'*','\u2026':'...' };
+    return map[c] || '';
+  });
+
+  const model = process.env.CLAUDE_MODEL || 'claude-sonnet-4-6';
+  const claudeCli = 'C:\\Users\\Tyler\\AppData\\Roaming\\npm\\node_modules\\@anthropic-ai\\claude-code\\cli.js';
+  const childEnv = { ...process.env };
+  delete childEnv.ANTHROPIC_API_KEY;
+  childEnv.PATH = (childEnv.PATH || '') + ';C:\\Users\\Tyler\\AppData\\Roaming\\npm';
+
+  // ── Git checkpoint: capture HEAD before session for rollback reference ──
+  const sessionId = crypto.randomBytes(6).toString('hex');
+  let preSessionHead = '';
+  try {
+    const headResult = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: ROOT, encoding: 'utf8', timeout: 5000 });
+    preSessionHead = (headResult.stdout || '').trim();
+    // Commit any uncommitted changes so we have a clean baseline to diff against
+    spawnSync('git', ['add', '-A'], { cwd: ROOT, timeout: 8000 });
+    spawnSync('git', ['commit', '--allow-empty-message', '-m', `pre-mobile-session ${sessionId}`], { cwd: ROOT, timeout: 15000 });
+  } catch(e) {}
+
+  // ── Spawn Claude in restricted agent mode (no Bash, no shell execution) ──
+  const claudeArgs = [
+    claudeCli,
+    '--allowedTools', 'Edit,Read,Write,Glob,Grep',
+    '--system-prompt', sanitize(systemPrompt),
+    '--model', model,
+    '--output-format', 'stream-json',
+    '--verbose',
+  ];
+  const debugLog = path.join(ROOT, 'logs', 'chat-debug.log');
+  try { fs.appendFileSync(debugLog, `\n[${new Date().toISOString()}] coding-mode spawn (agent, session=${sessionId})\n`); } catch(e) {}
+
+  const claude = spawn(process.execPath, claudeArgs, {
+    stdio: ['pipe', 'pipe', 'pipe'],
+    windowsHide: true,
+    env: childEnv,
+    cwd: ROOT,
+  });
+  let fullResponse = '', stdoutBuf = '', stderrBuf = '';
+
+  claude.stdin.write(sanitize(conversationText), 'utf8');
+  claude.stdin.end();
+
+  claude.stdout.on('data', chunk => {
+    const s = chunk.toString();
+    stdoutBuf += s;
+    try { fs.appendFileSync(debugLog, `[coding-stdout] ${s}`); } catch(e) {}
+    const lines = stdoutBuf.split('\n');
+    stdoutBuf = lines.pop();
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      try {
+        const evt = JSON.parse(line);
+        if (evt.type === 'stream_event' && evt.event?.type === 'content_block_delta' && evt.event.delta?.type === 'text_delta') {
+          const text = evt.event.delta.text;
+          fullResponse += text;
+          res.write(`data: ${JSON.stringify({ type: 'content_block_delta', delta: { type: 'text_delta', text } })}\n\n`);
+        }
+        if (evt.type === 'assistant' && evt.message?.content) {
+          for (const block of evt.message.content) {
+            if (block.type === 'text' && block.text) {
+              res.write(`data: ${JSON.stringify({ type: 'content_block_delta', delta: { type: 'text_delta', text: block.text } })}\n\n`);
+            }
+          }
+        }
+        if (evt.type === 'result' && evt.result) fullResponse = evt.result;
+      } catch(e) {}
+    }
+  });
+
+  claude.stderr.on('data', chunk => { stderrBuf += chunk.toString(); });
+
+  claude.on('close', code => {
+    // ── Post-session: capture diff and audit ──
+    try {
+      const SENSITIVE_FILES = ['.env', 'SOUL.md', 'BOOT.md'];
+      let diffStat = '', diffFull = '', filesChanged = 0, sensitiveHit = [];
+
+      if (preSessionHead) {
+        const statResult = spawnSync('git', ['diff', preSessionHead, '--stat'], { cwd: ROOT, encoding: 'utf8', timeout: 15000 });
+        const fullResult = spawnSync('git', ['diff', preSessionHead, '--'], { cwd: ROOT, encoding: 'utf8', timeout: 20000 });
+        diffStat = (statResult.stdout || '').slice(0, 3000);
+        diffFull = fullResult.stdout || '';
+        filesChanged = (diffFull.match(/^diff --git/gm) || []).length;
+        sensitiveHit = SENSITIVE_FILES.filter(f => diffFull.includes(`b/${f}`) || diffFull.includes(`a/${f}`));
+      }
+
+      mobileAuditLog({
+        action:          'coding_session',
+        session_id:      sessionId,
+        message_preview: message.slice(0, 100),
+        files_changed:   filesChanged,
+        diff_stat:       diffStat,
+        sensitive_files: sensitiveHit,
+        exit_code:       code,
+      });
+
+      // ── Tripwire: sensitive file touched → write OP-Sec alert + SSE push ──
+      if (sensitiveHit.length > 0) {
+        try {
+          const alertPkt = {
+            skill:             'mobile-audit',
+            status:            'alert',
+            escalate:          true,
+            escalation_reason: `MOBILE CODING SESSION touched sensitive file(s): ${sensitiveHit.join(', ')} — session ${sessionId}`,
+            summary:           `Mobile session ${sessionId} modified ${sensitiveHit.join(', ')}. Review git diff immediately.`,
+            generated_at:      new Date().toISOString(),
+          };
+          const pktPath = path.join(ROOT, 'divisions', 'op-sec', 'packets', 'mobile-audit.json');
+          fs.writeFileSync(pktPath, JSON.stringify(alertPkt, null, 2));
+        } catch(e) {}
+        _broadcastAlertUpdate();
+      }
+
+      // MEDIUM alert: more than 15 files changed
+      if (filesChanged > 15) {
+        try {
+          const warnPkt = {
+            skill:             'mobile-audit',
+            status:            'warning',
+            escalate:          true,
+            escalation_reason: `MOBILE CODING SESSION changed ${filesChanged} files in session ${sessionId} — unusually large change`,
+            summary:           `Mobile session ${sessionId} changed ${filesChanged} files. Review diff: git diff ${preSessionHead}`,
+            generated_at:      new Date().toISOString(),
+          };
+          const pktPath = path.join(ROOT, 'divisions', 'op-sec', 'packets', 'mobile-audit.json');
+          if (!fs.existsSync(pktPath)) fs.writeFileSync(pktPath, JSON.stringify(warnPkt, null, 2));
+        } catch(e) {}
+        _broadcastAlertUpdate();
+      }
+    } catch(e) {}
+
+    if (fullResponse) {
+      try {
+        const hist2 = readState('coding-history.json') || { messages: [], last_updated: null };
+        hist2.messages.push({ role: 'user', content: message });
+        hist2.messages.push({ role: 'assistant', content: fullResponse });
+        if (hist2.messages.length > 100) hist2.messages = hist2.messages.slice(-100);
+        hist2.last_updated = new Date().toISOString();
+        writeState('coding-history.json', hist2);
+      } catch(e) {}
+    }
+    if (!fullResponse) {
+      const errText = code !== 0 ? `Claude CLI error (exit ${code}): ${stderrBuf.slice(0,200)}` : 'No response received.';
+      res.write(`data: ${JSON.stringify({ type: 'content_block_delta', delta: { type: 'text_delta', text: errText } })}\n\n`);
+    }
+    res.end();
+  });
+
+  claude.on('error', err => {
+    res.write(`data: ${JSON.stringify({ type: 'content_block_delta', delta: { type: 'text_delta', text: 'Spawn error: ' + err.message } })}\n\n`);
+    res.end();
+  });
+}
+
 // ── Response helpers ──
 function jsonOk(res, data) {
   res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
@@ -1059,6 +1331,7 @@ function mobileAckAlert(alertId, division) {
   // suppresses ack'd alerts via the dismissedAlerts client-side set.
   // Here we record the ack in the activity log so desktop also sees it.
   logActivity(division || 'SYS', `[MOBILE] Alert ack'd: ${alertId}`, 'yellow');
+  _broadcastAlertUpdate();
   return { ok: true, message: 'Alert acknowledged' };
 }
 
@@ -1115,11 +1388,17 @@ function handleMobileOverview(res) {
     const apps      = readState('applications.json')       || { applications: [] };
     const briefing  = readState('briefing.json')           || {};
 
-    // Division health
+    // Division health + packet metrics
+    const divMetrics = _readDivisionMetrics();
     const divisions = {};
-    for (const [key, val] of Object.entries(orchState)) {
+    const orchDivisions = orchState.divisions || orchState;
+    for (const [key, val] of Object.entries(orchDivisions)) {
       if (typeof val === 'object' && val !== null && !Array.isArray(val)) {
-        divisions[key] = { status: val.status || 'unknown', last_run: val.last_run || null };
+        divisions[key] = {
+          status:   val.status   || 'unknown',
+          last_run: val.last_run || null,
+          metrics:  divMetrics[key] || {},
+        };
       }
     }
 
@@ -1166,6 +1445,80 @@ function handleMobileAlerts(res) {
   }
 }
 
+function _broadcastAlertUpdate() {
+  if (_mobileAlertSubscribers.size === 0) return;
+  try {
+    const payload = JSON.stringify({ type: 'update', alerts: _collectMobileAlerts() });
+    for (const res of _mobileAlertSubscribers) {
+      try { res.write(`data: ${payload}\n\n`); } catch(e) { _mobileAlertSubscribers.delete(res); }
+    }
+  } catch(e) {}
+}
+
+function handleMobileAlertStream(req, res, token) {
+  res.writeHead(200, {
+    'Content-Type':  'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection':    'keep-alive',
+    'X-Accel-Buffering': 'no',
+  });
+  // Send initial state
+  try {
+    const init = JSON.stringify({ type: 'init', alerts: _collectMobileAlerts() });
+    res.write(`data: ${init}\n\n`);
+  } catch(e) {}
+  // Heartbeat every 25s to prevent proxy timeouts
+  const hb = setInterval(() => { try { res.write(': ping\n\n'); } catch(e) {} }, 25000);
+  _mobileAlertSubscribers.add(res);
+  req.on('close', () => {
+    clearInterval(hb);
+    _mobileAlertSubscribers.delete(res);
+  });
+}
+
+function handleMobileDivisions(res) {
+  try {
+    const readPkt = (div, skill) => {
+      try {
+        const p = path.join(ROOT, 'divisions', div, 'packets', skill + '.json');
+        if (!fs.existsSync(p)) return null;
+        const d = JSON.parse(fs.readFileSync(p, 'utf8'));
+        return { summary: d.summary, metrics: d.metrics, action_items: d.action_items, status: d.status, generated_at: d.generated_at };
+      } catch(e) { return null; }
+    };
+
+    return jsonOk(res, {
+      opportunity: {
+        job_intake:     readPkt('opportunity', 'job-intake'),
+        funding_finder: readPkt('opportunity', 'funding-finder'),
+      },
+      personal: {
+        health_logger:   readPkt('personal', 'health-logger'),
+        burnout_monitor: readPkt('personal', 'burnout-monitor'),
+        perf_correlation: readPkt('personal', 'perf-correlation'),
+      },
+      dev_automation: {
+        repo_monitor:  readPkt('dev-automation', 'repo-monitor'),
+        refactor_scan: readPkt('dev-automation', 'refactor-scan'),
+        doc_update:    readPkt('dev-automation', 'doc-update'),
+        dev_digest:    readPkt('dev-automation', 'dev-digest'),
+        artifact_manager: readPkt('dev-automation', 'artifact-manager'),
+      },
+      op_sec: {
+        device_posture: readPkt('op-sec', 'device-posture'),
+        threat_surface: readPkt('op-sec', 'threat-surface'),
+        breach_check:   readPkt('op-sec', 'breach-check'),
+        cred_audit:     readPkt('op-sec', 'cred-audit'),
+        security_scan:  readPkt('op-sec', 'security-scan'),
+        privacy_scan:   readPkt('op-sec', 'privacy-scan'),
+        opsec_digest:   readPkt('op-sec', 'opsec-digest'),
+      },
+    });
+  } catch(e) {
+    return jsonError(res, 500, e.message);
+  }
+}
+
 function _collectMobileAlerts() {
   const alerts = [];
   const packetDirs = ['op-sec', 'trading', 'opportunity', 'dev-automation', 'personal', 'sentinel'];
@@ -1190,6 +1543,97 @@ function _collectMobileAlerts() {
     }
   }
   return alerts;
+}
+
+// ── Division packet metrics reader ────────────────────────────────────────────
+function _readDivisionMetrics() {
+  const m = {};
+
+  // Trading — reads agent-network cycle state
+  try {
+    const anState = 'C:/Users/Tyler/agent-network/state';
+    const files = fs.readdirSync(anState)
+      .filter(f => f.endsWith('_cycle_state.json'))
+      .map(f => ({ f, mtime: fs.statSync(path.join(anState, f)).mtimeMs }))
+      .sort((a, b) => b.mtime - a.mtime);
+    if (files.length) {
+      const cs = JSON.parse(fs.readFileSync(path.join(anState, files[0].f), 'utf8'));
+      const s = cs.active_strategy || {};
+      m.trading = {
+        cycle_number:  cs.cycle_number,
+        strategy_name: s.strategy_name || 'None',
+        win_rate:      s.win_rate != null ? Math.round(s.win_rate * 100) : null,
+        sharpe:        s.sharpe,
+        rr_ratio:         s.rr_ratio,
+        rr_display:       s.rr_display,
+        max_drawdown_pct: s.max_drawdown_pct,
+      };
+    }
+  } catch(e) {}
+
+  // Opportunity
+  try {
+    const ji = JSON.parse(fs.readFileSync(path.join(ROOT, 'divisions', 'opportunity', 'packets', 'job-intake.json'), 'utf8'));
+    m.opportunity = {
+      new_jobs_found:        ji.metrics?.new_jobs_found || 0,
+      tier_a:                ji.metrics?.tier_a || 0,
+      tier_b:                ji.metrics?.tier_b || 0,
+      tier_c:                ji.metrics?.tier_c || 0,
+      tier_d:                ji.metrics?.tier_d || 0,
+      funding_opportunities: 0,
+      sources_ok:            Object.values(ji.metrics?.source_status || {}).filter(v => v === 'ok').length,
+      sources_total:         Object.keys(ji.metrics?.source_status || {}).length,
+    };
+    try {
+      const ff = JSON.parse(fs.readFileSync(path.join(ROOT, 'divisions', 'opportunity', 'packets', 'funding-finder.json'), 'utf8'));
+      m.opportunity.funding_opportunities = ff.metrics?.funding_opportunities || 0;
+    } catch(e) {}
+  } catch(e) {}
+
+  // Personal
+  try {
+    const hl = JSON.parse(fs.readFileSync(path.join(ROOT, 'divisions', 'personal', 'packets', 'health-logger.json'), 'utf8'));
+    const bm = JSON.parse(fs.readFileSync(path.join(ROOT, 'divisions', 'personal', 'packets', 'burnout-monitor.json'), 'utf8'));
+    m.personal = {
+      health_logged:   hl.metrics?.health_logged || false,
+      sleep_hours:     hl.metrics?.sleep_hours   || null,
+      sleep_quality:   hl.metrics?.sleep_quality || null,
+      avg_sleep_hours: bm.metrics?.avg_sleep_hours || null,
+      burnout_level:   (bm.summary || '').toLowerCase().includes('normal') ? 'normal' : 'check',
+      health_entries:  bm.metrics?.health_entries || 0,
+    };
+  } catch(e) {}
+
+  // Dev Automation
+  try {
+    const rs = JSON.parse(fs.readFileSync(path.join(ROOT, 'divisions', 'dev-automation', 'packets', 'refactor-scan.json'), 'utf8'));
+    const rm = JSON.parse(fs.readFileSync(path.join(ROOT, 'divisions', 'dev-automation', 'packets', 'repo-monitor.json'), 'utf8'));
+    const dd = JSON.parse(fs.readFileSync(path.join(ROOT, 'divisions', 'dev-automation', 'packets', 'dev-digest.json'), 'utf8'));
+    m.dev_automation = {
+      refactor_high:     rs.metrics?.high     || 0,
+      files_scanned:     rs.metrics?.files_scanned || 0,
+      repos_checked:     rm.metrics?.repos_checked || 0,
+      repo_flags_high:   rm.metrics?.flags_high   || 0,
+      repo_flags_medium: rm.metrics?.flags_medium || 0,
+      total_high:        dd.metrics?.total_high || 0,
+    };
+  } catch(e) {}
+
+  // OP-Sec
+  try {
+    const ts = JSON.parse(fs.readFileSync(path.join(ROOT, 'divisions', 'op-sec', 'packets', 'threat-surface.json'), 'utf8'));
+    const dp = JSON.parse(fs.readFileSync(path.join(ROOT, 'divisions', 'op-sec', 'packets', 'device-posture.json'), 'utf8'));
+    const bc = JSON.parse(fs.readFileSync(path.join(ROOT, 'divisions', 'op-sec', 'packets', 'breach-check.json'), 'utf8'));
+    m.op_sec = {
+      anomaly_count:  ts.metrics?.anomaly_count || 0,
+      high_severity:  ts.metrics?.high_severity || 0,
+      threat_level:   (ts.metrics?.high_severity || 0) > 0 ? 'warning' : 'ok',
+      device_posture: dp.metrics?.severity || 'unknown',
+      breach_status:  bc.status || 'unknown',
+    };
+  } catch(e) {}
+
+  return m;
 }
 
 function handleMobileApprovals(res) {
@@ -1469,6 +1913,9 @@ const server = http.createServer(async (req, res) => {
   if (reqPath === '/mobile/manifest.json') {
     return serveStatic('/mobile/manifest.json', res);
   }
+  if (reqPath.startsWith('/mobile/icons/')) {
+    return serveStatic(reqPath, res);
+  }
 
   if (reqPath.startsWith('/mobile/api/')) {
     try {
@@ -1483,7 +1930,8 @@ const server = http.createServer(async (req, res) => {
           return jsonError(res, 503, 'Mobile access not configured — set MOBILE_TOKEN in .env');
         }
         const authHeader = req.headers['authorization'] || '';
-        const provided   = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
+        const queryToken = new url.URL('http://x' + req.url).searchParams.get('token') || '';
+        const provided   = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : queryToken;
         if (!provided || !crypto.timingSafeEqual(
           Buffer.from(provided.padEnd(64, '\0')),
           Buffer.from(mobileToken.padEnd(64, '\0'))
@@ -1510,6 +1958,27 @@ const server = http.createServer(async (req, res) => {
       }
       if (method === 'GET' && reqPath === '/mobile/api/alerts') {
         return handleMobileAlerts(res);
+      }
+      if (method === 'GET' && reqPath === '/mobile/api/alerts/stream') {
+        return handleMobileAlertStream(req, res);
+      }
+      if (method === 'GET' && reqPath === '/mobile/api/divisions') {
+        return handleMobileDivisions(res);
+      }
+      if (method === 'POST' && reqPath === '/mobile/api/chat') {
+        const body = await parseBody(req);
+        return handleChat(body, res);  // same handler as desktop — Ollama→Claude CLI
+      }
+      if (method === 'POST' && reqPath === '/mobile/api/chat/jclaw') {
+        const body = await parseBody(req);
+        return handleMobileChatJClaw(body, res);
+      }
+      if (method === 'POST' && reqPath === '/mobile/api/chat/coding') {
+        const body = await parseBody(req);
+        return handleMobileChatCoding(body, res);
+      }
+      if (method === 'POST' && reqPath === '/mobile/api/chat/clear') {
+        return handleChatClear(res);
       }
       if (method === 'GET' && reqPath === '/mobile/api/approvals') {
         return handleMobileApprovals(res);
@@ -1932,6 +2401,11 @@ cron.schedule('0 3 * * *', async () => {
 }, { timezone: TZ });
 
 // ── OP-Sec Division ────────────────────────────────────────────────────────
+// Mobile audit review nightly at 11:00 PM — reviews all mobile coding sessions
+cron.schedule('0 23 * * *', async () => {
+  await runSkillViaPython('mobile-audit-review', 'OP_SEC');
+}, { timezone: TZ });
+
 // Device posture daily at 8:00 AM (already runs via queue — ensure cron exists)
 cron.schedule('0 8 * * *', async () => {
   await runSkillViaPython('device-posture', 'OP_SEC');

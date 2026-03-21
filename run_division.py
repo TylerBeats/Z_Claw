@@ -19,6 +19,7 @@ Usage:
   python run_division.py dev-automation artifact-manager
   python run_division.py dev-automation dev-digest
   python run_division.py dev pipeline '<json_spec>'
+  python run_division.py op-sec mobile-audit-review
   python run_division.py sentinel provider-health
   python run_division.py sentinel queue-monitor
   python run_division.py sentinel sentinel-digest
@@ -104,6 +105,9 @@ def run(division: str, task: str, args: list) -> dict:
             return run_security_scan()
         if task == "opsec-digest":
             return run_opsec_digest()
+        if task == "mobile-audit-review":
+            from runtime.skills.mobile_audit_review import run as run_mobile_audit
+            return run_mobile_audit()
         raise ValueError(f"Unknown task for op-sec: {task}")
 
     # ── Dev Automation ────────────────────────────────────────────────────────

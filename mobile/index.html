@@ -8,9 +8,10 @@
   <meta name="apple-mobile-web-app-title" content="Mission Control">
   <meta name="theme-color" content="#1e1e2e">
   <link rel="manifest" href="/mobile/manifest.json">
+  <link rel="apple-touch-icon" href="/mobile/icons/icon.svg">
   <title>Mission Control</title>
   <style>
-    /* ── Design tokens (Catppuccin Mocha — matches desktop) ── */
+    /* ── Design tokens (Catppuccin Mocha) ── */
     :root {
       --bg:      #1e1e2e;
       --surface: #181825;
@@ -23,6 +24,7 @@
       --yellow:  #f9e2af;
       --red:     #f38ba8;
       --teal:    #94e2d5;
+      --peach:   #fab387;
       --border:  #45475a;
       /* iPhone 16 Pro Max safe areas */
       --safe-top:    env(safe-area-inset-top,    47px);
@@ -46,6 +48,42 @@
       flex-direction: column;
     }
 
+    /* ── Animations ── */
+    @keyframes pulse-ring {
+      0%   { box-shadow: 0 0 0 0 rgba(166,227,161,.6); }
+      70%  { box-shadow: 0 0 0 8px rgba(166,227,161,0); }
+      100% { box-shadow: 0 0 0 0 rgba(166,227,161,0); }
+    }
+    @keyframes glow-high {
+      0%, 100% { box-shadow: 0 0 4px rgba(243,139,168,.4); }
+      50%       { box-shadow: 0 0 16px rgba(243,139,168,.7); }
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes shimmer {
+      0%   { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+    @keyframes pulse-live {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.3; }
+    }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+
+    /* ── Offline banner ── */
+    #offline-banner {
+      position: fixed; top: 0; left: 0; right: 0;
+      background: var(--red); color: #1e1e2e;
+      text-align: center; font-size: 12px; font-weight: 600;
+      padding: 8px; z-index: 9998; display: none;
+    }
+    #offline-banner.show { display: block; }
+
     /* ── Top header ── */
     #mc-header {
       padding: calc(var(--safe-top) + 8px) 20px 12px;
@@ -56,9 +94,25 @@
       align-items: center;
       flex-shrink: 0;
     }
-    #mc-header .logo { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; color: var(--purple); text-transform: uppercase; }
-    #mc-header .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); display: inline-block; margin-right: 6px; }
+    #mc-header .logo {
+      font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+      color: var(--purple); text-transform: uppercase;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .status-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--green); display: inline-block;
+      flex-shrink: 0;
+    }
+    .status-dot.connected { animation: pulse-ring 2s ease-in-out infinite; }
     #mc-header .header-right { font-size: 11px; color: var(--subtext); display: flex; align-items: center; gap: 8px; }
+    #stale-label { display: none; color: var(--yellow); font-size: 10px; font-weight: 700; }
+    #stale-label.show { display: inline; }
+    .refresh-btn {
+      background: none; border: none; color: var(--subtext);
+      font-size: 18px; cursor: pointer; padding: 0; line-height: 1;
+    }
+    .refresh-btn:active { transform: scale(0.9); }
 
     /* ── Screen container ── */
     #screens {
@@ -71,18 +125,14 @@
     }
 
     /* ── Screen ── */
-    .screen { display: none; padding: 16px 16px 20px; }
+    .screen { display: none; padding: 16px 16px 24px; animation: fadeUp 0.2s ease; }
     .screen.active { display: block; }
 
     /* ── Section heading ── */
     .section-title {
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--subtext);
-      margin-bottom: 10px;
-      margin-top: 18px;
+      font-size: 11px; font-weight: 600; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--subtext);
+      margin-bottom: 10px; margin-top: 18px;
     }
     .section-title:first-child { margin-top: 0; }
 
@@ -100,14 +150,9 @@
 
     /* ── Pill / badge ── */
     .pill {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 20px;
-      font-size: 10px;
-      font-weight: 600;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-      border: 1px solid;
+      display: inline-block; padding: 2px 8px; border-radius: 20px;
+      font-size: 10px; font-weight: 600; letter-spacing: 0.05em;
+      text-transform: uppercase; border: 1px solid;
     }
     .pill-green  { color: var(--green);  border-color: var(--green);  background: rgba(166,227,161,.1); }
     .pill-red    { color: var(--red);    border-color: var(--red);    background: rgba(243,139,168,.1); }
@@ -115,34 +160,42 @@
     .pill-blue   { color: var(--blue);   border-color: var(--blue);   background: rgba(137,180,250,.1); }
     .pill-purple { color: var(--purple); border-color: var(--purple); background: rgba(203,166,247,.1); }
     .pill-grey   { color: var(--subtext);border-color: var(--border); background: transparent; }
+    .pill-teal   { color: var(--teal);   border-color: var(--teal);   background: rgba(148,226,213,.1); }
 
-    /* ── Division grid ── */
-    .div-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .div-chip {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-    .div-chip .name { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
-    .div-chip .last { font-size: 10px; color: var(--subtext); }
-
-    /* ── Stat row ── */
-    .stat-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+    /* ── Stat row (HOME) ── */
+    .stat-row { display: flex; gap: 8px; flex-wrap: nowrap; margin-bottom: 10px; }
     .stat-box {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 10px;
-      padding: 10px 14px;
+      padding: 10px 8px;
       flex: 1;
-      min-width: 80px;
+      min-width: 0;
       text-align: center;
     }
-    .stat-box .val  { font-size: 22px; font-weight: 700; color: var(--text); }
-    .stat-box .lbl  { font-size: 10px; color: var(--subtext); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 2px; }
+    .stat-box .val  { font-size: 20px; font-weight: 700; color: var(--text); }
+    .stat-box .lbl  { font-size: 9px; color: var(--subtext); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 2px; }
+
+    /* ── Division cards (HOME 2-col grid) ── */
+    .div-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 2px; }
+    .div-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+    }
+    .div-card.warning { border-color: var(--yellow); }
+    .div-card.danger  { border-color: var(--red); }
+    .div-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .div-name { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+    .div-metrics { display: flex; gap: 5px; margin-bottom: 6px; }
+    .dm-item {
+      display: flex; flex-direction: column; align-items: center;
+      flex: 1; background: var(--overlay); border-radius: 6px; padding: 4px 2px;
+    }
+    .dm-val { font-size: 12px; font-weight: 700; }
+    .dm-lbl { font-size: 9px; color: var(--subtext); text-transform: uppercase; letter-spacing: 0.04em; }
+    .div-lastrun { font-size: 10px; color: var(--subtext); }
 
     /* ── Alert card ── */
     .alert-card {
@@ -155,11 +208,12 @@
       padding: 12px 14px;
       margin-bottom: 8px;
     }
-    .alert-card.medium { border-left-color: var(--yellow); }
-    .alert-card.low    { border-left-color: var(--blue); }
-    .alert-card .alert-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-    .alert-card .alert-msg    { font-size: 13px; margin-bottom: 8px; }
-    .alert-card .alert-meta   { font-size: 11px; color: var(--subtext); }
+    .alert-card.severity-high { animation: glow-high 2.5s ease-in-out infinite; }
+    .alert-card.severity-medium { border-left-color: var(--yellow); }
+    .alert-card.severity-low    { border-left-color: var(--blue); }
+    .alert-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; gap: 6px; }
+    .alert-msg    { font-size: 13px; margin-bottom: 8px; line-height: 1.4; }
+    .alert-meta   { font-size: 11px; color: var(--subtext); }
 
     /* ── Approval card ── */
     .approval-card {
@@ -169,33 +223,28 @@
       padding: 14px;
       margin-bottom: 10px;
     }
-    .approval-card .approval-header  { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
-    .approval-card .approval-title   { font-size: 14px; font-weight: 600; flex: 1; }
-    .approval-card .approval-reason  { font-size: 13px; color: var(--subtext); margin-bottom: 12px; }
+    .approval-header  { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+    .approval-title   { font-size: 14px; font-weight: 600; flex: 1; padding-right: 8px; }
+    .approval-reason  { font-size: 13px; color: var(--subtext); margin-bottom: 12px; }
     .approval-actions { display: flex; gap: 10px; margin-top: 12px; }
 
     /* ── Buttons ── */
     .btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: 46px;
-      border-radius: 12px;
-      border: none;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      -webkit-appearance: none;
-      flex: 1;
-      transition: opacity 0.15s;
+      display: flex; align-items: center; justify-content: center;
+      height: 46px; border-radius: 12px; border: none;
+      font-size: 14px; font-weight: 600; cursor: pointer;
+      -webkit-appearance: none; flex: 1;
+      transition: transform 0.1s, opacity 0.15s;
     }
-    .btn:active { opacity: 0.7; }
+    .btn:active { transform: scale(0.94); opacity: 0.85; }
     .btn-approve { background: var(--green);  color: #1e1e2e; }
     .btn-reject  { background: var(--red);    color: #1e1e2e; }
     .btn-ack     { background: var(--overlay); color: var(--text); border: 1px solid var(--border); }
     .btn-pause   { background: var(--yellow); color: #1e1e2e; }
     .btn-resume  { background: var(--green);  color: #1e1e2e; }
     .btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
+    .btn-purple  { background: var(--purple); color: #1e1e2e; }
+    .btn-sm      { height: 34px; font-size: 12px; padding: 0 14px; flex: none; border-radius: 8px; }
 
     /* ── Trade row ── */
     .trade-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); }
@@ -207,16 +256,66 @@
     .trade-meta { font-size: 11px; color: var(--subtext); }
 
     /* ── Metrics row ── */
-    .metrics-row { display: flex; gap: 8px; }
+    .metrics-row { display: flex; gap: 8px; margin-bottom: 8px; }
     .metric-box {
-      flex: 1;
-      background: var(--overlay);
-      border-radius: 8px;
-      padding: 8px 10px;
-      text-align: center;
+      flex: 1; background: var(--overlay); border-radius: 8px;
+      padding: 8px 6px; text-align: center;
     }
-    .metric-box .mval { font-size: 16px; font-weight: 700; }
-    .metric-box .mlbl { font-size: 10px; color: var(--subtext); text-transform: uppercase; }
+    .metric-box .mval { font-size: 15px; font-weight: 700; }
+    .metric-box .mlbl { font-size: 9px; color: var(--subtext); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 2px; }
+
+    /* ── Trading: sparkline + ring row ── */
+    .trading-top {
+      display: flex; gap: 12px; align-items: center; margin-bottom: 12px;
+    }
+    .trading-ring-col { display: flex; flex-direction: column; align-items: center; gap: 4px; flex-shrink: 0; }
+    .trading-ring-col .ring-label { font-size: 9px; color: var(--subtext); text-transform: uppercase; letter-spacing: 0.06em; }
+    .trading-stats-col { flex: 1; display: flex; flex-direction: column; gap: 5px; }
+    .tstat-row { display: flex; justify-content: space-between; align-items: center; }
+    .tstat-lbl { font-size: 10px; color: var(--subtext); text-transform: uppercase; letter-spacing: 0.05em; }
+    .tstat-val { font-size: 13px; font-weight: 700; }
+
+    /* ── OOS card ── */
+    .oos-grid { display: flex; gap: 8px; }
+    .oos-box { flex: 1; background: var(--overlay); border-radius: 8px; padding: 8px; text-align: center; }
+    .oos-box .ov { font-size: 14px; font-weight: 700; }
+    .oos-box .ol { font-size: 9px; color: var(--subtext); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 2px; }
+
+    /* ── Source pills ── */
+    .src-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+
+    /* ── Job tier grid ── */
+    .tier-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 10px; }
+    .tier-box { background: var(--overlay); border-radius: 8px; padding: 10px 4px; text-align: center; }
+    .tier-box .tv { font-size: 20px; font-weight: 700; }
+    .tier-box .tl { font-size: 9px; color: var(--subtext); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px; }
+    .tier-a .tv { color: var(--green); }
+    .tier-b .tv { color: var(--blue); }
+    .tier-c .tv { color: var(--yellow); }
+    .tier-d .tv { color: var(--subtext); }
+
+    /* ── Sleep bar ── */
+    .sleep-bar-wrap { background: var(--overlay); border-radius: 6px; height: 8px; overflow: hidden; margin: 6px 0; }
+    .sleep-bar-fill { height: 100%; background: var(--teal); border-radius: 6px; transition: width 0.5s ease; }
+
+    /* ── Flag rows ── */
+    .flag-row { display: flex; gap: 8px; }
+    .flag-box { flex: 1; background: var(--overlay); border-radius: 8px; padding: 8px 6px; text-align: center; }
+    .flag-box .fv { font-size: 18px; font-weight: 700; }
+    .flag-box .fl { font-size: 9px; color: var(--subtext); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 2px; }
+
+    /* ── Action items list ── */
+    .action-list { list-style: none; margin-top: 8px; }
+    .action-list li {
+      font-size: 12px; color: var(--subtext); padding: 4px 0;
+      border-bottom: 1px solid var(--border); line-height: 1.4;
+    }
+    .action-list li:last-child { border-bottom: none; }
+    .action-list li::before { content: '→ '; color: var(--purple); }
+
+    /* ── Posture big pill ── */
+    .posture-display { text-align: center; padding: 16px 0; }
+    .posture-display .posture-label { font-size: 28px; font-weight: 800; letter-spacing: 0.04em; margin-top: 4px; }
 
     /* ── Bottom tab bar ── */
     #tab-bar {
@@ -229,35 +328,21 @@
     }
     .tab-btn {
       flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 3px;
-      border: none;
-      background: none;
-      color: var(--subtext);
-      font-size: 10px;
-      cursor: pointer;
-      -webkit-appearance: none;
-      transition: color 0.15s;
-      padding: 0;
-      padding-top: 8px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 3px; border: none; background: none;
+      color: var(--subtext); font-size: 10px;
+      cursor: pointer; -webkit-appearance: none;
+      transition: color 0.15s; padding: 0; padding-top: 8px;
     }
     .tab-btn.active { color: var(--purple); }
-    .tab-btn .tab-icon { font-size: 20px; line-height: 1; }
-    .tab-btn .tab-badge {
-      position: absolute;
-      top: 6px;
-      right: calc(50% - 18px);
-      background: var(--red);
-      color: #fff;
-      font-size: 9px;
-      font-weight: 700;
-      border-radius: 8px;
-      padding: 1px 4px;
-      min-width: 16px;
-      text-align: center;
+    .tab-btn:active { transform: scale(0.9); }
+    .tab-icon { font-size: 20px; line-height: 1; }
+    .tab-badge {
+      position: absolute; top: 2px; right: calc(50% - 20px);
+      background: var(--red); color: #fff;
+      font-size: 9px; font-weight: 700;
+      border-radius: 8px; padding: 1px 4px;
+      min-width: 16px; text-align: center; display: none;
     }
     .tab-wrap { position: relative; display: flex; flex-direction: column; align-items: center; gap: 3px; }
 
@@ -266,27 +351,27 @@
     .empty-state .empty-icon { font-size: 40px; margin-bottom: 12px; }
     .empty-state p { font-size: 14px; }
 
-    /* ── Loading spinner ── */
+    /* ── Loading ── */
     .loading { text-align: center; padding: 30px; color: var(--subtext); font-size: 13px; }
+    .skeleton {
+      background: linear-gradient(90deg, var(--surface) 0%, var(--overlay) 50%, var(--surface) 100%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s ease-in-out infinite;
+      border-radius: 8px;
+      height: 14px; margin-bottom: 8px;
+    }
 
     /* ── Toast notification ── */
     #toast {
       position: fixed;
       bottom: calc(var(--tab-height) + var(--safe-bottom) + 16px);
-      left: 50%;
-      transform: translateX(-50%) translateY(20px);
-      background: var(--overlay);
-      color: var(--text);
-      padding: 10px 20px;
-      border-radius: 20px;
-      font-size: 13px;
-      font-weight: 500;
-      opacity: 0;
-      transition: opacity 0.2s, transform 0.2s;
-      pointer-events: none;
-      z-index: 9999;
-      white-space: nowrap;
-      border: 1px solid var(--border);
+      left: 50%; transform: translateX(-50%) translateY(20px);
+      background: var(--overlay); color: var(--text);
+      padding: 10px 20px; border-radius: 20px;
+      font-size: 13px; font-weight: 500;
+      opacity: 0; transition: opacity 0.2s, transform 0.2s;
+      pointer-events: none; z-index: 9999;
+      white-space: nowrap; border: 1px solid var(--border);
     }
     #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
@@ -294,50 +379,35 @@
     #setup-screen {
       position: fixed; inset: 0;
       background: var(--bg);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 40px 32px;
-      z-index: 100;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 40px 32px; z-index: 100;
     }
     #setup-screen.hidden { display: none; }
     #setup-screen h1 { font-size: 20px; font-weight: 700; color: var(--purple); margin-bottom: 8px; }
     #setup-screen p  { font-size: 13px; color: var(--subtext); text-align: center; margin-bottom: 28px; line-height: 1.6; }
     #setup-screen input {
-      width: 100%;
-      padding: 14px 16px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      color: var(--text);
-      font-size: 15px;
-      margin-bottom: 12px;
-      -webkit-appearance: none;
+      width: 100%; padding: 14px 16px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; color: var(--text); font-size: 15px;
+      margin-bottom: 12px; -webkit-appearance: none;
     }
     #setup-screen input:focus { outline: none; border-color: var(--purple); }
     #setup-screen .setup-btn {
-      width: 100%;
-      padding: 14px;
-      background: var(--purple);
-      color: var(--bg);
-      border: none;
-      border-radius: 12px;
-      font-size: 15px;
-      font-weight: 700;
-      cursor: pointer;
+      width: 100%; padding: 14px;
+      background: var(--purple); color: var(--bg);
+      border: none; border-radius: 12px;
+      font-size: 15px; font-weight: 700; cursor: pointer;
     }
+    #setup-screen .setup-btn:active { transform: scale(0.97); }
 
     /* ── Action confirm sheet ── */
     #confirm-sheet {
-      position: fixed;
-      bottom: 0; left: 0; right: 0;
-      background: var(--surface);
-      border-radius: 20px 20px 0 0;
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: var(--surface); border-radius: 20px 20px 0 0;
       border-top: 1px solid var(--border);
       padding: 20px 24px calc(var(--safe-bottom) + 20px);
-      z-index: 200;
-      transform: translateY(100%);
+      z-index: 200; transform: translateY(100%);
       transition: transform 0.3s ease;
     }
     #confirm-sheet.open { transform: translateY(0); }
@@ -345,23 +415,284 @@
     #confirm-sheet .sheet-body  { font-size: 13px; color: var(--subtext); margin-bottom: 20px; }
     #confirm-sheet .sheet-actions { display: flex; gap: 10px; }
     #sheet-backdrop {
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,0.5);
-      z-index: 199;
-      display: none;
+      position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+      z-index: 199; display: none;
     }
     #sheet-backdrop.open { display: block; }
+
+    /* ── Chat mode toggle ── */
+    .mode-btn {
+      flex: 1; padding: 12px 8px; border: none; background: none;
+      color: var(--subtext); font-size: 14px; font-weight: 600;
+      cursor: pointer; -webkit-appearance: none;
+      border-bottom: 3px solid transparent; transition: color 0.15s, border-color 0.15s;
+    }
+    .mode-btn.mode-active { color: var(--purple); border-bottom-color: var(--purple); }
+    #chat-mode-coding.mode-active { color: var(--blue); border-bottom-color: var(--blue); }
+
+    /* ── Chat ── */
+    .chat-msg { margin-bottom: 12px; display: flex; flex-direction: column; }
+    .chat-msg.user { align-items: flex-end; }
+    .chat-msg.assistant { align-items: flex-start; }
+    .chat-bubble {
+      max-width: 82%; padding: 10px 14px; border-radius: 18px;
+      font-size: 14px; line-height: 1.5; white-space: pre-wrap; word-break: break-word;
+    }
+    .chat-msg.user .chat-bubble { background: var(--purple); color: #1e1e2e; border-bottom-right-radius: 4px; }
+    .chat-msg.assistant .chat-bubble { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-bottom-left-radius: 4px; }
+    .chat-msg.assistant .chat-bubble code { background: var(--overlay); border-radius: 4px; padding: 1px 5px; font-family: monospace; font-size: 13px; }
+    .chat-sender { font-size: 10px; color: var(--subtext); margin-bottom: 3px; letter-spacing: 0.04em; }
+    .chat-typing { display: flex; gap: 4px; padding: 10px 14px; }
+    .chat-typing span { width: 7px; height: 7px; border-radius: 50%; background: var(--subtext); animation: typing-dot 1.2s ease-in-out infinite; }
+    .chat-typing span:nth-child(2) { animation-delay: 0.2s; }
+    .chat-typing span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes typing-dot { 0%,80%,100%{opacity:.3;transform:scale(.8)} 40%{opacity:1;transform:scale(1)} }
+    #screen-chat.active { display: flex !important; flex-direction: column; padding: 0; }
+
+    /* ── Division detail overlay ── */
+    #div-detail-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+      z-index: 300; display: none; opacity: 0; transition: opacity 0.25s;
+    }
+    #div-detail-backdrop.open { display: block; opacity: 1; }
+    #div-detail-sheet {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      height: 92dvh;
+      background: var(--bg);
+      border-radius: 20px 20px 0 0;
+      border-top: 1px solid var(--border);
+      z-index: 301;
+      transform: translateY(100%);
+      transition: transform 0.3s cubic-bezier(0.32,0.72,0,1);
+      display: flex; flex-direction: column;
+    }
+    #div-detail-sheet.open { transform: translateY(0); }
+    #div-detail-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px 12px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    #div-detail-header .detail-title {
+      font-size: 16px; font-weight: 700; color: var(--purple);
+      text-transform: uppercase; letter-spacing: 0.08em;
+    }
+    #div-detail-header .detail-close {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--overlay); border: none;
+      color: var(--text); font-size: 16px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; -webkit-appearance: none;
+    }
+    #div-detail-body {
+      flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+      padding: 16px 16px calc(var(--safe-bottom) + 20px);
+    }
+    .detail-packet {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 14px; margin-bottom: 12px;
+    }
+    .detail-packet-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 8px;
+    }
+    .detail-packet-name { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; }
+    .detail-summary { font-size: 13px; color: var(--subtext); line-height: 1.5; margin-bottom: 10px; }
+    .detail-metrics { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+    .detail-metric {
+      background: var(--overlay); border-radius: 8px;
+      padding: 6px 10px; text-align: center; min-width: 60px;
+    }
+    .detail-metric .dm-v { font-size: 14px; font-weight: 700; }
+    .detail-metric .dm-l { font-size: 9px; color: var(--subtext); text-transform: uppercase; letter-spacing: 0.05em; }
+    .detail-actions { border-top: 1px solid var(--border); margin-top: 10px; padding-top: 10px; }
+    .detail-action-item {
+      padding: 8px 10px; border-radius: 8px;
+      background: var(--overlay); margin-bottom: 6px;
+      font-size: 12px; line-height: 1.5;
+    }
+    .detail-action-item:last-child { margin-bottom: 0; }
+    .action-priority-high  { border-left: 3px solid var(--red); }
+    .action-priority-normal { border-left: 3px solid var(--blue); }
+    .div-card { cursor: pointer; transition: border-color 0.15s, transform 0.1s; }
+    .div-card:active { transform: scale(0.97); }
+
+    /* ── Info row (two-col label/value) ── */
+    .info-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); }
+    .info-row:last-child { border-bottom: none; }
+    .info-lbl { font-size: 12px; color: var(--subtext); }
+    .info-val { font-size: 12px; font-weight: 600; }
+
+    /* ── Divider ── */
+    .divider { height: 1px; background: var(--border); margin: 14px 0; }
+
+    /* ── Section header with right badge ── */
+    .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; margin-top: 18px; }
+    .section-header:first-child { margin-top: 0; }
+    .section-header .sh-title { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--subtext); }
+    .section-header .sh-badge { background: var(--red); color: #fff; font-size: 9px; font-weight: 700; padding: 1px 6px; border-radius: 8px; }
+    .section-header .sh-badge-yellow { background: var(--yellow); color: #1e1e2e; font-size: 9px; font-weight: 700; padding: 1px 6px; border-radius: 8px; }
+
+    /* ── Error card ── */
+    .error-card { text-align: center; padding: 32px 20px; }
+    .error-icon { font-size: 36px; margin-bottom: 12px; }
+    .error-msg  { font-size: 13px; color: var(--subtext); margin-bottom: 16px; line-height: 1.5; }
+
+    /* ── Command tab segment control ── */
+    .segment-control {
+      display: flex; gap: 0; flex-shrink: 0;
+      background: var(--overlay); border-radius: 10px;
+      padding: 3px; margin: 12px 16px 4px;
+    }
+    .seg-btn {
+      flex: 1; padding: 8px 12px; border: none;
+      background: transparent; color: var(--subtext);
+      font-size: 13px; font-weight: 600; border-radius: 8px;
+      cursor: pointer; -webkit-appearance: none;
+      transition: background 0.15s, color 0.15s;
+    }
+    .seg-btn.active { background: var(--surface); color: var(--text); }
+
+    /* ── Markdown rendered content ── */
+    .md-content h3 { font-size: 14px; font-weight: 700; margin: 10px 0 4px; color: var(--text); }
+    .md-content strong { font-weight: 700; color: var(--text); }
+    .md-content ul, .md-content ol { padding-left: 18px; margin: 4px 0 8px; }
+    .md-content li { font-size: 13px; color: var(--subtext); margin-bottom: 2px; line-height: 1.5; }
+    .md-content code { background: var(--overlay); border-radius: 4px; padding: 1px 5px; font-family: 'Menlo', 'SF Mono', monospace; font-size: 12px; color: var(--teal); }
+    .md-pre-wrap { position: relative; margin: 8px 0; }
+    .md-pre {
+      background: var(--overlay); border: 1px solid var(--border);
+      border-radius: 10px; padding: 12px 14px; padding-right: 52px;
+      overflow-x: auto; -webkit-overflow-scrolling: touch;
+      font-family: 'Menlo', 'SF Mono', monospace; font-size: 12px;
+      line-height: 1.6; color: var(--teal); white-space: pre;
+    }
+    .md-copy-btn {
+      position: absolute; top: 8px; right: 8px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--subtext); font-size: 11px;
+      padding: 3px 7px; cursor: pointer; -webkit-appearance: none;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .md-copy-btn:active { color: var(--green); border-color: var(--green); }
+
+    /* ── Setup screen redesign ── */
+    #setup-logo-wrap { margin-bottom: 24px; }
+    #setup-logo-wrap svg { display: block; margin: 0 auto 12px; }
+    #setup-title { font-size: 22px; font-weight: 800; color: var(--purple); letter-spacing: 0.05em; text-align: center; text-transform: uppercase; margin-bottom: 4px; }
+    #setup-subtitle { font-size: 12px; color: var(--subtext); text-align: center; margin-bottom: 28px; letter-spacing: 0.04em; }
+    .setup-field-wrap { width: 100%; position: relative; margin-bottom: 12px; }
+    .setup-field-wrap input {
+      width: 100%; padding: 14px 44px 14px 16px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; color: var(--text); font-size: 15px;
+      -webkit-appearance: none; font-family: inherit;
+    }
+    .setup-field-wrap input:focus { outline: none; border-color: var(--purple); }
+    .setup-eye-btn {
+      position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; color: var(--subtext); font-size: 16px;
+      cursor: pointer; padding: 4px; -webkit-appearance: none;
+    }
+    #setup-advanced-toggle {
+      background: none; border: none; color: var(--subtext);
+      font-size: 12px; cursor: pointer; margin-bottom: 12px;
+      display: flex; align-items: center; gap: 4px; -webkit-appearance: none;
+    }
+    #setup-server-wrap { display: none; width: 100%; margin-bottom: 12px; }
+    #setup-server-wrap input {
+      width: 100%; padding: 14px 16px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; color: var(--text); font-size: 14px;
+      -webkit-appearance: none; font-family: monospace;
+    }
+    #setup-server-wrap input:focus { outline: none; border-color: var(--purple); }
+    .setup-connect-btn {
+      width: 100%; padding: 16px;
+      background: var(--purple); color: var(--bg);
+      border: none; border-radius: 14px;
+      font-size: 16px; font-weight: 700; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      -webkit-appearance: none; transition: opacity 0.15s;
+    }
+    .setup-connect-btn:disabled { opacity: 0.5; }
+    .setup-spinner { width: 16px; height: 16px; border: 2px solid rgba(30,30,46,.4); border-top-color: var(--bg); border-radius: 50%; animation: spin 0.6s linear infinite; display: none; }
+
+    /* ── PIN sheet ── */
+    #pin-sheet {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: var(--surface); border-radius: 24px 24px 0 0;
+      border-top: 1px solid var(--border);
+      padding: 20px 24px calc(var(--safe-bottom) + 16px);
+      z-index: 400; transform: translateY(100%);
+      transition: transform 0.3s ease;
+    }
+    #pin-sheet.open { transform: translateY(0); }
+    #pin-sheet-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+      z-index: 399; display: none;
+    }
+    #pin-sheet-backdrop.open { display: block; }
+    .pin-sheet-title { font-size: 16px; font-weight: 700; text-align: center; margin-bottom: 4px; }
+    .pin-sheet-sub   { font-size: 12px; color: var(--subtext); text-align: center; margin-bottom: 20px; }
+    .pin-dots { display: flex; justify-content: center; gap: 16px; margin-bottom: 24px; }
+    .pin-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--border); background: transparent; transition: background 0.15s, border-color 0.15s; }
+    .pin-dot.filled { background: var(--purple); border-color: var(--purple); }
+    .pin-keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .pin-key {
+      background: var(--overlay); border: none; border-radius: 14px;
+      color: var(--text); font-size: 20px; font-weight: 600;
+      height: 60px; cursor: pointer; -webkit-appearance: none;
+      transition: background 0.1s; display: flex; align-items: center; justify-content: center;
+    }
+    .pin-key:active { background: var(--border); }
+    .pin-key.pin-del { color: var(--subtext); font-size: 18px; }
+    .pin-key.pin-ok  { background: var(--purple); color: var(--bg); }
+    .pin-cancel { display: block; text-align: center; font-size: 13px; color: var(--subtext); margin-top: 14px; cursor: pointer; padding: 4px; }
   </style>
 </head>
 <body>
 
+<!-- Offline banner -->
+<div id="offline-banner">⚠ No connection — retrying...</div>
+
 <!-- Setup screen (token entry) -->
 <div id="setup-screen">
-  <h1>Mission Control</h1>
-  <p>Enter your mobile access token to connect to the OpenClaw server.</p>
-  <input type="password" id="token-input" placeholder="Mobile access token" autocomplete="off" autocorrect="off" spellcheck="false">
-  <input type="text" id="server-input" placeholder="Server (e.g. http://192.168.1.x:3000)" autocomplete="off" autocorrect="off" spellcheck="false">
-  <button class="setup-btn" onclick="saveSetup()">Connect</button>
+  <div id="setup-logo-wrap">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="80" height="80">
+      <rect width="120" height="120" rx="26" fill="#181825"/>
+      <circle cx="60" cy="60" r="44" fill="none" stroke="#cba6f7" stroke-width="2.5" stroke-dasharray="19 3 19 3 19 3 19 3" stroke-dashoffset="11" opacity="0.9"/>
+      <circle cx="60" cy="60" r="29" fill="none" stroke="#cba6f7" stroke-width="1.5" opacity="0.3"/>
+      <line x1="60" y1="12" x2="60" y2="39" stroke="#cba6f7" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="60" y1="81" x2="60" y2="108" stroke="#cba6f7" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="12" y1="60" x2="39" y2="60" stroke="#cba6f7" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="81" y1="60" x2="108" y2="60" stroke="#cba6f7" stroke-width="2.5" stroke-linecap="round"/>
+      <path d="M26 26 L26 36 M26 26 L36 26" stroke="#94e2d5" stroke-width="2" stroke-linecap="round" fill="none"/>
+      <path d="M94 26 L94 36 M94 26 L84 26" stroke="#94e2d5" stroke-width="2" stroke-linecap="round" fill="none"/>
+      <path d="M26 94 L26 84 M26 94 L36 94" stroke="#94e2d5" stroke-width="2" stroke-linecap="round" fill="none"/>
+      <path d="M94 94 L94 84 M94 94 L84 94" stroke="#94e2d5" stroke-width="2" stroke-linecap="round" fill="none"/>
+      <circle cx="60" cy="60" r="6" fill="#cba6f7"/>
+    </svg>
+  </div>
+  <div id="setup-title">Mission Control</div>
+  <div id="setup-subtitle">J_Claw Operator Access</div>
+
+  <div class="setup-field-wrap">
+    <input type="password" id="token-input" placeholder="Mobile access token" autocomplete="off" autocorrect="off" spellcheck="false" autocapitalize="none" style="font-family:monospace;">
+    <button class="setup-eye-btn" onclick="toggleTokenVisibility()" id="eye-btn">👁</button>
+  </div>
+
+  <button id="setup-advanced-toggle" onclick="toggleAdvanced()">
+    <span id="adv-arrow">▸</span> Advanced
+  </button>
+  <div id="setup-server-wrap">
+    <input type="text" id="server-input" placeholder="http://your-server:3000" autocomplete="off" autocorrect="off" spellcheck="false" autocapitalize="none">
+  </div>
+
+  <button class="setup-connect-btn" id="connect-btn" onclick="saveSetup()">
+    <div class="setup-spinner" id="setup-spinner"></div>
+    <span id="connect-label">Connect</span>
+  </button>
 </div>
 
 <!-- Header -->
@@ -370,17 +701,18 @@
     <span class="status-dot" id="conn-dot"></span>Mission Control
   </div>
   <div class="header-right">
+    <span id="stale-label">STALE</span>
     <span id="header-time">—</span>
-    <button onclick="refreshCurrent()" style="background:none;border:none;color:var(--subtext);font-size:16px;cursor:pointer;padding:0;">↻</button>
+    <button class="refresh-btn" onclick="refreshCurrent()" title="Refresh">↻</button>
   </div>
 </div>
 
 <!-- Screens -->
 <div id="screens">
 
-  <!-- ── OVERVIEW ── -->
-  <div id="screen-overview" class="screen active">
-    <div id="overview-content"><div class="loading">Loading...</div></div>
+  <!-- ── HOME ── -->
+  <div id="screen-home" class="screen active">
+    <div id="home-content"><div class="loading">Loading...</div></div>
   </div>
 
   <!-- ── ALERTS ── -->
@@ -388,14 +720,18 @@
     <div id="alerts-content"><div class="loading">Loading...</div></div>
   </div>
 
-  <!-- ── APPROVALS ── -->
-  <div id="screen-approvals" class="screen">
-    <div id="approvals-content"><div class="loading">Loading...</div></div>
-  </div>
-
-  <!-- ── TASKS ── -->
-  <div id="screen-tasks" class="screen">
-    <div id="tasks-content"><div class="loading">Loading...</div></div>
+  <!-- ── COMMAND (merged Intel + Ops) ── -->
+  <div id="screen-command" class="screen" style="padding:0;">
+    <div class="segment-control">
+      <button class="seg-btn active" id="seg-intel" onclick="switchCommandSeg('intel')">📋 Intel</button>
+      <button class="seg-btn" id="seg-ops" onclick="switchCommandSeg('ops')">⚙ Ops</button>
+    </div>
+    <div id="command-intel-wrap" style="padding:0 16px 24px;">
+      <div id="intel-content"><div class="loading">Loading...</div></div>
+    </div>
+    <div id="command-ops-wrap" style="padding:0 16px 24px;display:none;">
+      <div id="ops-content"><div class="loading">Loading...</div></div>
+    </div>
   </div>
 
   <!-- ── TRADING ── -->
@@ -403,34 +739,48 @@
     <div id="trading-content"><div class="loading">Loading...</div></div>
   </div>
 
+  <!-- ── CHAT ── -->
+  <div id="screen-chat" class="screen" style="display:none;padding:0;height:100%;display:flex;flex-direction:column;">
+    <!-- Mode toggle -->
+    <div style="display:flex;gap:0;flex-shrink:0;border-bottom:1px solid var(--border);background:var(--surface);">
+      <button id="chat-mode-jclaw" class="mode-btn mode-active" onclick="setChatMode('jclaw')">
+        🤖 J_Claw
+      </button>
+      <button id="chat-mode-coding" class="mode-btn" onclick="setChatMode('coding')">
+        💻 Coding
+      </button>
+    </div>
+    <div id="chat-messages" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 16px 8px;"></div>
+    <div id="chat-input-bar" style="flex-shrink:0;display:flex;align-items:flex-end;gap:8px;padding:10px 12px;border-top:1px solid var(--border);background:var(--surface);">
+      <textarea id="chat-input" placeholder="Message J_Claw…" rows="1"
+        style="flex:1;background:var(--overlay);border:1px solid var(--border);border-radius:12px;color:var(--text);font-size:15px;padding:10px 14px;resize:none;max-height:120px;-webkit-appearance:none;font-family:inherit;line-height:1.4;"
+        oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat();}"></textarea>
+      <button onclick="sendChat()" style="width:40px;height:40px;border-radius:50%;background:var(--purple);border:none;color:#1e1e2e;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">↑</button>
+    </div>
+  </div>
+
 </div>
 
-<!-- Bottom tab bar -->
+<!-- Bottom tab bar (5 tabs — Apple HIG) -->
 <nav id="tab-bar">
-  <button class="tab-btn active" onclick="switchTab('overview')" id="tab-overview">
+  <button class="tab-btn active" onclick="switchTab('home')" id="tab-home">
     <div class="tab-wrap">
       <span class="tab-icon">⌂</span>
-      <span>Overview</span>
+      <span>Home</span>
     </div>
   </button>
   <button class="tab-btn" onclick="switchTab('alerts')" id="tab-alerts">
     <div class="tab-wrap" style="position:relative;">
       <span class="tab-icon">⚠</span>
-      <span id="alert-badge" class="tab-badge" style="display:none;">0</span>
+      <span id="alert-badge" class="tab-badge">0</span>
       <span>Alerts</span>
     </div>
   </button>
-  <button class="tab-btn" onclick="switchTab('approvals')" id="tab-approvals">
-    <div class="tab-wrap" style="position:relative;">
-      <span class="tab-icon">✓</span>
-      <span id="approval-badge" class="tab-badge" style="display:none;">0</span>
-      <span>Approvals</span>
-    </div>
-  </button>
-  <button class="tab-btn" onclick="switchTab('tasks')" id="tab-tasks">
+  <button class="tab-btn" onclick="switchTab('command')" id="tab-command">
     <div class="tab-wrap">
-      <span class="tab-icon">≡</span>
-      <span>Tasks</span>
+      <span class="tab-icon">⊞</span>
+      <span>Command</span>
     </div>
   </button>
   <button class="tab-btn" onclick="switchTab('trading')" id="tab-trading">
@@ -439,10 +789,54 @@
       <span>Trading</span>
     </div>
   </button>
+  <button class="tab-btn" onclick="switchTab('chat')" id="tab-chat">
+    <div class="tab-wrap">
+      <span class="tab-icon">💬</span>
+      <span>Chat</span>
+    </div>
+  </button>
 </nav>
+
+<!-- Division Detail Sheet -->
+<div id="div-detail-backdrop" onclick="closeDivisionDetail()"></div>
+<div id="div-detail-sheet">
+  <div id="div-detail-header">
+    <span class="detail-title" id="div-detail-title">Division</span>
+    <button class="detail-close" onclick="closeDivisionDetail()">✕</button>
+  </div>
+  <div id="div-detail-body"><div class="loading">Loading...</div></div>
+</div>
 
 <!-- Toast -->
 <div id="toast"></div>
+
+<!-- PIN sheet -->
+<div id="pin-sheet-backdrop" onclick="cancelPin()"></div>
+<div id="pin-sheet">
+  <div class="pin-sheet-title">Confirm Identity</div>
+  <div class="pin-sheet-sub">Enter your 4-digit PIN to authorize this action</div>
+  <div class="pin-dots">
+    <div class="pin-dot" id="pd0"></div>
+    <div class="pin-dot" id="pd1"></div>
+    <div class="pin-dot" id="pd2"></div>
+    <div class="pin-dot" id="pd3"></div>
+  </div>
+  <div class="pin-keypad">
+    <button class="pin-key" onclick="pinKey('1')">1</button>
+    <button class="pin-key" onclick="pinKey('2')">2</button>
+    <button class="pin-key" onclick="pinKey('3')">3</button>
+    <button class="pin-key" onclick="pinKey('4')">4</button>
+    <button class="pin-key" onclick="pinKey('5')">5</button>
+    <button class="pin-key" onclick="pinKey('6')">6</button>
+    <button class="pin-key" onclick="pinKey('7')">7</button>
+    <button class="pin-key" onclick="pinKey('8')">8</button>
+    <button class="pin-key" onclick="pinKey('9')">9</button>
+    <button class="pin-key pin-del" onclick="pinKey('del')">⌫</button>
+    <button class="pin-key" onclick="pinKey('0')">0</button>
+    <button class="pin-key pin-ok" onclick="pinKey('ok')">✓</button>
+  </div>
+  <span class="pin-cancel" onclick="cancelPin()">Cancel</span>
+</div>
 
 <!-- Action confirm sheet -->
 <div id="sheet-backdrop" onclick="closeSheet()"></div>
@@ -457,7 +851,7 @@
 
 <script>
 // ══════════════════════════════════════════════════════
-// Mission Control Mobile — Core Logic
+// Mission Control Mobile — Ultimate Edition
 // Trust model: mobile is untrusted client. All actions
 // require Bearer token + fresh server challenge + biometric.
 // Admin operations are blocked server-side; mobile only
@@ -465,21 +859,53 @@
 // ══════════════════════════════════════════════════════
 
 // ── Config ──────────────────────────────────────────────
-let MC_TOKEN  = localStorage.getItem('mc_token') || '';
-let MC_SERVER = localStorage.getItem('mc_server') || (location.origin);
-let _currentTab = 'overview';
-let _pendingAction = null;
+const _hashToken = location.hash.replace(/^#/, '').trim();
+if (_hashToken && _hashToken.length > 10) {
+  try { localStorage.setItem('mc_token', _hashToken); } catch(e) {}
+  try { sessionStorage.setItem('mc_token', _hashToken); } catch(e) {}
+  history.replaceState(null, '', location.pathname + location.search);
+}
+
+function _getStored(key) {
+  try { const v = localStorage.getItem(key); if (v) return v; } catch(e) {}
+  try { const v = sessionStorage.getItem(key); if (v) return v; } catch(e) {}
+  return '';
+}
+function _setStored(key, val) {
+  try { localStorage.setItem(key, val); } catch(e) {}
+  try { sessionStorage.setItem(key, val); } catch(e) {}
+}
+
+let MC_TOKEN  = _hashToken || _getStored('mc_token') || '';
+let MC_SERVER = _getStored('mc_server') || location.origin;
+let _currentTab = 'home';
+let _lastLoadTime = 0;
 
 // ── Setup ────────────────────────────────────────────────
 function checkSetup() {
+  const si = document.getElementById('server-input');
+  si.value = MC_SERVER !== location.origin ? MC_SERVER : location.origin;
   if (!MC_TOKEN) {
     document.getElementById('setup-screen').classList.remove('hidden');
-    const si = document.getElementById('server-input');
-    si.value = MC_SERVER !== location.origin ? MC_SERVER : '';
   } else {
     document.getElementById('setup-screen').classList.add('hidden');
     init();
   }
+}
+
+function toggleTokenVisibility() {
+  const inp = document.getElementById('token-input');
+  const btn = document.getElementById('eye-btn');
+  if (inp.type === 'password') { inp.type = 'text'; btn.textContent = '🙈'; }
+  else { inp.type = 'password'; btn.textContent = '👁'; }
+}
+
+function toggleAdvanced() {
+  const wrap = document.getElementById('setup-server-wrap');
+  const arrow = document.getElementById('adv-arrow');
+  const shown = wrap.style.display !== 'none';
+  wrap.style.display = shown ? 'none' : 'block';
+  arrow.textContent = shown ? '▸' : '▾';
 }
 
 function saveSetup() {
@@ -488,10 +914,29 @@ function saveSetup() {
   if (!tok) { showToast('Token required'); return; }
   MC_TOKEN  = tok;
   MC_SERVER = srv || location.origin;
-  localStorage.setItem('mc_token', MC_TOKEN);
-  localStorage.setItem('mc_server', MC_SERVER);
+  _setStored('mc_token', MC_TOKEN);
+  _setStored('mc_server', MC_SERVER);
   document.getElementById('setup-screen').classList.add('hidden');
   init();
+}
+
+// ── Haptic feedback ──────────────────────────────────────
+function haptic(type = 'light') {
+  if (!('vibrate' in navigator)) return;
+  if (type === 'light')  navigator.vibrate(8);
+  if (type === 'medium') navigator.vibrate(20);
+  if (type === 'error')  navigator.vibrate([25, 15, 25]);
+}
+
+// ── Fetch with retry ─────────────────────────────────────
+async function fetchWithRetry(url, opts, retries = 3, delay = 500) {
+  for (let i = 0; i < retries; i++) {
+    try { return await fetch(url, opts); }
+    catch(e) {
+      if (i === retries - 1) throw e;
+      await new Promise(r => setTimeout(r, delay * Math.pow(2, i)));
+    }
+  }
 }
 
 // ── API fetch wrapper ────────────────────────────────────
@@ -505,11 +950,11 @@ async function api(endpoint, options = {}) {
       ...(options.headers || {}),
     },
   };
-  const res = await fetch(url, opts);
+  const res = await fetchWithRetry(url, opts);
   if (res.status === 401) {
-    // Token invalid — show setup
     MC_TOKEN = '';
-    localStorage.removeItem('mc_token');
+    try { localStorage.removeItem('mc_token'); } catch(e) {}
+    try { sessionStorage.removeItem('mc_token'); } catch(e) {}
     document.getElementById('setup-screen').classList.remove('hidden');
     throw new Error('Unauthorized — check your token');
   }
@@ -524,8 +969,66 @@ async function api(endpoint, options = {}) {
 function init() {
   updateClock();
   setInterval(updateClock, 1000);
-  loadTab('overview');
-  setInterval(() => loadTab(_currentTab, true), 30000); // auto-refresh every 30s
+  setInterval(checkStaleness, 15000);
+  loadTab('home');
+  setInterval(() => loadTab(_currentTab, true), 30000);
+
+  // Pull-to-refresh
+  const screens = document.getElementById('screens');
+  let _ptrStartY = 0, _ptrActive = false;
+  screens.addEventListener('touchstart', e => {
+    if (screens.scrollTop === 0) { _ptrStartY = e.touches[0].clientY; _ptrActive = true; }
+  }, { passive: true });
+  screens.addEventListener('touchend', e => {
+    if (_ptrActive && (e.changedTouches[0].clientY - _ptrStartY) > 70) { haptic('light'); refreshCurrent(); }
+    _ptrActive = false;
+  }, { passive: true });
+
+  // Offline/online detection
+  window.addEventListener('offline', () => document.getElementById('offline-banner').classList.add('show'));
+  window.addEventListener('online', () => {
+    document.getElementById('offline-banner').classList.remove('show');
+    refreshCurrent();
+  });
+
+  // SSE: real-time alert push
+  _connectAlertStream();
+}
+
+let _alertSSE = null;
+let _alertSSERetry = null;
+
+function _connectAlertStream() {
+  if (_alertSSE) { try { _alertSSE.close(); } catch(e) {} }
+  // EventSource doesn't support custom headers — pass token as query param for this endpoint
+  const streamUrl = MC_SERVER + '/mobile/api/alerts/stream?token=' + encodeURIComponent(MC_TOKEN);
+  try {
+    _alertSSE = new EventSource(streamUrl);
+    _alertSSE.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (data.type === 'init' || data.type === 'update') {
+          const alerts = data.alerts || [];
+          // Update badge from any screen
+          const approvalCount = document.getElementById('alert-badge') ? 0 : 0; // badge includes approvals too — just update alert portion
+          updateBadge('alert-badge', alerts.length);
+          // If alerts tab is active, re-render it
+          if (_currentTab === 'alerts') {
+            loadAlerts(true);
+          }
+        }
+      } catch(err) {}
+    };
+    _alertSSE.onerror = () => {
+      _alertSSE.close();
+      _alertSSE = null;
+      // Retry after 15s
+      clearTimeout(_alertSSERetry);
+      _alertSSERetry = setTimeout(_connectAlertStream, 15000);
+    };
+  } catch(e) {
+    // EventSource not available — fall back to polling (already set up above)
+  }
 }
 
 function updateClock() {
@@ -534,28 +1037,59 @@ function updateClock() {
     now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
 }
 
+function checkStaleness() {
+  const staleEl = document.getElementById('stale-label');
+  if (_lastLoadTime && (Date.now() - _lastLoadTime) > 10 * 60 * 1000) {
+    staleEl.classList.add('show');
+  } else {
+    staleEl.classList.remove('show');
+  }
+}
+
 // ── Tab navigation ───────────────────────────────────────
+let _commandSeg = 'intel'; // active segment within Command tab
+
 function switchTab(name) {
+  haptic('light');
   _currentTab = name;
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('screen-' + name).classList.add('active');
-  document.getElementById('tab-' + name).classList.add('active');
+  const screenId = 'screen-' + name;
+  const screen = document.getElementById(screenId);
+  if (screen) screen.classList.add('active');
+  const tabBtn = document.getElementById('tab-' + name);
+  if (tabBtn) tabBtn.classList.add('active');
   loadTab(name);
-  // Scroll content to top
   document.getElementById('screens').scrollTop = 0;
+}
+
+function switchCommandSeg(seg) {
+  _commandSeg = seg;
+  document.getElementById('seg-intel').classList.toggle('active', seg === 'intel');
+  document.getElementById('seg-ops').classList.toggle('active', seg === 'ops');
+  document.getElementById('command-intel-wrap').style.display = seg === 'intel' ? 'block' : 'none';
+  document.getElementById('command-ops-wrap').style.display = seg === 'ops' ? 'block' : 'none';
+  // Load if not yet loaded
+  if (seg === 'intel') loadIntel(true);
+  if (seg === 'ops') loadOps(true);
 }
 
 function refreshCurrent() { loadTab(_currentTab); }
 
 function loadTab(name, silent = false) {
   switch(name) {
-    case 'overview':  loadOverview(silent);  break;
-    case 'alerts':    loadAlerts(silent);    break;
-    case 'approvals': loadApprovals(silent); break;
-    case 'tasks':     loadTasks(silent);     break;
-    case 'trading':   loadTrading(silent);   break;
+    case 'home':     loadOverview(silent); break;
+    case 'alerts':   loadAlerts(silent);   break;
+    case 'command':  loadCommand(silent);  break;
+    case 'trading':  loadTrading(silent);  break;
+    case 'chat':     initChat();           break;
   }
+}
+
+function loadCommand(silent = false) {
+  // Load the active segment; pre-load the other in background
+  loadIntel(silent);
+  loadOps(true);
 }
 
 // ── Toast ─────────────────────────────────────────────────
@@ -572,16 +1106,23 @@ function showToast(msg, duration = 2500) {
 function setConnected(ok) {
   const dot = document.getElementById('conn-dot');
   dot.style.background = ok ? 'var(--green)' : 'var(--red)';
+  if (ok) {
+    dot.classList.add('connected');
+    _lastLoadTime = Date.now();
+    checkStaleness();
+  } else {
+    dot.classList.remove('connected');
+  }
 }
 
 // ── Confirm sheet ─────────────────────────────────────────
 function openSheet(title, body, btnLabel, btnClass, onConfirm) {
-  document.getElementById('sheet-title').textContent  = title;
-  document.getElementById('sheet-body').textContent   = body;
+  document.getElementById('sheet-title').textContent = title;
+  document.getElementById('sheet-body').textContent  = body;
   const btn = document.getElementById('sheet-confirm-btn');
-  btn.textContent  = btnLabel;
-  btn.className    = 'btn ' + btnClass;
-  btn.onclick      = () => { closeSheet(); onConfirm(); };
+  btn.textContent = btnLabel;
+  btn.className   = 'btn ' + btnClass;
+  btn.onclick     = () => { closeSheet(); onConfirm(); };
   document.getElementById('confirm-sheet').classList.add('open');
   document.getElementById('sheet-backdrop').classList.add('open');
 }
@@ -592,9 +1133,6 @@ function closeSheet() {
 }
 
 // ── Biometric / challenge gate ────────────────────────────
-// Called before any Operator action.
-// Gets a 30s server challenge, triggers WebAuthn (Face ID),
-// then calls the action endpoint with the challenge_id.
 async function requireBiometricThenAct(action, payload) {
   let challengeId;
   try {
@@ -602,14 +1140,13 @@ async function requireBiometricThenAct(action, payload) {
     challengeId = ch.challenge_id;
   } catch(e) {
     showToast('Could not get challenge: ' + e.message);
+    haptic('error');
     return;
   }
 
-  // Try WebAuthn (Face ID on iOS Safari)
   let biometricOk = false;
   try {
     if (window.PublicKeyCredential) {
-      // Minimal WebAuthn get — uses platform authenticator (Face ID / Touch ID)
       const cred = await navigator.credentials.get({
         publicKey: {
           challenge: new TextEncoder().encode(challengeId),
@@ -621,39 +1158,41 @@ async function requireBiometricThenAct(action, payload) {
       biometricOk = !!cred;
     }
   } catch(e) {
-    // WebAuthn unavailable or denied
     biometricOk = false;
   }
 
-  // Fallback: PIN prompt (WebAuthn requires HTTPS+registered credential)
+  // Fallback: In-app PIN sheet
   if (!biometricOk) {
-    const pin = prompt('Biometric unavailable. Enter PIN to confirm:');
-    const storedHash = localStorage.getItem('mc_pin_hash');
-    if (!pin) { showToast('Action cancelled'); return; }
-    if (storedHash) {
-      const h = await sha256(pin);
-      if (h !== storedHash) { showToast('Incorrect PIN'); return; }
-    } else {
-      // First time: set the PIN
-      const h = await sha256(pin);
-      localStorage.setItem('mc_pin_hash', h);
-      showToast('PIN set');
+    try {
+      const pin = await openPinSheet();
+      const storedHash = _getStored('mc_pin_hash');
+      if (storedHash) {
+        const h = await sha256(pin);
+        if (h !== storedHash) { showToast('Incorrect PIN'); haptic('error'); return; }
+      } else {
+        const h = await sha256(pin);
+        _setStored('mc_pin_hash', h);
+        showToast('PIN saved');
+      }
+      biometricOk = true;
+    } catch(e) {
+      showToast('Action cancelled');
+      return;
     }
-    biometricOk = true;
   }
 
-  if (!biometricOk) { showToast('Auth failed'); return; }
+  if (!biometricOk) { showToast('Auth failed'); haptic('error'); return; }
 
-  // Execute action
   try {
     const result = await api('/mobile/api/action', {
       method: 'POST',
       body: JSON.stringify({ ...payload, action, challenge_id: challengeId }),
     });
+    haptic('medium');
     showToast(result.message || 'Done');
-    // Refresh current tab
     setTimeout(() => loadTab(_currentTab), 500);
   } catch(e) {
+    haptic('error');
     showToast('Error: ' + e.message);
   }
 }
@@ -663,117 +1202,415 @@ async function sha256(str) {
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
 }
 
-// ══════════════════════════════════════════════════════
-// SCREEN: OVERVIEW
-// ══════════════════════════════════════════════════════
-async function loadOverview(silent = false) {
-  const el = document.getElementById('overview-content');
-  if (!silent) el.innerHTML = '<div class="loading">Loading...</div>';
-  try {
-    const d = await api('/mobile/api/overview');
-    setConnected(true);
+// ── PIN sheet ──────────────────────────────────────────────
+let _pinResolve = null, _pinReject = null, _pinValue = '';
 
-    // Update badges
-    const alertCount = (d.alerts || []).length;
-    const approvalCount = (d.approvals || []).length;
-    updateBadge('alert-badge', alertCount);
-    updateBadge('approval-badge', approvalCount);
+function openPinSheet() {
+  return new Promise((resolve, reject) => {
+    _pinResolve = resolve;
+    _pinReject  = reject;
+    _pinValue   = '';
+    _updatePinDots();
+    document.getElementById('pin-sheet').classList.add('open');
+    document.getElementById('pin-sheet-backdrop').classList.add('open');
+  });
+}
 
-    let html = '';
+function closePinSheet() {
+  document.getElementById('pin-sheet').classList.remove('open');
+  document.getElementById('pin-sheet-backdrop').classList.remove('open');
+  _pinValue = '';
+  _updatePinDots();
+}
 
-    // Stats row
-    html += '<div class="stat-row">';
-    html += statBox(d.stats?.pending_jobs ?? '—', 'Jobs');
-    html += statBox(alertCount, 'Alerts', alertCount > 0 ? 'var(--red)' : null);
-    html += statBox(approvalCount, 'Pending', approvalCount > 0 ? 'var(--yellow)' : null);
-    html += '</div>';
+function cancelPin() {
+  closePinSheet();
+  if (_pinReject) { _pinReject(new Error('cancelled')); _pinReject = null; _pinResolve = null; }
+}
 
-    // Division health grid
-    html += '<div class="section-title">Divisions</div>';
-    html += '<div class="div-grid">';
-    for (const [key, div] of Object.entries(d.divisions || {})) {
-      const color = div.status === 'idle' ? 'var(--green)'
-                  : div.status === 'running' ? 'var(--blue)'
-                  : div.status === 'error' ? 'var(--red)' : 'var(--subtext)';
-      html += `<div class="div-chip">
-        <div class="name" style="color:${color}">${key.replace('_','-')}</div>
-        <div class="last">${div.last_run ? relTime(div.last_run) : 'Never'}</div>
-        <div><span class="pill pill-grey">${div.status || 'unknown'}</span></div>
-      </div>`;
-    }
-    html += '</div>';
-
-    // Active alerts summary (up to 3)
-    if ((d.alerts || []).length) {
-      html += '<div class="section-title">Active Alerts</div>';
-      (d.alerts || []).slice(0, 3).forEach(a => {
-        html += renderAlertCard(a, false);
-      });
-    }
-
-    // System health
-    if (d.system) {
-      html += '<div class="section-title">System</div>';
-      html += '<div class="card">';
-      html += `<div style="display:flex;gap:8px;flex-wrap:wrap;">`;
-      for (const [k, v] of Object.entries(d.system)) {
-        const ok = v === 'available' || v === 'ok' || v === true;
-        html += `<span class="pill ${ok ? 'pill-green' : 'pill-red'}">${k}</span>`;
-      }
-      html += '</div></div>';
-    }
-
-    // Briefing snippet
-    if (d.briefing) {
-      html += '<div class="section-title">Briefing</div>';
-      html += `<div class="card"><div class="card-body" style="font-size:12px;line-height:1.6;">${escHtml(d.briefing.slice(0, 300))}${d.briefing.length > 300 ? '…' : ''}</div></div>`;
-    }
-
-    el.innerHTML = html;
-  } catch(e) {
-    setConnected(false);
-    el.innerHTML = `<div class="empty-state"><div class="empty-icon">⚡</div><p>${escHtml(e.message)}</p></div>`;
+function _updatePinDots() {
+  for (let i = 0; i < 4; i++) {
+    const dot = document.getElementById('pd' + i);
+    if (dot) dot.classList.toggle('filled', i < _pinValue.length);
   }
+}
+
+function pinKey(key) {
+  haptic('light');
+  if (key === 'del') {
+    _pinValue = _pinValue.slice(0, -1);
+    _updatePinDots();
+  } else if (key === 'ok') {
+    if (_pinValue.length < 4) { showToast('Enter 4 digits'); return; }
+    const pin = _pinValue;
+    closePinSheet();
+    if (_pinResolve) { _pinResolve(pin); _pinResolve = null; _pinReject = null; }
+  } else if (_pinValue.length < 4) {
+    _pinValue += key;
+    _updatePinDots();
+    if (_pinValue.length === 4) {
+      // Auto-submit after brief delay
+      setTimeout(() => {
+        if (_pinValue.length === 4) {
+          const pin = _pinValue;
+          closePinSheet();
+          if (_pinResolve) { _pinResolve(pin); _pinResolve = null; _pinReject = null; }
+        }
+      }, 120);
+    }
+  }
+}
+
+// ── Utilities ─────────────────────────────────────────────
+function updateBadge(id, count) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (count > 0) { el.textContent = count > 99 ? '99+' : count; el.style.display = 'block'; }
+  else { el.style.display = 'none'; }
+}
+
+function relTime(iso) {
+  if (!iso) return '—';
+  const diff = Date.now() - new Date(iso).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1)  return 'just now';
+  if (m < 60) return m + 'm ago';
+  const h = Math.floor(m / 60);
+  if (h < 24) return h + 'h ago';
+  return Math.floor(h / 24) + 'd ago';
+}
+
+function escHtml(s) {
+  return String(s ?? '')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 function statBox(val, lbl, color) {
   return `<div class="stat-box"><div class="val" ${color ? `style="color:${color}"` : ''}>${val}</div><div class="lbl">${lbl}</div></div>`;
 }
 
+function metricBox(val, lbl, color) {
+  return `<div class="metric-box"><div class="mval" ${color ? `style="color:${color}"` : ''}>${val}</div><div class="mlbl">${lbl}</div></div>`;
+}
+
+// ── Error card renderer ────────────────────────────────────
+function renderError(el, msg, retryFn) {
+  let friendly = msg || 'Something went wrong';
+  if (msg && msg.toLowerCase().includes('unauthorized')) friendly = 'Token rejected — tap to re-enter';
+  else if (msg && (msg.includes('fetch') || msg.includes('network') || msg.includes('Failed to fetch'))) friendly = "Can't reach server";
+  else if (msg && msg.includes('500')) friendly = 'Server error';
+  const retryId = 'retry-' + Date.now();
+  el.innerHTML = `<div class="error-card">
+    <div class="error-icon">⚠</div>
+    <div class="error-msg">${escHtml(friendly)}</div>
+    <button class="btn btn-outline btn-sm" id="${retryId}" style="margin:0 auto;display:flex;">Retry</button>
+  </div>`;
+  if (retryFn) document.getElementById(retryId).onclick = retryFn;
+}
+
+// ── Markdown renderer ──────────────────────────────────────
+function renderMarkdown(text) {
+  if (!text) return '';
+  let html = '';
+  const lines = text.split('\n');
+  let inCode = false, codeLang = '', codeLines = [];
+
+  const flushCode = () => {
+    const code = codeLines.join('\n');
+    const copyId = 'cp-' + Math.random().toString(36).slice(2, 8);
+    html += `<div class="md-pre-wrap"><button class="md-copy-btn" id="${copyId}" onclick="copyCode('${copyId}')">Copy</button><pre class="md-pre">${escHtml(code)}</pre></div>`;
+    codeLines = []; codeLang = ''; inCode = false;
+  };
+
+  for (const raw of lines) {
+    if (raw.startsWith('```')) {
+      if (inCode) { flushCode(); continue; }
+      inCode = true; codeLang = raw.slice(3).trim(); continue;
+    }
+    if (inCode) { codeLines.push(raw); continue; }
+
+    let line = raw
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/`([^`]+)`/g, '<code>$1</code>');
+
+    if (/^#{1,3}\s/.test(raw)) {
+      html += `<h3 class="md-h">${line.replace(/^#+\s/, '')}</h3>`;
+    } else if (/^[-*]\s/.test(raw)) {
+      html += `<li>${line.slice(2)}</li>`;
+    } else if (/^\d+\.\s/.test(raw)) {
+      html += `<li>${line.replace(/^\d+\.\s/, '')}</li>`;
+    } else if (line.trim() === '') {
+      html += '<br>';
+    } else {
+      html += `<span>${line}</span><br>`;
+    }
+  }
+  if (inCode) flushCode();
+  return `<div class="md-content">${html}</div>`;
+}
+
+function copyCode(btnId) {
+  const wrap = document.getElementById(btnId).parentElement;
+  const pre  = wrap.querySelector('pre');
+  if (!pre) return;
+  navigator.clipboard.writeText(pre.textContent).then(() => {
+    const btn = document.getElementById(btnId);
+    if (btn) { btn.textContent = 'Copied!'; btn.style.color = 'var(--green)'; setTimeout(() => { btn.textContent = 'Copy'; btn.style.color = ''; }, 2000); }
+  }).catch(() => showToast('Copy failed'));
+}
+
+// ── SVG: Equity Sparkline ─────────────────────────────────
+function renderSparkline(equityCurve) {
+  if (!equityCurve || equityCurve.length < 2) return '<div style="height:48px;display:flex;align-items:center;justify-content:center;color:var(--subtext);font-size:12px;">No equity data</div>';
+  const W = 280, H = 48;
+  const min = Math.min(...equityCurve), max = Math.max(...equityCurve);
+  const range = max - min || 1;
+  const pts = equityCurve.map((v, i) => {
+    const x = (i / (equityCurve.length - 1)) * W;
+    const y = H - ((v - min) / range) * (H - 4) - 2;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+  const lastVal = equityCurve[equityCurve.length - 1];
+  const color = lastVal >= equityCurve[0] ? 'var(--green)' : 'var(--red)';
+  const startY = H - ((equityCurve[0] - min) / range) * (H - 4) - 2;
+  return `<svg width="100%" height="${H}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="display:block">
+    <line x1="0" y1="${startY.toFixed(1)}" x2="${W}" y2="${startY.toFixed(1)}" stroke="var(--border)" stroke-width="1" stroke-dasharray="3,3"/>
+    <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  </svg>`;
+}
+
+// ── SVG: Win Rate Ring ────────────────────────────────────
+function renderWinRateRing(pct) {
+  if (pct === null || pct === undefined) pct = 0;
+  const r = 28, circ = 2 * Math.PI * r;
+  const offset = circ * (1 - pct / 100);
+  const color = pct >= 55 ? 'var(--green)' : pct >= 40 ? 'var(--yellow)' : 'var(--red)';
+  return `<svg width="72" height="72" viewBox="0 0 72 72">
+    <circle cx="36" cy="36" r="${r}" fill="none" stroke="var(--overlay)" stroke-width="6"/>
+    <circle cx="36" cy="36" r="${r}" fill="none" stroke="${color}" stroke-width="6"
+      stroke-dasharray="${circ.toFixed(1)}" stroke-dashoffset="${offset.toFixed(1)}"
+      stroke-linecap="round" transform="rotate(-90 36 36)"/>
+    <text x="36" y="40" text-anchor="middle" font-family="-apple-system,sans-serif" font-size="13" font-weight="700" fill="var(--text)">${pct ?? '—'}%</text>
+  </svg>`;
+}
+
 // ══════════════════════════════════════════════════════
-// SCREEN: ALERTS
+// SCREEN: HOME (Overview)
+// ══════════════════════════════════════════════════════
+async function loadOverview(silent = false) {
+  const el = document.getElementById('home-content');
+  if (!silent) el.innerHTML = '<div class="loading">Loading...</div>';
+  try {
+    const d = await api('/mobile/api/overview');
+    setConnected(true);
+
+    const alertCount    = (d.alerts || []).length;
+    const approvalCount = (d.approvals || []).length;
+    updateBadge('alert-badge', alertCount);
+
+    let html = '';
+
+    // ── Stats bar ──
+    html += '<div class="stat-row">';
+    html += statBox(d.stats?.pending_jobs ?? '—', 'Jobs');
+    html += statBox(alertCount, 'Alerts', alertCount > 0 ? 'var(--red)' : null);
+    html += statBox(approvalCount, 'Pending', approvalCount > 0 ? 'var(--yellow)' : null);
+    html += statBox(Object.keys(d.divisions || {}).length, 'Divs');
+    html += '</div>';
+
+    // ── Division cards 2-col grid ──
+    html += '<div class="section-title">Divisions</div>';
+    html += '<div class="div-grid">';
+
+    const divs = d.divisions || {};
+    for (const [key, div] of Object.entries(divs)) {
+      const m = div.metrics || {};
+      const statusPillClass = div.status === 'idle' ? 'pill-green'
+        : div.status === 'running' ? 'pill-blue'
+        : div.status === 'error' ? 'pill-red' : 'pill-grey';
+
+      let cardClass = '';
+      let metricsHtml = '';
+      let lastRunLabel = div.last_run ? relTime(div.last_run) : 'Never';
+
+      if (key === 'trading') {
+        const warning = (m.win_rate != null && m.win_rate < 35);
+        cardClass = warning ? 'danger' : '';
+        metricsHtml = `<div class="div-metrics">
+          <span class="dm-item"><span class="dm-val">${m.win_rate != null ? m.win_rate + '%' : '—'}</span><span class="dm-lbl">WIN</span></span>
+          <span class="dm-item"><span class="dm-val">${m.sharpe != null ? m.sharpe.toFixed(2) : '—'}</span><span class="dm-lbl">SHP</span></span>
+          <span class="dm-item"><span class="dm-val">${m.rr_display || (m.rr_ratio ? m.rr_ratio.toFixed(1)+':1' : '—')}</span><span class="dm-lbl">RR</span></span>
+          <span class="dm-item"><span class="dm-val" style="color:var(--red)">${m.max_drawdown_pct != null ? m.max_drawdown_pct.toFixed(1) + '%' : '—'}</span><span class="dm-lbl">DD</span></span>
+        </div>`;
+        if (m.cycle_number) lastRunLabel = `Cycle ${m.cycle_number} · ${lastRunLabel}`;
+
+      } else if (key === 'opportunity') {
+        const srcOk = m.sources_ok != null ? `${m.sources_ok}/${m.sources_total || 4}` : '—';
+        metricsHtml = `<div class="div-metrics">
+          <span class="dm-item"><span class="dm-val">${m.new_jobs_found ?? '—'}</span><span class="dm-lbl">JOBS</span></span>
+          <span class="dm-item"><span class="dm-val">${srcOk}</span><span class="dm-lbl">SRC</span></span>
+          <span class="dm-item"><span class="dm-val">${m.funding_opportunities ?? '—'}</span><span class="dm-lbl">FUND</span></span>
+        </div>`;
+
+      } else if (key === 'personal') {
+        const burnColor = m.burnout_level === 'check' ? 'var(--yellow)' : m.burnout_level === 'elevated' ? 'var(--red)' : '';
+        metricsHtml = `<div class="div-metrics">
+          <span class="dm-item"><span class="dm-val" ${burnColor ? `style="color:${burnColor}"` : ''}>${m.burnout_level || '—'}</span><span class="dm-lbl">BURN</span></span>
+          <span class="dm-item"><span class="dm-val">${m.sleep_hours != null ? m.sleep_hours + 'h' : m.avg_sleep_hours != null ? m.avg_sleep_hours + 'h' : '—'}</span><span class="dm-lbl">SLP</span></span>
+          <span class="dm-item"><span class="dm-val">${m.health_entries ?? '—'}</span><span class="dm-lbl">LOGS</span></span>
+        </div>`;
+        if (m.burnout_level === 'check' || m.burnout_level === 'elevated') cardClass = 'warning';
+
+      } else if (key === 'dev_automation') {
+        const high = m.refactor_high ?? m.total_high ?? 0;
+        cardClass = high > 5 ? 'warning' : '';
+        metricsHtml = `<div class="div-metrics">
+          <span class="dm-item"><span class="dm-val" ${high > 0 ? 'style="color:var(--red)"' : ''}>${high}</span><span class="dm-lbl">HIGH</span></span>
+          <span class="dm-item"><span class="dm-val">${m.files_scanned ?? '—'}</span><span class="dm-lbl">FILES</span></span>
+          <span class="dm-item"><span class="dm-val">${m.repos_checked ?? '—'}</span><span class="dm-lbl">REPOS</span></span>
+        </div>`;
+
+      } else if (key === 'op_sec') {
+        const threatWarn = m.threat_level === 'warning';
+        cardClass = threatWarn ? 'warning' : '';
+        if (m.high_severity > 0) cardClass = 'danger';
+        metricsHtml = `<div class="div-metrics">
+          <span class="dm-item"><span class="dm-val" ${m.anomaly_count > 0 ? 'style="color:var(--red)"' : ''}>${m.anomaly_count ?? '—'}</span><span class="dm-lbl">ANML</span></span>
+          <span class="dm-item"><span class="dm-val">${m.device_posture || '—'}</span><span class="dm-lbl">POST</span></span>
+          <span class="dm-item"><span class="dm-val">${m.breach_status || '—'}</span><span class="dm-lbl">BRCH</span></span>
+        </div>`;
+
+      } else {
+        // sentinel or unknown
+        metricsHtml = `<div class="div-metrics"><span class="dm-item" style="flex:unset;padding:4px 8px;"><span class="dm-val" style="font-size:10px;color:var(--subtext);">—</span></span></div>`;
+      }
+
+      const divLabel = key.replace(/_/g, '-');
+      html += `<div class="div-card ${cardClass}" onclick="openDivisionDetail('${key}')">
+        <div class="div-card-header">
+          <span class="div-name">${escHtml(divLabel)}</span>
+          <span class="pill ${statusPillClass}">${escHtml(div.status || '?')}</span>
+        </div>
+        ${metricsHtml}
+        <div class="div-lastrun">${escHtml(lastRunLabel)} <span style="color:var(--border);float:right">›</span></div>
+      </div>`;
+    }
+    html += '</div>';
+
+    // ── Active alerts preview ──
+    if (alertCount > 0) {
+      html += `<div class="section-header"><span class="sh-title">Active Alerts</span><span class="sh-badge">${alertCount}</span></div>`;
+      (d.alerts || []).slice(0, 3).forEach(a => {
+        html += renderAlertCard(a, false);
+      });
+      if (alertCount > 3) {
+        html += `<div style="text-align:center;font-size:12px;color:var(--subtext);margin-bottom:8px;">+${alertCount - 3} more — see Alerts tab</div>`;
+      }
+    }
+
+    // ── System providers ──
+    if (d.system) {
+      html += '<div class="section-title">System Providers</div>';
+      html += '<div class="card"><div style="display:flex;gap:6px;flex-wrap:wrap;">';
+      for (const [k, v] of Object.entries(d.system)) {
+        const ok = v === 'available' || v === 'ok' || v === true;
+        html += `<span class="pill ${ok ? 'pill-green' : 'pill-red'}">${escHtml(k)}</span>`;
+      }
+      html += '</div></div>';
+    }
+
+    // ── Briefing ──
+    if (d.briefing) {
+      html += '<div class="section-title">Briefing</div>';
+      html += `<div class="card"><div class="card-body" style="font-size:12px;line-height:1.6;">${escHtml(d.briefing.slice(0, 400))}${d.briefing.length > 400 ? '…' : ''}</div></div>`;
+    }
+
+    el.innerHTML = html;
+  } catch(e) {
+    setConnected(false);
+    renderError(el, e.message, () => loadOverview());
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// SCREEN: ALERTS (alerts + approvals combined)
 // ══════════════════════════════════════════════════════
 async function loadAlerts(silent = false) {
   const el = document.getElementById('alerts-content');
   if (!silent) el.innerHTML = '<div class="loading">Loading...</div>';
   try {
-    const d = await api('/mobile/api/alerts');
-    updateBadge('alert-badge', (d.alerts || []).length);
-    if (!d.alerts?.length) {
-      el.innerHTML = `<div class="empty-state"><div class="empty-icon">✓</div><p>No active alerts</p></div>`;
-      return;
+    const [alertsData, approvalsData] = await Promise.all([
+      api('/mobile/api/alerts').catch(() => ({ alerts: [] })),
+      api('/mobile/api/approvals').catch(() => ({ approvals: [] })),
+    ]);
+
+    const alerts    = alertsData.alerts    || [];
+    const approvals = approvalsData.approvals || [];
+
+    updateBadge('alert-badge', alerts.length + approvals.length);
+
+    let html = '';
+
+    // ── Alerts section ──
+    if (alerts.length === 0) {
+      html += '<div class="section-title">Alerts</div>';
+      html += `<div class="empty-state" style="padding:24px 0;"><div class="empty-icon" style="font-size:28px;">✓</div><p style="font-size:13px;">No active alerts</p></div>`;
+    } else {
+      html += `<div class="section-header"><span class="sh-title">${alerts.length} Active Alert${alerts.length !== 1 ? 's' : ''}</span><span class="sh-badge">${alerts.length}</span></div>`;
+      alerts.forEach(a => { html += renderAlertCard(a, true); });
     }
-    let html = `<div class="section-title">${d.alerts.length} Active Alert${d.alerts.length !== 1 ? 's' : ''}</div>`;
-    d.alerts.forEach(a => { html += renderAlertCard(a, true); });
+
+    html += '<div class="divider"></div>';
+
+    // ── Approvals section ──
+    if (approvals.length === 0) {
+      html += '<div class="section-title">Pending Approvals</div>';
+      html += `<div class="empty-state" style="padding:20px 0;"><div class="empty-icon" style="font-size:28px;">✓</div><p style="font-size:13px;">No pending approvals</p></div>`;
+    } else {
+      html += `<div class="section-header"><span class="sh-title">Pending Approvals</span><span class="sh-badge-yellow">${approvals.length}</span></div>`;
+      html += '<div style="background:var(--overlay);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:var(--yellow);">⚠ Face ID or PIN required for each action</div>';
+      approvals.forEach(a => {
+        const riskClass = a.risk === 'high' ? 'pill-red' : a.risk === 'medium' ? 'pill-yellow' : 'pill-green';
+        html += `<div class="approval-card">
+          <div class="approval-header">
+            <div class="approval-title">${escHtml(a.type || a.skill || 'Approval Required')}</div>
+            <span class="pill ${riskClass}">${escHtml((a.risk || 'low').toUpperCase())}</span>
+          </div>
+          <div class="approval-reason">${escHtml(a.reason || a.escalation_reason || '')}</div>
+          ${a.division ? `<div class="card-meta" style="margin-bottom:4px;">Division: ${escHtml(a.division)}</div>` : ''}
+          <div class="approval-actions">
+            <button class="btn btn-reject"  onclick="doApproval('reject',  '${escHtml(a.id)}', '${escHtml(a.type || '')}')">Reject</button>
+            <button class="btn btn-approve" onclick="doApproval('approve', '${escHtml(a.id)}', '${escHtml(a.type || '')}')">Approve</button>
+          </div>
+        </div>`;
+      });
+    }
+
     el.innerHTML = html;
+    setConnected(true);
   } catch(e) {
-    el.innerHTML = `<div class="empty-state"><div class="empty-icon">⚡</div><p>${escHtml(e.message)}</p></div>`;
+    setConnected(false);
+    renderError(el, e.message, () => loadAlerts());
   }
 }
 
 function renderAlertCard(a, showAck) {
   const sev = (a.severity || 'HIGH').toUpperCase();
-  const cls = sev === 'HIGH' ? '' : sev === 'MEDIUM' ? ' medium' : ' low';
-  const sevClass = sev === 'HIGH' ? 'pill-red' : sev === 'MEDIUM' ? 'pill-yellow' : 'pill-blue';
-  return `<div class="alert-card${cls}">
+  const sevClass = sev === 'HIGH' ? '' : sev === 'MEDIUM' ? 'severity-medium' : 'severity-low';
+  const pillClass = sev === 'HIGH' ? 'pill-red' : sev === 'MEDIUM' ? 'pill-yellow' : 'pill-blue';
+  const icon = sev === 'HIGH' ? '🔴' : sev === 'MEDIUM' ? '🟡' : '🔵';
+  return `<div class="alert-card severity-${sev.toLowerCase()} ${sevClass}">
     <div class="alert-header">
-      <span class="pill ${sevClass}">${sev}</span>
+      <span style="font-size:13px;">${icon}</span>
+      <span class="pill ${pillClass}" style="margin-right:auto;margin-left:4px;">${escHtml(sev)}</span>
       <span class="pill pill-grey">${escHtml(a.division || '?')}</span>
     </div>
     <div class="alert-msg">${escHtml(a.message || a.escalation_reason || '')}</div>
     <div style="display:flex;justify-content:space-between;align-items:center;">
-      <div class="alert-meta">${a.generated_at ? relTime(a.generated_at) : ''}</div>
-      ${showAck ? `<button class="btn btn-ack" style="flex:0;padding:6px 14px;height:34px;font-size:12px;" onclick="ackAlert('${escHtml(a.id || a.skill || '')}', '${escHtml(a.division || '')}')">ACK</button>` : ''}
+      <div class="alert-meta">${a.generated_at ? relTime(a.generated_at) : ''} ${a.skill ? '· ' + escHtml(a.skill) : ''}</div>
+      ${showAck ? `<button class="btn btn-ack btn-sm" onclick="ackAlert('${escHtml(a.id || a.skill || '')}', '${escHtml(a.division || '')}')">ACK</button>` : ''}
     </div>
   </div>`;
 }
@@ -788,42 +1625,6 @@ function ackAlert(id, division) {
   );
 }
 
-// ══════════════════════════════════════════════════════
-// SCREEN: APPROVALS
-// ══════════════════════════════════════════════════════
-async function loadApprovals(silent = false) {
-  const el = document.getElementById('approvals-content');
-  if (!silent) el.innerHTML = '<div class="loading">Loading...</div>';
-  try {
-    const d = await api('/mobile/api/approvals');
-    updateBadge('approval-badge', (d.approvals || []).length);
-    if (!d.approvals?.length) {
-      el.innerHTML = `<div class="empty-state"><div class="empty-icon">✓</div><p>No pending approvals</p></div>`;
-      return;
-    }
-    let html = `<div class="section-title">${d.approvals.length} Pending Approval${d.approvals.length !== 1 ? 's' : ''}</div>`;
-    html += '<div style="background:var(--overlay);border-radius:10px;padding:10px 12px;margin-bottom:14px;font-size:12px;color:var(--yellow);">⚠ Face ID or PIN required for each action</div>';
-    d.approvals.forEach(a => {
-      const riskClass = a.risk === 'high' ? 'pill-red' : a.risk === 'medium' ? 'pill-yellow' : 'pill-green';
-      html += `<div class="approval-card">
-        <div class="approval-header">
-          <div class="approval-title">${escHtml(a.type || a.skill || 'Approval Required')}</div>
-          <span class="pill ${riskClass}">${(a.risk || 'low').toUpperCase()}</span>
-        </div>
-        <div class="approval-reason">${escHtml(a.reason || a.escalation_reason || '')}</div>
-        ${a.division ? `<div class="card-meta">Division: ${escHtml(a.division)}</div>` : ''}
-        <div class="approval-actions">
-          <button class="btn btn-reject"  onclick="doApproval('reject',  '${escHtml(a.id)}', '${escHtml(a.type || '')}')">Reject</button>
-          <button class="btn btn-approve" onclick="doApproval('approve', '${escHtml(a.id)}', '${escHtml(a.type || '')}')">Approve</button>
-        </div>
-      </div>`;
-    });
-    el.innerHTML = html;
-  } catch(e) {
-    el.innerHTML = `<div class="empty-state"><div class="empty-icon">⚡</div><p>${escHtml(e.message)}</p></div>`;
-  }
-}
-
 function doApproval(decision, id, type) {
   const isApprove = decision === 'approve';
   openSheet(
@@ -836,41 +1637,290 @@ function doApproval(decision, id, type) {
 }
 
 // ══════════════════════════════════════════════════════
-// SCREEN: TASKS
+// SCREEN: INTEL (Opportunity + Personal)
 // ══════════════════════════════════════════════════════
-async function loadTasks(silent = false) {
-  const el = document.getElementById('tasks-content');
+async function loadIntel(silent = false) {
+  const el = document.getElementById('intel-content');
   if (!silent) el.innerHTML = '<div class="loading">Loading...</div>';
   try {
-    const d = await api('/mobile/api/tasks');
-    const tasks = d.tasks || [];
-    if (!tasks.length) {
-      el.innerHTML = `<div class="empty-state"><div class="empty-icon">≡</div><p>No tasks in queue</p></div>`;
-      return;
-    }
-    const groups = { running: [], queued: [], completed: [], failed: [] };
-    tasks.forEach(t => { (groups[t.status] || groups.queued).push(t); });
+    const d = await api('/mobile/api/divisions');
+    setConnected(true);
     let html = '';
-    for (const [status, list] of Object.entries(groups)) {
-      if (!list.length) continue;
-      const color = status === 'running' ? 'pill-blue' : status === 'completed' ? 'pill-green' : status === 'failed' ? 'pill-red' : 'pill-grey';
-      html += `<div class="section-title">${status.toUpperCase()} (${list.length})</div>`;
-      list.slice(0, 20).forEach(t => {
-        html += `<div class="card">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-            <div class="card-title">${escHtml(t.skill || t.type || t.id)}</div>
-            <span class="pill ${color}">${status}</span>
-          </div>
-          <div class="card-meta">
-            ${t.division ? `<span>${escHtml(t.division)}</span> · ` : ''}
-            ${t.submitted_at ? relTime(t.submitted_at) : ''}
-          </div>
-        </div>`;
-      });
+
+    // ── OPPORTUNITY ──
+    html += '<div class="section-title">Opportunity</div>';
+    const opp = d.opportunity || {};
+    const ji  = opp.job_intake  || {};
+    const ff  = opp.funding_finder || {};
+    const jiM = ji.metrics  || {};
+    const ffM = ff.metrics  || {};
+
+    // Source status pills
+    if (jiM.source_status && Object.keys(jiM.source_status).length) {
+      html += '<div class="src-row">';
+      for (const [src, status] of Object.entries(jiM.source_status)) {
+        const pc = status === 'ok' ? 'pill-green' : status === 'partial' ? 'pill-yellow' : 'pill-red';
+        html += `<span class="pill ${pc}">${escHtml(src)}</span>`;
+      }
+      html += '</div>';
     }
+
+    // Job tier grid
+    html += '<div class="tier-grid">';
+    html += `<div class="tier-box tier-a"><div class="tv">${jiM.tier_a ?? 0}</div><div class="tl">Tier A</div></div>`;
+    html += `<div class="tier-box tier-b"><div class="tv">${jiM.tier_b ?? 0}</div><div class="tl">Tier B</div></div>`;
+    html += `<div class="tier-box tier-c"><div class="tv">${jiM.tier_c ?? 0}</div><div class="tl">Tier C</div></div>`;
+    html += `<div class="tier-box tier-d"><div class="tv">${jiM.tier_d ?? 0}</div><div class="tl">Tier D</div></div>`;
+    html += '</div>';
+
+    // Jobs found + funding
+    html += '<div class="card">';
+    html += `<div class="info-row"><span class="info-lbl">Total Jobs Found</span><span class="info-val" style="color:var(--teal)">${jiM.new_jobs_found ?? '—'}</span></div>`;
+    html += `<div class="info-row"><span class="info-lbl">Funding Opportunities</span><span class="info-val" style="color:var(--peach)">${ffM.funding_opportunities ?? '—'}</span></div>`;
+    if (ji.summary) html += `<div style="font-size:12px;color:var(--subtext);margin-top:8px;line-height:1.5;">${escHtml(ji.summary)}</div>`;
+    html += '</div>';
+
+    // Job intake action items
+    if ((ji.action_items || []).length) {
+      html += '<div class="card">';
+      html += '<div class="card-title" style="font-size:12px;margin-bottom:6px;">Job Action Items</div>';
+      html += '<ul class="action-list">';
+      ji.action_items.slice(0, 5).forEach(item => {
+        html += `<li>${escHtml(typeof item === 'string' ? item : item.text || JSON.stringify(item))}</li>`;
+      });
+      html += '</ul></div>';
+    }
+
+    // Funding summary
+    if (ff.summary) {
+      html += `<div class="card"><div class="card-body" style="font-size:12px;line-height:1.5;">${escHtml(ff.summary)}</div></div>`;
+    }
+
+    html += '<div class="divider"></div>';
+
+    // ── PERSONAL ──
+    html += '<div class="section-title">Personal</div>';
+    const per = d.personal || {};
+    const hl  = per.health_logger || {};
+    const bm  = per.burnout_monitor || {};
+    const hlM = hl.metrics || {};
+    const bmM = bm.metrics || {};
+
+    // Sleep card
+    html += '<div class="card">';
+    html += '<div class="card-title">Sleep</div>';
+    const sleepHrs = hlM.sleep_hours ?? bmM.avg_sleep_hours;
+    const sleepGoal = 8;
+    const sleepPct  = sleepHrs != null ? Math.min(100, (sleepHrs / sleepGoal) * 100) : 0;
+    const sleepColor = sleepHrs == null ? 'var(--subtext)' : sleepHrs >= 7 ? 'var(--green)' : sleepHrs >= 6 ? 'var(--yellow)' : 'var(--red)';
+    html += `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+      <span style="font-size:22px;font-weight:700;color:${sleepColor}">${sleepHrs != null ? sleepHrs + 'h' : '—'}</span>
+      <span class="pill pill-grey">Goal: ${sleepGoal}h</span>
+    </div>`;
+    html += `<div class="sleep-bar-wrap"><div class="sleep-bar-fill" style="width:${sleepPct.toFixed(0)}%;background:${sleepColor};"></div></div>`;
+    if (hlM.sleep_quality) {
+      html += `<div class="card-meta">Quality: ${escHtml(hlM.sleep_quality)}</div>`;
+    }
+    if (bmM.avg_sleep_hours != null) {
+      html += `<div class="card-meta">7-day avg: ${bmM.avg_sleep_hours}h</div>`;
+    }
+    html += '</div>';
+
+    // Burnout card
+    html += '<div class="card">';
+    html += '<div class="card-title">Burnout Monitor</div>';
+    const burnLevel = bmM.burnout_level || (bmM.negative_emotions > 2 ? 'check' : 'normal');
+    const burnPillClass = burnLevel === 'elevated' ? 'pill-red' : burnLevel === 'check' ? 'pill-yellow' : 'pill-green';
+    html += `<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+      <span class="pill ${burnPillClass}" style="font-size:12px;padding:4px 12px;">${escHtml(burnLevel.toUpperCase())}</span>
+    </div>`;
+    html += `<div class="info-row"><span class="info-lbl">Health Entries (week)</span><span class="info-val">${bmM.health_entries ?? '—'}</span></div>`;
+    html += `<div class="info-row"><span class="info-lbl">Skipped Logs</span><span class="info-val" ${(bmM.skipped_logs || 0) > 0 ? 'style="color:var(--yellow)"' : ''}>${bmM.skipped_logs ?? '—'}</span></div>`;
+    html += `<div class="info-row"><span class="info-lbl">Negative Emotions</span><span class="info-val" ${(bmM.negative_emotions || 0) > 0 ? 'style="color:var(--red)"' : ''}>${bmM.negative_emotions ?? '—'}</span></div>`;
+    if (bm.summary) html += `<div style="font-size:12px;color:var(--subtext);margin-top:8px;line-height:1.5;">${escHtml(bm.summary)}</div>`;
+    html += '</div>';
+
+    // Health logger summary
+    if (hl.summary) {
+      html += `<div class="card"><div class="card-body" style="font-size:12px;line-height:1.5;">${escHtml(hl.summary)}</div></div>`;
+    }
+    if ((hl.action_items || []).length) {
+      html += '<div class="card">';
+      html += '<div class="card-title" style="font-size:12px;margin-bottom:6px;">Health Action Items</div>';
+      html += '<ul class="action-list">';
+      hl.action_items.slice(0, 4).forEach(item => {
+        html += `<li>${escHtml(typeof item === 'string' ? item : item.text || JSON.stringify(item))}</li>`;
+      });
+      html += '</ul></div>';
+    }
+
     el.innerHTML = html;
   } catch(e) {
-    el.innerHTML = `<div class="empty-state"><div class="empty-icon">⚡</div><p>${escHtml(e.message)}</p></div>`;
+    setConnected(false);
+    renderError(el, e.message, () => loadIntel());
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// SCREEN: OPS (Dev Automation + OP-Sec)
+// ══════════════════════════════════════════════════════
+async function loadOps(silent = false) {
+  const el = document.getElementById('ops-content');
+  if (!silent) el.innerHTML = '<div class="loading">Loading...</div>';
+  try {
+    const d = await api('/mobile/api/divisions');
+    setConnected(true);
+    let html = '';
+
+    // ── DEV AUTOMATION ──
+    html += '<div class="section-title">Dev Automation</div>';
+    const dev = d.dev_automation || {};
+    const rm  = dev.repo_monitor  || {};
+    const rs  = dev.refactor_scan || {};
+    const dd  = dev.dev_digest    || {};
+    const rmM = rm.metrics || {};
+    const rsM = rs.metrics || {};
+    const ddM = dd.metrics || {};
+
+    // Repo monitor card
+    html += '<div class="card">';
+    html += '<div class="card-title">Repo Monitor</div>';
+    html += '<div class="flag-row" style="margin:10px 0;">';
+    html += `<div class="flag-box"><div class="fv" style="color:var(--red)">${rmM.flags_high ?? 0}</div><div class="fl">High</div></div>`;
+    html += `<div class="flag-box"><div class="fv" style="color:var(--yellow)">${rmM.flags_medium ?? 0}</div><div class="fl">Medium</div></div>`;
+    html += `<div class="flag-box"><div class="fv" style="color:var(--blue)">${rmM.flags_low ?? 0}</div><div class="fl">Low</div></div>`;
+    html += `<div class="flag-box"><div class="fv">${rmM.repos_checked ?? '—'}</div><div class="fl">Repos</div></div>`;
+    html += '</div>';
+    if (rm.summary) html += `<div class="card-body" style="font-size:12px;line-height:1.5;">${escHtml(rm.summary)}</div>`;
+    if ((rm.action_items || []).length) {
+      html += '<ul class="action-list" style="margin-top:8px;">';
+      rm.action_items.slice(0, 3).forEach(item => {
+        html += `<li>${escHtml(typeof item === 'string' ? item : item.text || JSON.stringify(item))}</li>`;
+      });
+      html += '</ul>';
+    }
+    html += '</div>';
+
+    // Refactor scan card
+    html += '<div class="card">';
+    html += '<div class="card-title">Refactor Scan</div>';
+    html += '<div class="metrics-row" style="margin:8px 0;">';
+    html += metricBox(rsM.high != null ? rsM.high : '—', 'High', rsM.high > 0 ? 'var(--red)' : null);
+    html += metricBox(rsM.findings != null ? rsM.findings : '—', 'Total');
+    html += metricBox(rsM.files_scanned != null ? rsM.files_scanned : '—', 'Files');
+    html += '</div>';
+    if (rs.summary) html += `<div class="card-body" style="font-size:12px;line-height:1.5;">${escHtml(rs.summary)}</div>`;
+    if ((rs.action_items || []).length) {
+      html += '<ul class="action-list" style="margin-top:8px;">';
+      rs.action_items.slice(0, 3).forEach(item => {
+        html += `<li>${escHtml(typeof item === 'string' ? item : item.text || JSON.stringify(item))}</li>`;
+      });
+      html += '</ul>';
+    }
+    html += '</div>';
+
+    // Dev digest summary
+    if (dd.summary || Object.keys(ddM).length) {
+      html += '<div class="card">';
+      html += '<div class="card-title">Dev Digest</div>';
+      html += '<div class="metrics-row" style="margin:8px 0;">';
+      html += metricBox(ddM.total_high != null ? ddM.total_high : '—', 'Total High', (ddM.total_high || 0) > 0 ? 'var(--red)' : null);
+      html += metricBox(ddM.repo_flags != null ? ddM.repo_flags : '—', 'Repo Flags');
+      html += metricBox(ddM.refactor_high != null ? ddM.refactor_high : '—', 'Refactor', (ddM.refactor_high || 0) > 0 ? 'var(--yellow)' : null);
+      html += '</div>';
+      if (dd.summary) html += `<div class="card-body" style="font-size:12px;line-height:1.5;">${escHtml(dd.summary)}</div>`;
+      html += '</div>';
+    }
+
+    html += '<div class="divider"></div>';
+
+    // ── OP-SEC ──
+    html += '<div class="section-title">OP-Sec</div>';
+    const ops   = d.op_sec || {};
+    const dp    = ops.device_posture || {};
+    const ts    = ops.threat_surface || {};
+    const bc    = ops.breach_check   || {};
+    const ss    = ops.security_scan  || {};
+    const ca    = ops.cred_audit     || {};
+    const ps    = ops.privacy_scan   || {};
+    const dpM   = dp.metrics || {};
+    const tsM   = ts.metrics || {};
+    const bcM   = bc.metrics || {};
+    const ssM   = ss.metrics || {};
+
+    // Device posture big pill
+    const postureOk = dpM.severity === 'ok' || dpM.issues === 0;
+    const postureLbl = postureOk ? 'OK' : 'WARNING';
+    const postureColor = postureOk ? 'var(--green)' : 'var(--yellow)';
+    html += '<div class="card">';
+    html += '<div class="card-title">Device Posture</div>';
+    html += `<div class="posture-display">
+      <div style="font-size:32px;">${postureOk ? '🛡' : '⚠️'}</div>
+      <div class="posture-label" style="color:${postureColor}">${postureLbl}</div>
+      ${dpM.issues != null ? `<div style="font-size:11px;color:var(--subtext);margin-top:4px;">${dpM.issues} issue${dpM.issues !== 1 ? 's' : ''} detected</div>` : ''}
+    </div>`;
+    if (dp.summary) html += `<div class="card-body" style="font-size:12px;line-height:1.5;text-align:center;">${escHtml(dp.summary)}</div>`;
+    html += '</div>';
+
+    // Threat surface card
+    html += '<div class="card">';
+    html += '<div class="card-title">Threat Surface</div>';
+    html += '<div class="metrics-row" style="margin:8px 0;">';
+    html += metricBox(tsM.anomaly_count != null ? tsM.anomaly_count : '—', 'Anomalies', (tsM.anomaly_count || 0) > 0 ? 'var(--red)' : null);
+    html += metricBox(tsM.high_severity != null ? tsM.high_severity : '—', 'High Sev', (tsM.high_severity || 0) > 0 ? 'var(--red)' : null);
+    html += '</div>';
+    if (ts.summary) html += `<div class="card-body" style="font-size:12px;line-height:1.5;">${escHtml(ts.summary)}</div>`;
+    if ((ts.action_items || []).length) {
+      html += '<ul class="action-list" style="margin-top:8px;">';
+      ts.action_items.slice(0, 3).forEach(item => {
+        html += `<li>${escHtml(typeof item === 'string' ? item : item.text || JSON.stringify(item))}</li>`;
+      });
+      html += '</ul>';
+    }
+    html += '</div>';
+
+    // Breach check + security scan row
+    html += '<div class="card">';
+    html += '<div class="card-title">Security Checks</div>';
+    const breachStatus = bc.status || 'unknown';
+    const breachPill = breachStatus === 'skipped' ? 'pill-grey' : breachStatus === 'ok' ? 'pill-green' : 'pill-red';
+    const secFindings = ssM.findings ?? 0;
+    const secHigh     = ssM.high ?? 0;
+    html += `<div class="info-row">
+      <span class="info-lbl">Breach Check</span>
+      <span class="pill ${breachPill}">${escHtml(breachStatus.toUpperCase())}</span>
+    </div>`;
+    if (bcM.emails_checked != null) {
+      html += `<div class="info-row"><span class="info-lbl">Emails Checked</span><span class="info-val">${bcM.emails_checked}</span></div>`;
+    }
+    html += `<div class="info-row">
+      <span class="info-lbl">Security Scan Findings</span>
+      <span class="info-val" ${secFindings > 0 ? 'style="color:var(--yellow)"' : ''}>${secFindings} (${secHigh} high)</span>
+    </div>`;
+    if (ss.summary) html += `<div style="font-size:12px;color:var(--subtext);margin-top:6px;line-height:1.4;">${escHtml(ss.summary)}</div>`;
+    html += '</div>';
+
+    // Cred audit + privacy scan
+    if (ca.summary || ps.summary || (ca.action_items || []).length || (ps.action_items || []).length) {
+      html += '<div class="card">';
+      html += '<div class="card-title">Cred Audit &amp; Privacy</div>';
+      if (ca.summary) html += `<div class="card-body" style="font-size:12px;line-height:1.5;margin-bottom:6px;">${escHtml(ca.summary)}</div>`;
+      if (ps.summary) html += `<div class="card-body" style="font-size:12px;line-height:1.5;">${escHtml(ps.summary)}</div>`;
+      const allActions = [...(ca.action_items || []), ...(ps.action_items || [])];
+      if (allActions.length) {
+        html += '<ul class="action-list" style="margin-top:8px;">';
+        allActions.slice(0, 4).forEach(item => {
+          html += `<li>${escHtml(typeof item === 'string' ? item : item.text || JSON.stringify(item))}</li>`;
+        });
+        html += '</ul>';
+      }
+      html += '</div>';
+    }
+
+    el.innerHTML = html;
+  } catch(e) {
+    setConnected(false);
+    renderError(el, e.message, () => loadOps());
   }
 }
 
@@ -882,75 +1932,146 @@ async function loadTrading(silent = false) {
   if (!silent) el.innerHTML = '<div class="loading">Loading...</div>';
   try {
     const d = await api('/mobile/api/trading');
+    setConnected(true);
+
     if (!d.available) {
       el.innerHTML = `<div class="empty-state"><div class="empty-icon">📈</div><p>Trading system not active</p></div>`;
       return;
     }
+
     const s = d.active_strategy || {};
     let html = '';
 
-    // Cycle header
+    // ── Cycle header card ──
+    const isStale = !!d.stale;
     html += `<div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-        <div><span class="pill pill-blue">CYCLE ${d.cycle_number || '—'}</span></div>
-        ${d.stale ? '<span class="pill pill-red">STALE</span>' : '<span class="pill pill-green">LIVE</span>'}
+        <span class="pill pill-purple">CYCLE ${escHtml(String(d.cycle_number || '—'))}</span>
+        ${isStale
+          ? '<span class="pill pill-yellow">STALE</span>'
+          : '<span class="pill pill-green" style="animation:pulse-live 2s ease-in-out infinite;">LIVE</span>'}
       </div>
-      <div class="card-title" style="color:var(--teal);font-size:13px;">${escHtml(s.name || 'No active strategy')}</div>
+      <div style="font-size:14px;font-weight:700;color:var(--teal);margin-bottom:4px;">${escHtml(s.name || 'No active strategy')}</div>
       ${d.hours_since_update != null ? `<div class="card-meta">Updated ${d.hours_since_update}h ago</div>` : ''}
     </div>`;
 
-    // Key metrics
+    // ── Win rate ring + sharpe/RR ──
     if (s.win_rate != null || s.sharpe != null) {
-      html += '<div class="section-title">Strategy Metrics</div>';
-      html += '<div class="metrics-row" style="margin-bottom:8px;">';
-      html += metricBox(s.win_rate != null ? s.win_rate + '%' : '—', 'Win Rate');
-      html += metricBox(s.sharpe != null ? s.sharpe.toFixed(2) : '—', 'Sharpe');
-      html += metricBox(s.rr_display || (s.rr_ratio ? s.rr_ratio.toFixed(2)+':1' : '—'), 'RR');
+      html += '<div class="card">';
+      html += '<div class="trading-top">';
+
+      // Ring
+      html += '<div class="trading-ring-col">';
+      html += renderWinRateRing(s.win_rate ?? 0);
+      html += '<div class="ring-label">Win Rate</div>';
       html += '</div>';
-      html += '<div class="metrics-row">';
-      html += metricBox(s.avg_win_r != null ? '+'+s.avg_win_r.toFixed(2)+'R' : '—', 'Avg Win', 'var(--green)');
-      html += metricBox(s.avg_loss_r != null ? '-'+s.avg_loss_r.toFixed(2)+'R' : '—', 'Avg Loss', 'var(--red)');
-      html += metricBox(s.max_drawdown_pct != null ? s.max_drawdown_pct.toFixed(1)+'%' : '—', 'Max DD', 'var(--red)');
+
+      // Right stats col
+      html += '<div class="trading-stats-col">';
+      if (s.sharpe != null) {
+        html += `<div class="tstat-row"><span class="tstat-lbl">Sharpe</span><span class="tstat-val">${s.sharpe.toFixed(3)}</span></div>`;
+      }
+      if (s.rr_ratio != null || s.rr_display) {
+        html += `<div class="tstat-row"><span class="tstat-lbl">Risk / Reward</span><span class="tstat-val">${escHtml(s.rr_display || (s.rr_ratio ? s.rr_ratio.toFixed(2)+':1' : '—'))}</span></div>`;
+      }
+      if (s.profit_factor != null) {
+        html += `<div class="tstat-row"><span class="tstat-lbl">Prof. Factor</span><span class="tstat-val">${s.profit_factor.toFixed(2)}</span></div>`;
+      }
+      if (s.strategy_name || s.name) {
+        html += `<div class="tstat-row"><span class="tstat-lbl">Strategy</span><span class="tstat-val" style="font-size:11px;color:var(--subtext);max-width:110px;text-align:right;">${escHtml((s.strategy_name || s.name || '').slice(0,30))}</span></div>`;
+      }
+      html += '</div>';
+      html += '</div>';
+
+      // Equity sparkline
+      if (d.equity_curve && d.equity_curve.length >= 2) {
+        html += '<div style="margin-top:4px;border-top:1px solid var(--border);padding-top:10px;">';
+        html += '<div style="font-size:10px;color:var(--subtext);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">Equity Curve</div>';
+        html += renderSparkline(d.equity_curve);
+        html += '</div>';
+      }
+
       html += '</div>';
     }
 
-    // Controls — Operator-gated
+    // ── Extended metrics row ──
+    const hasExt = s.sortino != null || s.max_drawdown_pct != null || s.profit_factor != null;
+    if (hasExt) {
+      html += '<div class="card">';
+      html += '<div class="metrics-row">';
+      if (s.sortino != null)         html += metricBox(s.sortino.toFixed(3), 'Sortino');
+      if (s.max_drawdown_pct != null) html += metricBox(s.max_drawdown_pct.toFixed(2) + '%', 'Max DD', 'var(--red)');
+      if (s.profit_factor != null)    html += metricBox(s.profit_factor.toFixed(2), 'Prof.F');
+      html += '</div>';
+      html += '</div>';
+    }
+
+    // ── OOS Validation ──
+    if (d.oos_validation) {
+      const oos = d.oos_validation;
+      html += '<div class="card">';
+      html += '<div class="card-title" style="margin-bottom:8px;">OOS Validation</div>';
+      html += '<div class="oos-grid">';
+      if (oos.sharpe != null)     html += `<div class="oos-box"><div class="ov">${oos.sharpe.toFixed(2)}</div><div class="ol">Sharpe</div></div>`;
+      if (oos.win_rate != null)   html += `<div class="oos-box"><div class="ov">${oos.win_rate}%</div><div class="ol">Win</div></div>`;
+      if (oos.trade_count != null) html += `<div class="oos-box"><div class="ov">${oos.trade_count}</div><div class="ol">Trades</div></div>`;
+      html += '</div>';
+      if (oos.note) html += `<div class="card-meta" style="margin-top:8px;">${escHtml(oos.note)}</div>`;
+      html += '</div>';
+    }
+
+    // ── Avg Win / Loss ──
+    if (s.avg_win_r != null || s.avg_loss_r != null) {
+      html += '<div class="metrics-row">';
+      html += metricBox(s.avg_win_r != null ? '+' + s.avg_win_r.toFixed(2) + 'R' : '—', 'Avg Win', 'var(--green)');
+      html += metricBox(s.avg_loss_r != null ? '-' + s.avg_loss_r.toFixed(2) + 'R' : '—', 'Avg Loss', 'var(--red)');
+      if (s.total_trades != null) html += metricBox(s.total_trades, 'Trades');
+      html += '</div>';
+    }
+
+    // ── Controls ──
     html += '<div class="section-title">Controls</div>';
-    html += '<div style="background:var(--overlay);border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:12px;color:var(--subtext);">Face ID required for trading controls</div>';
-    html += '<div style="display:flex;gap:10px;margin-bottom:14px;">';
-    html += `<button class="btn btn-pause"  onclick="tradingControl('pause_trading')">⏸ Pause</button>`;
-    html += `<button class="btn btn-resume" onclick="tradingControl('resume_trading')">▶ Resume</button>`;
+    html += '<div style="background:var(--overlay);border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:12px;color:var(--subtext);">⚠ Face ID required for trading controls</div>';
+    html += '<div style="display:flex;gap:10px;margin-bottom:4px;">';
+    html += `<button class="btn btn-pause" onclick="tradingControl('pause_trading')">⏸ Pause Trading</button>`;
+    html += `<button class="btn btn-resume" onclick="tradingControl('resume_trading')">▶ Resume Trading</button>`;
     html += '</div>';
 
-    // Recent trades
+    // ── Recent trades ──
     if ((d.recent_trades || []).length) {
       html += '<div class="section-title">Recent Trades</div>';
       html += '<div class="card">';
-      (d.recent_trades || []).slice(0, 8).forEach(t => {
+      d.recent_trades.slice(0, 10).forEach(t => {
         const pos = (t.pnl || 0) >= 0;
         const r   = t.r_multiple != null ? (t.r_multiple >= 0 ? '+' : '') + t.r_multiple.toFixed(2) + 'R' : '';
+        const pnlStr = (pos ? '+' : '') + (t.pnl || 0).toFixed(2);
         html += `<div class="trade-row">
           <div>
-            <div class="trade-sym">${escHtml(t.symbol || '?')}</div>
-            <div class="trade-meta">${t.date || ''} ${r ? '· '+r : ''}</div>
+            <div class="trade-sym">${escHtml(t.symbol || '?')}${t.outcome ? ' · <span style="font-size:10px;color:' + (t.outcome === 'WIN' ? 'var(--green)' : 'var(--red)') + '">' + escHtml(t.outcome) + '</span>' : ''}</div>
+            <div class="trade-meta">${escHtml(t.date || '')}${r ? ' · ' + r : ''}</div>
           </div>
-          <div class="trade-pnl ${pos ? 'pos' : 'neg'}">${pos ? '+' : ''}${(t.pnl || 0).toFixed(2)}</div>
+          <div>
+            <div class="trade-pnl ${pos ? 'pos' : 'neg'}">${pnlStr}</div>
+            ${t.pnl_dollar != null ? `<div class="trade-meta" style="text-align:right;">${pos ? '+' : ''}$${Math.abs(t.pnl_dollar).toFixed(0)}</div>` : ''}
+          </div>
         </div>`;
       });
       html += '</div>';
     }
 
-    // Agent statuses
-    if (d.agents) {
+    // ── Agents ──
+    if (d.agents && Object.keys(d.agents).length) {
       html += '<div class="section-title">Agents</div>';
       html += '<div class="card">';
       for (const [name, info] of Object.entries(d.agents)) {
+        const agentStatus = info.status || 'auto';
+        const agentPill = agentStatus === 'running' ? 'pill-blue' : agentStatus === 'error' ? 'pill-red' : 'pill-grey';
         html += `<div class="trade-row">
-          <div>
-            <div class="trade-sym">${escHtml(name.replace('_','-'))}</div>
-            <div class="trade-meta">${escHtml(info.last_output || '—')}</div>
+          <div style="flex:1;min-width:0;">
+            <div class="trade-sym">${escHtml(name.replace(/_/g, '-'))}</div>
+            <div class="trade-meta" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;">${escHtml(info.last_output || info.summary || '—')}</div>
           </div>
-          <span class="pill pill-grey">AUTO</span>
+          <span class="pill ${agentPill}">${escHtml(agentStatus.toUpperCase())}</span>
         </div>`;
       }
       html += '</div>';
@@ -958,12 +2079,9 @@ async function loadTrading(silent = false) {
 
     el.innerHTML = html;
   } catch(e) {
-    el.innerHTML = `<div class="empty-state"><div class="empty-icon">⚡</div><p>${escHtml(e.message)}</p></div>`;
+    setConnected(false);
+    renderError(el, e.message, () => loadTrading());
   }
-}
-
-function metricBox(val, lbl, color) {
-  return `<div class="metric-box"><div class="mval" ${color ? `style="color:${color}"` : ''}>${val}</div><div class="mlbl">${lbl}</div></div>`;
 }
 
 function tradingControl(action) {
@@ -977,30 +2095,325 @@ function tradingControl(action) {
   );
 }
 
-// ══════════════════════════════════════════════════════
-// UTILITIES
-// ══════════════════════════════════════════════════════
-function updateBadge(id, count) {
+// ── Chat ─────────────────────────────────────────────────
+let _chatReady = false;
+let _chatStreaming = false;
+let _chatMode = 'jclaw'; // 'jclaw' | 'coding'
+const _chatHistory = { jclaw: [], coding: [] };
+
+function initChat() {
+  if (_chatReady) {
+    _renderChatHistory();
+    return;
+  }
+  _chatReady = true;
+  _chatHistory.jclaw.push({ role: 'assistant', text: 'J_Claw online. Ask me anything about your system.' });
+  _chatHistory.coding.push({ role: 'assistant', text: 'Coding mode — Claude agent connected. I can make real file edits on the PC. Ask me to make changes, fix bugs, or add features. All changes are git-checkpointed and OP-Sec monitored.' });
+  _renderChatHistory();
+}
+
+function setChatMode(mode) {
+  if (_chatStreaming) return;
+  _chatMode = mode;
+  document.getElementById('chat-mode-jclaw').classList.toggle('mode-active', mode === 'jclaw');
+  document.getElementById('chat-mode-coding').classList.toggle('mode-active', mode === 'coding');
+  document.getElementById('chat-input').placeholder = mode === 'coding' ? 'Ask Claude to make changes…' : 'Message J_Claw…';
+  const bar = document.getElementById('chat-input-bar');
+  bar.style.borderTopColor = mode === 'coding' ? 'var(--blue)' : 'var(--border)';
+  const btn = bar.querySelector('button');
+  btn.style.background = mode === 'coding' ? 'var(--blue)' : 'var(--purple)';
+  _renderChatHistory();
+}
+
+function _renderChatHistory() {
+  const msgs = document.getElementById('chat-messages');
+  msgs.innerHTML = '';
+  for (const m of _chatHistory[_chatMode]) {
+    _appendChatBubble(m.role, m.text, _chatMode);
+  }
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function _appendChatBubble(role, text, mode) {
+  const msgs = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.className = `chat-msg ${role}`;
+  const senderName = role === 'user' ? 'Matthew' : (mode === 'coding' ? 'Claude' : 'J_Claw');
+  const bubbleAccent = role === 'assistant' && mode === 'coding' ? 'border-color:var(--blue)' : '';
+  const content = role === 'assistant' ? renderMarkdown(text) : escHtml(text);
+  div.innerHTML = `<div class="chat-sender">${senderName}</div><div class="chat-bubble" style="${bubbleAccent}">${content}</div>`;
+  msgs.appendChild(div);
+  return div;
+}
+
+function appendChatMsg(role, text, id) {
+  const div = _appendChatBubble(role, text, _chatMode);
+  if (id) div.id = id;
+  return div;
+}
+
+function updateChatMsg(id, text) {
   const el = document.getElementById(id);
   if (!el) return;
-  if (count > 0) { el.textContent = count > 99 ? '99+' : count; el.style.display = 'block'; }
-  else { el.style.display = 'none'; }
+  const bubble = el.querySelector('.chat-bubble');
+  if (bubble) bubble.innerHTML = renderMarkdown(text);
+  document.getElementById('chat-messages').scrollTop = 99999;
 }
 
-function relTime(iso) {
-  const diff = Date.now() - new Date(iso).getTime();
-  const m = Math.floor(diff / 60000);
-  if (m < 1)  return 'just now';
-  if (m < 60) return m + 'm ago';
-  const h = Math.floor(m / 60);
-  if (h < 24) return h + 'h ago';
-  return Math.floor(h / 24) + 'd ago';
+function showTypingIndicator() {
+  const msgs = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.className = 'chat-msg assistant';
+  div.id = 'chat-typing';
+  div.innerHTML = '<div class="chat-sender">J_Claw</div><div class="chat-bubble chat-typing"><span></span><span></span><span></span></div>';
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
 }
 
-function escHtml(s) {
-  return String(s ?? '')
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function removeTypingIndicator() {
+  const el = document.getElementById('chat-typing');
+  if (el) el.remove();
+}
+
+async function sendChat() {
+  if (_chatStreaming) return;
+  const input = document.getElementById('chat-input');
+  const msg = input.value.trim();
+  if (!msg) return;
+  haptic('light');
+  input.value = '';
+  input.style.height = 'auto';
+
+  appendChatMsg('user', msg);
+  _chatStreaming = true;
+  showTypingIndicator();
+
+  const responseId = 'chat-resp-' + Date.now();
+  let fullText = '';
+  let responseStarted = false;
+
+  _chatHistory[_chatMode].push({ role: 'user', text: msg });
+
+  const endpoint = _chatMode === 'coding' ? '/mobile/api/chat/coding' : '/mobile/api/chat/jclaw';
+
+  try {
+    const res = await fetchWithRetry(MC_SERVER + endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + MC_TOKEN },
+      body: JSON.stringify({ message: msg }),
+    }, 2, 800);
+
+    if (res.status === 401) {
+      MC_TOKEN = '';
+      try { localStorage.removeItem('mc_token'); } catch(e) {}
+      try { sessionStorage.removeItem('mc_token'); } catch(e) {}
+      document.getElementById('setup-screen').classList.remove('hidden');
+      removeTypingIndicator();
+      _chatStreaming = false;
+      return;
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        try {
+          const evt = JSON.parse(line.slice(6));
+          if (evt.type === 'content_block_delta' && evt.delta?.type === 'text_delta' && evt.delta.text) {
+            fullText += evt.delta.text;
+            if (!responseStarted) {
+              removeTypingIndicator();
+              appendChatMsg('assistant', fullText, responseId);
+              responseStarted = true;
+            } else {
+              updateChatMsg(responseId, fullText);
+            }
+          }
+        } catch(e) {}
+      }
+    }
+  } catch(e) {
+    removeTypingIndicator();
+    appendChatMsg('assistant', 'Connection error: ' + e.message);
+  }
+
+  if (!responseStarted) {
+    removeTypingIndicator();
+    const fallback = fullText || 'No response received.';
+    appendChatMsg('assistant', fallback);
+    _chatHistory[_chatMode].push({ role: 'assistant', text: fallback });
+  } else {
+    _chatHistory[_chatMode].push({ role: 'assistant', text: fullText });
+  }
+
+  _chatStreaming = false;
+  haptic('light');
+}
+
+// ── Division Detail Sheet ─────────────────────────────────
+let _detailDivKey = null;
+
+function openDivisionDetail(key) {
+  haptic('light');
+  _detailDivKey = key;
+  const labels = { trading: 'Trading', opportunity: 'Opportunity', personal: 'Personal', dev_automation: 'Dev Automation', op_sec: 'OP-Sec', sentinel: 'Sentinel' };
+  document.getElementById('div-detail-title').textContent = labels[key] || key.replace(/_/g, ' ');
+  document.getElementById('div-detail-body').innerHTML = '<div class="loading">Loading...</div>';
+  document.getElementById('div-detail-backdrop').classList.add('open');
+  document.getElementById('div-detail-sheet').classList.add('open');
+  _loadDivisionDetail(key);
+}
+
+function closeDivisionDetail() {
+  haptic('light');
+  document.getElementById('div-detail-backdrop').classList.remove('open');
+  document.getElementById('div-detail-sheet').classList.remove('open');
+  _detailDivKey = null;
+}
+
+async function _loadDivisionDetail(key) {
+  const el = document.getElementById('div-detail-body');
+  try {
+    let html = '';
+    if (key === 'trading') {
+      const d = await api('/mobile/api/trading');
+      html = _renderTradingDetail(d);
+    } else {
+      const all = await api('/mobile/api/divisions');
+      const divData = all[key] || {};
+      html = _renderDivisionPackets(key, divData);
+    }
+    el.innerHTML = html || '<div class="empty-state"><div class="empty-icon">📭</div><p>No data available</p></div>';
+  } catch(e) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠</div><p>Failed to load: ${escHtml(e.message)}</p></div>`;
+  }
+}
+
+function _packetCard(name, pkt) {
+  if (!pkt) return `<div class="detail-packet"><div class="detail-packet-header"><span class="detail-packet-name">${escHtml(name)}</span><span class="pill pill-grey">no data</span></div></div>`;
+  const statusClass = pkt.status === 'success' ? 'pill-green' : pkt.status === 'partial' ? 'pill-yellow' : pkt.status === 'skipped' ? 'pill-grey' : 'pill-red';
+  let html = `<div class="detail-packet">`;
+  html += `<div class="detail-packet-header"><span class="detail-packet-name">${escHtml(name)}</span><span class="pill ${statusClass}">${escHtml(pkt.status || '—')}</span></div>`;
+  if (pkt.summary) html += `<div class="detail-summary">${escHtml(pkt.summary)}</div>`;
+  // Metrics
+  if (pkt.metrics && typeof pkt.metrics === 'object') {
+    const entries = Object.entries(pkt.metrics).filter(([k,v]) => v !== null && v !== undefined && typeof v !== 'object');
+    if (entries.length) {
+      html += '<div class="detail-metrics">';
+      entries.forEach(([k, v]) => {
+        const lbl = k.replace(/_/g, ' ').toUpperCase().slice(0, 10);
+        const val = typeof v === 'boolean' ? (v ? '✓' : '✗') : typeof v === 'number' ? (Number.isInteger(v) ? v : v.toFixed(2)) : String(v);
+        html += `<div class="detail-metric"><div class="dm-v">${escHtml(val)}</div><div class="dm-l">${escHtml(lbl)}</div></div>`;
+      });
+      html += '</div>';
+    }
+  }
+  // Action items
+  const items = pkt.action_items || [];
+  if (items.length) {
+    html += '<div class="detail-actions">';
+    items.forEach(item => {
+      const pClass = (item.priority === 'high') ? 'action-priority-high' : 'action-priority-normal';
+      const desc = item.description || item.detail || String(item);
+      html += `<div class="detail-action-item ${pClass}">${escHtml(desc)}</div>`;
+    });
+    html += '</div>';
+  }
+  if (pkt.generated_at) html += `<div style="font-size:10px;color:var(--subtext);margin-top:8px;">Updated ${relTime(pkt.generated_at)}</div>`;
+  html += '</div>';
+  return html;
+}
+
+function _renderDivisionPackets(key, divData) {
+  let html = '';
+  const packetNames = {
+    opportunity:    { job_intake: 'Job Intake', funding_finder: 'Funding Finder' },
+    personal:       { health_logger: 'Health Logger', burnout_monitor: 'Burnout Monitor', perf_correlation: 'Perf Correlation' },
+    dev_automation: { repo_monitor: 'Repo Monitor', refactor_scan: 'Refactor Scan', doc_update: 'Doc Update', dev_digest: 'Dev Digest', artifact_manager: 'Artifact Manager' },
+    op_sec:         { device_posture: 'Device Posture', threat_surface: 'Threat Surface', breach_check: 'Breach Check', cred_audit: 'Cred Audit', security_scan: 'Security Scan', privacy_scan: 'Privacy Scan', opsec_digest: 'OpSec Digest' },
+    sentinel:       {},
+  };
+  const names = packetNames[key] || {};
+  for (const [pktKey, pktLabel] of Object.entries(names)) {
+    html += _packetCard(pktLabel, divData[pktKey] || null);
+  }
+  if (!html) html = '<div class="empty-state"><div class="empty-icon">📭</div><p>No packets found</p></div>';
+  return html;
+}
+
+function _renderTradingDetail(d) {
+  if (!d.available) return '<div class="empty-state"><div class="empty-icon">📈</div><p>Trading system not active</p></div>';
+  const s = d.active_strategy || {};
+  let html = '';
+
+  // Strategy header card
+  html += '<div class="detail-packet">';
+  html += `<div class="detail-packet-header"><span class="detail-packet-name">Active Strategy</span><span class="pill ${d.stale ? 'pill-yellow' : 'pill-green'}">${d.stale ? 'STALE' : 'LIVE'}</span></div>`;
+  html += `<div style="font-size:14px;font-weight:600;margin-bottom:10px;color:var(--text)">${escHtml(s.name || 'None')}</div>`;
+  html += '<div class="detail-metrics">';
+  if (s.win_rate != null)       html += `<div class="detail-metric"><div class="dm-v">${s.win_rate}%</div><div class="dm-l">Win Rate</div></div>`;
+  if (s.sharpe != null)         html += `<div class="detail-metric"><div class="dm-v">${s.sharpe.toFixed(3)}</div><div class="dm-l">Sharpe</div></div>`;
+  if (s.rr_display)             html += `<div class="detail-metric"><div class="dm-v">${escHtml(s.rr_display)}</div><div class="dm-l">RR Ratio</div></div>`;
+  if (s.sortino != null)        html += `<div class="detail-metric"><div class="dm-v">${s.sortino.toFixed(3)}</div><div class="dm-l">Sortino</div></div>`;
+  if (s.profit_factor != null)  html += `<div class="detail-metric"><div class="dm-v">${s.profit_factor.toFixed(2)}</div><div class="dm-l">Prof.Factor</div></div>`;
+  if (s.max_drawdown_pct != null) html += `<div class="detail-metric"><div class="dm-v" style="color:var(--red)">${s.max_drawdown_pct.toFixed(2)}%</div><div class="dm-l">Max DD</div></div>`;
+  if (s.avg_win_r != null)      html += `<div class="detail-metric"><div class="dm-v" style="color:var(--green)">${s.avg_win_r.toFixed(2)}R</div><div class="dm-l">Avg Win</div></div>`;
+  if (s.avg_loss_r != null)     html += `<div class="detail-metric"><div class="dm-v" style="color:var(--red)">${s.avg_loss_r.toFixed(2)}R</div><div class="dm-l">Avg Loss</div></div>`;
+  if (s.theoretical_ev_r != null) html += `<div class="detail-metric"><div class="dm-v">${s.theoretical_ev_r.toFixed(3)}R</div><div class="dm-l">EV/Trade</div></div>`;
+  if (s.trade_count != null)    html += `<div class="detail-metric"><div class="dm-v">${s.trade_count}</div><div class="dm-l">Trades</div></div>`;
+  html += '</div>';
+  if (d.hours_since_update != null) html += `<div style="font-size:10px;color:var(--subtext)">Cycle ${d.cycle_number || '—'} · Updated ${d.hours_since_update}h ago</div>`;
+  html += '</div>';
+
+  // OOS Validation
+  if (s.oos_sharpe != null || s.oos_win_rate != null) {
+    html += '<div class="detail-packet">';
+    html += '<div class="detail-packet-header"><span class="detail-packet-name">OOS Validation</span><span class="pill pill-blue">Out-of-Sample</span></div>';
+    html += '<div class="detail-metrics">';
+    if (s.oos_sharpe != null)    html += `<div class="detail-metric"><div class="dm-v">${s.oos_sharpe.toFixed(3)}</div><div class="dm-l">OOS Sharpe</div></div>`;
+    if (s.oos_win_rate != null)  html += `<div class="detail-metric"><div class="dm-v">${s.oos_win_rate}%</div><div class="dm-l">OOS Win%</div></div>`;
+    if (s.oos_trade_count != null) html += `<div class="detail-metric"><div class="dm-v">${s.oos_trade_count}</div><div class="dm-l">OOS Trades</div></div>`;
+    html += '</div></div>';
+  }
+
+  // Agents
+  if (d.agents && Object.keys(d.agents).length) {
+    html += '<div class="detail-packet">';
+    html += '<div class="detail-packet-header"><span class="detail-packet-name">Agents</span></div>';
+    for (const [aKey, agent] of Object.entries(d.agents)) {
+      const aName = aKey.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+      html += `<div style="margin-bottom:10px"><div style="font-size:12px;font-weight:600;color:var(--purple);margin-bottom:3px">${escHtml(aName)}</div>`;
+      html += `<div style="font-size:12px;color:var(--subtext);line-height:1.5">${escHtml((agent.last_output || '—').slice(0, 200))}</div></div>`;
+    }
+    html += '</div>';
+  }
+
+  // Recent trades
+  const trades = (d.recent_trades || []).slice(0, 10);
+  if (trades.length) {
+    html += '<div class="detail-packet">';
+    html += '<div class="detail-packet-header"><span class="detail-packet-name">Recent Trades</span></div>';
+    trades.forEach(t => {
+      const pos = (t.r_multiple || t.pnl || 0) >= 0;
+      const rStr = t.r_multiple != null ? (pos ? '+' : '') + t.r_multiple.toFixed(2) + 'R' : '—';
+      const pnlStr = t.pnl != null ? (t.pnl >= 0 ? '+$' : '-$') + Math.abs(t.pnl).toFixed(0) : '';
+      html += `<div class="trade-row">
+        <div><div class="trade-sym">${escHtml(t.symbol || '?')} <span style="font-size:10px;color:${pos ? 'var(--green)' : 'var(--red)'}">${pos ? 'WIN' : 'LOSS'}</span></div><div class="trade-meta">${escHtml(t.date || '')}</div></div>
+        <div style="text-align:right"><div class="trade-pnl ${pos ? 'pos' : 'neg'}">${rStr}</div><div class="trade-meta">${escHtml(pnlStr)}</div></div>
+      </div>`;
+    });
+    html += '</div>';
+  }
+
+  return html;
 }
 
 // ── Boot ─────────────────────────────────────────────────

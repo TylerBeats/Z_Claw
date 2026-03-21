@@ -8,5 +8,12 @@
   "background_color": "#1e1e2e",
   "start_url": "/mobile",
   "scope": "/mobile",
-  "icons": []
+  "icons": [
+    {
+      "src": "/mobile/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
 }
