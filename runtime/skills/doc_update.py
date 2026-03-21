@@ -101,24 +101,43 @@ def run() -> dict:
 
     try:
         doc_content = chat(use_model, messages, host=use_host, temperature=0.3, max_tokens=700)
+    except Exception as e:
+        # 14B OOM or crash — fall back to 7B if we haven't already
+        if use_model != MODEL_7B and is_available(MODEL_7B, host=OLLAMA_HOST):
+            log.warning("doc-update: %s failed (%s), retrying with 7B fallback", use_model, e)
+            try:
+                doc_content = chat(MODEL_7B, messages, host=OLLAMA_HOST, temperature=0.3, max_tokens=700)
+                use_model = MODEL_7B
+            except Exception as e2:
+                log.error("doc-update 7B fallback also failed: %s", e2)
+                return {
+                    "status":       "failed",
+                    "summary":      f"Doc update failed: {e2}",
+                    "docs_updated": [],
+                    "model_used":   MODEL_7B,
+                }
+        else:
+            log.error("doc-update LLM failed: %s", e)
+            return {
+                "status":       "failed",
+                "summary":      f"Doc update failed: {e}",
+                "docs_updated": [],
+                "model_used":   use_model,
+            }
 
+    try:
         today    = date.today().isoformat()
         doc_path = HOT_DIR / f"architecture-doc-{today}.md"
         doc_path.write_text(doc_content, encoding="utf-8")
-
-        log.info("doc-update: wrote %s (%d chars)", doc_path.name, len(doc_content))
-        return {
-            "status":       "success",
-            "summary":      f"Architecture doc generated ({len(doc_content)} chars).",
-            "docs_updated": [str(doc_path.relative_to(ROOT))],
-            "doc_preview":  doc_content[:400],
-            "model_used":   use_model,
-        }
     except Exception as e:
-        log.error("doc-update LLM failed: %s", e)
-        return {
-            "status":       "failed",
-            "summary":      f"Doc update failed: {e}",
-            "docs_updated": [],
-            "model_used":   use_model,
-        }
+        log.error("doc-update write failed: %s", e)
+        return {"status": "failed", "summary": f"Doc write failed: {e}", "docs_updated": [], "model_used": use_model}
+
+    log.info("doc-update: wrote %s (%d chars)", doc_path.name, len(doc_content))
+    return {
+        "status":       "success",
+        "summary":      f"Architecture doc generated ({len(doc_content)} chars).",
+        "docs_updated": [str(doc_path.relative_to(ROOT))],
+        "doc_preview":  doc_content[:400],
+        "model_used":   use_model,
+    }

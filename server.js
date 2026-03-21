@@ -1499,7 +1499,8 @@ cron.schedule('0 11 * * *', async () => {
   await runSkillViaPython('security-scan', 'DEV');
 }, { timezone: TZ });
 
-cron.schedule('0 12 * * *', async () => {
+// doc-update at 13:00 — 2h after refactor-scan to ensure VRAM is clear
+cron.schedule('0 13 * * *', async () => {
   await runSkillViaPython('doc-update', 'DEV');
 }, { timezone: TZ });
 
@@ -1520,20 +1521,21 @@ cron.schedule('0 19 * * *', async () => {
 }, { timezone: TZ });
 
 // OP-SEC deep scans — TEMP: daily until verified, then restore Sunday-only
-cron.schedule('0 13 * * *', async () => {
+// Staggered from 14:00 to avoid VRAM conflict with doc-update at 13:00
+cron.schedule('0 14 * * *', async () => {
   await runSkillViaPython('breach-check', 'OP_SEC');
 }, { timezone: TZ });
 
-cron.schedule('0 14 * * *', async () => {
+cron.schedule('0 15 * * *', async () => {
   await runSkillViaPython('cred-audit', 'OP_SEC');
 }, { timezone: TZ });
 
-cron.schedule('0 15 * * *', async () => {
+cron.schedule('0 16 * * *', async () => {
   await runSkillViaPython('privacy-scan', 'OP_SEC');
 }, { timezone: TZ });
 
-// opsec-digest — daily at 15:30 (after breach/cred/privacy complete)
-cron.schedule('30 15 * * *', async () => {
+// opsec-digest — daily at 16:30 (after breach/cred/privacy complete)
+cron.schedule('30 16 * * *', async () => {
   await runSkillViaPython('opsec-digest', 'OP_SEC');
 }, { timezone: TZ });
 
