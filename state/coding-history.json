@@ -391,7 +391,15 @@
     {
       "role": "assistant",
       "content": "The actual folder name is **`J_Claw_Reborn`** (underscores, not hyphens). Tell Tyler to run:\n\n```powershell\ncd C:\\Users\\Tyler\\Desktop\\J_Claw_Reborn\ngit pull origin master\ngit push origin master\n```"
+    },
+    {
+      "role": "user",
+      "content": "“Windows PowerShell\nCopyright (C) Microsoft Corporation. All rights reserved.\n\nInstall the latest PowerShell for new features and improvements! https://aka.ms/PSWindows\n\nPS C:\\WINDOWS\\system32> cd C:\\Users\\Tyler\\Desktop\\J_Claw_Reborn\nPS C:\\Users\\Tyler\\Desktop\\J_Claw_Reborn> git pull origin master\nFrom https://github.com/TylerBeats/Z_Claw\n * branch            master     -> FETCH_HEAD\nwarning: in the working copy of 'state/coding-history.json', LF will be replaced by CRLF the next time Git touches it\nerror: Your local changes to the following files would be overwritten by merge:\n        state/coding-history.json\nPlease commit your changes or stash them before you merge.\nAborting\nMerge with strategy ort failed.\nPS C:\\Users\\Tyler\\Desktop\\J_Claw_Reborn> git push origin master\nTo https://github.com/TylerBeats/Z_Claw.git\n ! [rejected]        master -> master (non-fast-forward)\nerror: failed to push some refs to 'https://github.com/TylerBeats/Z_Claw.git'\nhint: Updates were rejected because the tip of your current branch is behind\nhint: its remote counterpart. If you want to integrate the remote changes,\nhint: use 'git pull' before pushing again.\nhint: See the 'Note about fast-forwards' in 'git push --help' for details.\nPS C:\\Users\\Tyler\\Desktop\\J_Claw_Reborn>”"
+    },
+    {
+      "role": "assistant",
+      "content": "The local `coding-history.json` has uncommitted changes blocking the pull. Tell Tyler to run these in order:\n\n```powershell\ngit stash\ngit pull origin master\ngit stash pop\ngit push origin master\n```\n\n**What this does:**\n1. `git stash` -- temporarily shelves the local coding-history.json changes\n2. `git pull` -- pulls the remote commits cleanly\n3. `git stash pop` -- restores the local coding-history.json on top\n4. `git push` -- syncs everything up to GitHub\n\nIf `git stash pop` shows a conflict on coding-history.json, run this instead of pop:\n```powershell\ngit checkout stash -- state/coding-history.json\ngit stash drop\ngit push origin master\n```"
     }
   ],
-  "last_updated": "2026-03-21T15:09:19.546Z"
+  "last_updated": "2026-03-21T15:11:19.927Z"
 }
