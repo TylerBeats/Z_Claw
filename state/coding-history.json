@@ -175,7 +175,15 @@
     {
       "role": "assistant",
       "content": "Both fixes are now live:\n\n- **Groq fallback** -- Ollama 500s will silently switch to Groq instead of erroring\n- **Trading division** -- mobile chat AI can now see actual trade data\n\nGive mobile J_Claw chat a test message -- ideally when Ollama is busy so you can see the Groq fallback kick in with the ☁️ banner. What's next?"
+    },
+    {
+      "role": "user",
+      "content": "What recent updates were made and what is left to do?"
+    },
+    {
+      "role": "assistant",
+      "content": "Can't pull git log from mobile without desktop approval. Here's what I know from this session:\n\n---\n\n## Recent Updates (This Session)\n\n| Fix | Status |\n|-----|--------|\n| Groq fallback in mobile chat | ✅ Live |\n| Trading division context fix (`trade-log.json` → actual packets) | ✅ Live |\n| PM2 restart by Tyler | ✅ Done |\n\n---\n\n## Still To Do\n\n1. **Biometric auth** -- Tailscale HTTPS is live, ready to build fingerprint login for mobile\n2. **Ollama 500s** -- VRAM pressure when multiple models compete; worth investigating a queue or priority system\n3. **4am reverted sessions** -- need git log from desktop to see exactly what was lost and if anything needs to be rebuilt\n\n---\n\n## Recommended Next Step\n\nIf you're testing mobile chat and it's working, the biometric auth is the cleanest next win -- Tailscale already satisfies the HTTPS requirement. One session to build it. Want me to start?"
     }
   ],
-  "last_updated": "2026-03-21T07:57:46.763Z"
+  "last_updated": "2026-03-21T12:56:49.090Z"
 }
