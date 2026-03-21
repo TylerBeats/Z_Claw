@@ -1038,8 +1038,9 @@ function init() {
     refreshCurrent();
   });
 
-  // SSE: real-time alert push
+  // SSE: real-time alert + gamification push
   _connectAlertStream();
+  _connectGamifStream();
 }
 
 let _alertSSE = null;
@@ -1077,6 +1078,32 @@ function _connectAlertStream() {
   } catch(e) {
     // EventSource not available — fall back to polling (already set up above)
   }
+}
+
+let _gamifSSE = null;
+function _connectGamifStream() {
+  if (_gamifSSE) { try { _gamifSSE.close(); } catch(e) {} }
+  try {
+    _gamifSSE = new EventSource(MC_SERVER + '/mobile/api/gamif/stream');
+    _gamifSSE.onmessage = (e) => {
+      try {
+        const evt = JSON.parse(e.data);
+        if (!evt || evt.type !== 'gamif') return;
+        if (['skill_complete','xp_grant','init'].includes(evt.event)) {
+          if (_currentTab === 'home') refreshCurrent();
+        } else if (evt.event === 'achievement_unlock') {
+          showToast(`🏆 Achievement: ${evt.achievement.replace(/_/g,' ')}`);
+          if (_currentTab === 'home') refreshCurrent();
+        } else if (evt.event === 'streak_milestone') {
+          showToast(`🔥 ${evt.division} streak: ${evt.streak} days!`);
+        }
+      } catch(err) {}
+    };
+    _gamifSSE.onerror = () => {
+      _gamifSSE.close(); _gamifSSE = null;
+      setTimeout(_connectGamifStream, 20000);
+    };
+  } catch(e) {}
 }
 
 function updateClock() {
@@ -1493,9 +1520,10 @@ async function loadOverview(silent = false) {
       const baseXp   = s.base_xp  || 0;
       const level    = s.level    || 1;
       const rank     = s.rank     || 'Apprentice of the Realm';
-      const xpToNext = Math.max(1, (level) * 100);
-      const pct      = Math.min(100, Math.round((baseXp % 100) / 100 * 100));
+      const xpToNext = s.xp_to_next_level || 100;
+      const pct      = Math.min(100, Math.round(baseXp / xpToNext * 100));
       const divs     = s.divisions || {};
+      const streaks  = s.streaks   || {};
       const divOrder = [['op_sec','OP-Sec'],['dev_automation','Dev'],['trading','Trading'],['opportunity','Opps'],['personal','Personal']];
       html += '<div class="xp-card">';
       html += '<div class="xp-rank-row">';
@@ -1503,11 +1531,20 @@ async function loadOverview(silent = false) {
       html += `<div class="xp-level">LVL ${level}</div>`;
       html += '</div>';
       html += '<div class="xp-bar-wrap"><div class="xp-bar-fill" style="width:' + pct + '%"></div></div>';
-      html += `<div class="xp-label">${baseXp} base XP · ${100 - (baseXp % 100)} to next level</div>`;
+      html += `<div class="xp-label">${baseXp} / ${xpToNext} XP · ${s.total_xp_earned || 0} total earned</div>`;
+      const activeStreaks = Object.entries(streaks).filter(([,v]) => v.current > 0);
+      if (activeStreaks.length) {
+        const sl = {opportunity:'OPPS',trading:'TRADE',dev_automation:'DEV',personal:'PERS',op_sec:'OPSEC'};
+        html += '<div style="font-size:10px;color:var(--yellow);margin-bottom:6px;">';
+        html += activeStreaks.map(([k,v]) => `${sl[k]||k} 🔥${v.current}d`).join('  ');
+        html += '</div>';
+      }
       html += '<div class="xp-divs">';
       for (const [key, label] of divOrder) {
         const div = divs[key];
-        if (div) html += `<div class="xp-div-badge">${label} <span>${div.xp} XP</span> · ${escHtml(div.rank)}</div>`;
+        const st  = streaks[key];
+        const tag = st && st.current > 0 ? ` 🔥${st.current}` : '';
+        if (div) html += `<div class="xp-div-badge">${label}${tag} <span>${div.xp} XP</span> · ${escHtml(div.rank)}</div>`;
       }
       html += '</div></div>';
     } catch(e) {}
@@ -2014,7 +2051,9 @@ async function loadOps(silent = false) {
     html += '<div class="card">';
     html += '<div class="card-title">Server Control</div>';
     html += '<div class="card-body" style="font-size:12px;color:var(--subtext);margin-bottom:12px;">Restart the J_Claw server process. PM2 will auto-restart within ~3 seconds. Requires biometric or PIN confirmation.</div>';
-    html += '<button class="btn btn-danger" style="width:100%;" onclick="restartServer()">⟳ Restart Server</button>';
+    html += '<button class="btn btn-danger" style="width:100%;margin-bottom:8px;" onclick="restartServer()">⟳ Restart Server</button>';
+    html += '<button class="btn" style="width:100%;background:var(--surface);border:1px solid var(--yellow);color:var(--yellow);" onclick="restartPm2()">⊞ PM2 Restart (New Terminal)</button>';
+    html += '<div style="font-size:10px;color:var(--subtext);margin-top:6px;">Opens a PowerShell window on the PC and runs <code style="color:var(--green);">pm2 restart openclaw</code>. Use this to apply code updates.</div>';
     html += '</div>';
 
     el.innerHTML = html;
@@ -2111,6 +2150,17 @@ async function restartServer() {
       setTimeout(tryReconnect, 5000);
     }
   );
+}
+
+async function restartPm2() {
+  await requireBiometricThenAct('restart_pm2', {}, async (challengeId) => {
+    const res = await api('/mobile/api/action', {
+      method: 'POST',
+      body: JSON.stringify({ action: 'restart_pm2', challenge_id: challengeId }),
+    });
+    haptic('medium');
+    showToast(res.ok ? 'PowerShell window opened on PC' : (res.message || 'Failed'));
+  });
 }
 
 // ── Coding approval banner ─────────────────────────────

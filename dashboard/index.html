@@ -763,6 +763,7 @@
         <div class="xp-bar"><div class="xp-bar-fill" id="xp-bar-fill" style="width:0%"></div></div>
       </div>
       <div>
+        <div id="streak-display" style="font-size:9px;color:var(--yellow);margin-bottom:6px;letter-spacing:0.05em;min-height:12px;"></div>
         <div id="achievements-row" style="margin-bottom:8px;max-width:220px;"></div>
         <button class="bestow-btn" onclick="openBestowModal()">⚔ BESTOW HONOR</button>
       </div>
@@ -2168,13 +2169,22 @@ Hit ⚡ GENERATE NOW to compile immediately.
         document.getElementById('rank-title-text').textContent = s.rank.toUpperCase();
         document.getElementById('rank-level-text').textContent = `LVL ${s.level} // J_CLAW`;
 
-        // xp_to_next_level may be absent if Python xp.py wrote the file — compute locally
-        const xpInLevel = s.base_xp % 100;
-        const pct = Math.min(100, Math.round(xpInLevel / 100 * 100));
+        const xpInLevel   = s.base_xp || 0;
+        const xpNeeded    = s.xp_to_next_level || 100;
+        const pct         = Math.min(100, Math.round(xpInLevel / xpNeeded * 100));
         const totalEarned = s.total_xp_earned != null ? s.total_xp_earned : '?';
         document.getElementById('xp-label').textContent =
-          `XP: ${xpInLevel} / 100  (${totalEarned} total earned)`;
+          `XP: ${xpInLevel} / ${xpNeeded}  (${totalEarned} total earned)`;
         document.getElementById('xp-bar-fill').style.width = pct + '%';
+
+        // Streak display
+        const streaks = s.streaks || {};
+        const streakLabels = {opportunity:'OPPS',trading:'TRADE',dev_automation:'DEV',personal:'PERS',op_sec:'OPSEC'};
+        const streakParts  = Object.entries(streaks)
+          .filter(([,v]) => v.current > 0)
+          .map(([k,v]) => `${streakLabels[k]||k} 🔥${v.current}d`);
+        const streakEl = document.getElementById('streak-display');
+        if (streakEl) streakEl.textContent = streakParts.join('  ');
 
         ['trading','opportunity','dev_automation','personal','op_sec'].forEach(div => {
           const data = s.divisions[div];
@@ -2232,6 +2242,26 @@ Hit ⚡ GENERATE NOW to compile immediately.
     document.getElementById('bestow-modal').addEventListener('click', function(e) {
       if (e.target === this) closeBestowModal();
     });
+
+    // ── Gamification SSE — real-time XP / rank / achievement events ──
+    (function connectGamifSSE() {
+      const es = new EventSource('/api/gamif/stream');
+      es.onmessage = function(e) {
+        try {
+          const evt = JSON.parse(e.data);
+          if (!evt || evt.type !== 'gamif') return;
+          if (['init','skill_complete','xp_grant'].includes(evt.event)) {
+            loadRankCard(); if (evt.event !== 'init') loadActivityLog();
+          } else if (evt.event === 'achievement_unlock') {
+            loadRankCard();
+            addLog('SYS', `🏆 Achievement unlocked: ${evt.achievement}`, 'yellow');
+          } else if (evt.event === 'streak_milestone') {
+            addLog('SYS', `🔥 ${evt.division} streak: ${evt.streak} days!`, 'yellow');
+          }
+        } catch(e) {}
+      };
+      es.onerror = function() { es.close(); setTimeout(connectGamifSSE, 5000); };
+    })();
 
     // Refresh every 30 seconds
     setInterval(() => {

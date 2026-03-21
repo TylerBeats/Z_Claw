@@ -114,9 +114,21 @@ def _division_rank(division: str, xp: int) -> str:
     return "—"
 
 
+_XP_PER_LEVEL = [0, 100, 180, 300, 450, 650, 900, 1200, 1600, 2100]
+
+def _xp_for_next_level(level: int) -> int:
+    """XP to advance FROM this level. Matches server.js xpForNextLevel()."""
+    if level < len(_XP_PER_LEVEL):
+        return _XP_PER_LEVEL[level]
+    return round(2100 * (1.3 ** (level - 9)))
+
 def _level_from_xp(base_xp: int) -> int:
-    """Simple level formula: 1 level per 100 base XP, floor at 1."""
-    return max(1, base_xp // 100 + 1)
+    """Derive level from accumulated base_xp using the exponential curve."""
+    level, remaining = 1, base_xp
+    while remaining >= _xp_for_next_level(level):
+        remaining -= _xp_for_next_level(level)
+        level += 1
+    return level
 
 
 # ── State read/write ──────────────────────────────────────────────────────────
@@ -132,17 +144,30 @@ def _load_stats() -> dict:
         return _empty_stats()
 
 
+def _streak_entry() -> dict:
+    return {"current": 0, "longest": 0, "last_date": None, "shield_this_week": False, "week": None}
+
 def _empty_stats() -> dict:
     return {
-        "base_xp":  0,
-        "level":    1,
-        "rank":     "Apprentice of the Realm",
+        "base_xp":               0,
+        "level":                 1,
+        "rank":                  "Apprentice of the Realm",
+        "xp_to_next_level":      100,
+        "total_xp_earned":       0,
+        "total_rewards_from_ruler": 0,
         "divisions": {
             "opportunity":    {"xp": 0, "rank": "Hunter"},
             "trading":        {"xp": 0, "rank": "Market Scout"},
             "dev_automation": {"xp": 0, "rank": "Code Ward"},
             "personal":       {"xp": 0, "rank": "Keeper"},
             "op_sec":         {"xp": 0, "rank": "Watchman"},
+        },
+        "streaks": {
+            "opportunity":    _streak_entry(),
+            "trading":        _streak_entry(),
+            "dev_automation": _streak_entry(),
+            "personal":       _streak_entry(),
+            "op_sec":         _streak_entry(),
         },
         "achievements": [],
         "last_updated": None,
@@ -203,11 +228,13 @@ def grant_base_xp(amount: int, reason: str = "") -> dict:
     old_level = stats.get("level", 1)
     old_rank  = stats.get("rank", "")
 
-    stats["base_xp"] = stats.get("base_xp", 0) + amount
+    stats["base_xp"]          = stats.get("base_xp", 0) + amount
+    stats["total_xp_earned"]  = stats.get("total_xp_earned", 0) + amount
     new_level = _level_from_xp(stats["base_xp"])
     new_rank  = _base_rank(new_level)
-    stats["level"] = new_level
-    stats["rank"]  = new_rank
+    stats["level"]            = new_level
+    stats["rank"]             = new_rank
+    stats["xp_to_next_level"] = _xp_for_next_level(new_level)
 
     rank_up = new_rank != old_rank
     level_up = new_level > old_level

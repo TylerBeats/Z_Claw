@@ -220,7 +220,7 @@ function applyXP(stats, amount) {
 // Grant division XP — called after every successful skill run.
 // Division XP tracks skill activity and division rank only.
 // Base XP is granted exclusively by the Ruler via /api/bestow.
-function grantDivisionXP(division, amount) {
+function grantDivisionXP(division, amount, skillName = null) {
   try {
     const stats = readState('jclaw-stats.json');
     if (!stats) return;
@@ -246,7 +246,151 @@ function grantDivisionXP(division, amount) {
 
     stats.last_updated = new Date().toISOString();
     writeState('jclaw-stats.json', stats);
+
+    const resolved = skillName || Object.keys(SKILL_XP).find(k => SKILL_XP[k].division === division) || 'unknown';
+    setImmediate(() => handleGamifCheck(resolved, division));
   } catch(e) {}
+}
+
+// ── Gamification Engine ──────────────────────────────────────────────────────
+
+function _getWeekKey(date) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
+  const week = Math.floor((d - new Date(d.getFullYear(), 0, 4)) / 604800000);
+  return `${d.getFullYear()}-${String(week + 1).padStart(2, '0')}`;
+}
+
+function _ensureStreaks(stats) {
+  if (!stats.streaks) stats.streaks = {};
+  for (const d of ['opportunity', 'trading', 'dev_automation', 'personal', 'op_sec']) {
+    if (!stats.streaks[d]) {
+      stats.streaks[d] = { current: 0, longest: 0, last_date: null, shield_this_week: false, week: null };
+    }
+  }
+}
+
+// Returns streak milestone count if hit a multiple of 7, else false.
+function _updateStreak(stats, division) {
+  _ensureStreaks(stats);
+  const s = stats.streaks[division];
+  if (!s) return false;
+
+  const today     = new Date().toISOString().slice(0, 10);
+  const week      = _getWeekKey(new Date());
+  if (s.week !== week) { s.shield_this_week = false; s.week = week; }
+  if (s.last_date === today) return false;
+
+  const prev = new Date();
+  prev.setDate(prev.getDate() - 1);
+  const yesterday = prev.toISOString().slice(0, 10);
+
+  if (!s.last_date || s.last_date === yesterday) {
+    s.current++;
+  } else if (!s.shield_this_week) {
+    s.shield_this_week = true;
+    s.current++;
+  } else {
+    s.current = 1;
+  }
+
+  s.longest   = Math.max(s.longest, s.current);
+  s.last_date = today;
+  return (s.current > 0 && s.current % 7 === 0) ? s.current : false;
+}
+
+function _checkAchievements(stats) {
+  const earned   = new Set(stats.achievements || []);
+  const unlocked = [];
+  const divXP    = div => ((stats.divisions || {})[div] || {}).xp || 0;
+  const divIdx   = div => DIV_XP_THRESHOLDS.filter(t => divXP(div) >= t).length - 1;
+
+  const checks = [
+    { id: 'first_hunt',      cond: () => divXP('opportunity') > 0 },
+    { id: 'market_watcher',  cond: () => divXP('trading') > 0 },
+    { id: 'code_warden',     cond: () => divXP('dev_automation') > 0 },
+    { id: 'healthy_habits',  cond: () => Object.values(stats.streaks || {}).some(s => (s.longest || 0) >= 7) },
+    { id: 'division_master', cond: () => Object.keys(stats.divisions || {}).some(d => divIdx(d) >= 3) },
+    { id: 'realm_commander', cond: () => (stats.level || 1) >= 10 },
+    { id: 'eternal',         cond: () => (stats.level || 1) >= 50 },
+  ];
+
+  for (const { id, cond } of checks) {
+    if (!earned.has(id) && cond()) {
+      stats.achievements.push(id);
+      earned.add(id);
+      unlocked.push(id);
+    }
+  }
+  return unlocked;
+}
+
+function _broadcastGamifEvent(event) {
+  if (_gamifSubscribers.size === 0) return;
+  const payload = JSON.stringify({ type: 'gamif', ...event });
+  for (const res of _gamifSubscribers) {
+    try { res.write(`data: ${payload}\n\n`); } catch(e) { _gamifSubscribers.delete(res); }
+  }
+}
+
+function _appendXpHistory(entry) {
+  try {
+    const line = JSON.stringify({ ts: new Date().toISOString(), ...entry }) + '\n';
+    fs.appendFileSync(path.join(STATE_DIR, 'xp-history.jsonl'), line);
+  } catch(e) {}
+}
+
+// Called after every skill completion. Updates streak, checks achievements,
+// broadcasts SSE, appends telemetry. Does NOT modify division XP.
+function handleGamifCheck(skillName, divisionKey) {
+  try {
+    const stats = readState('jclaw-stats.json');
+    if (!stats) return;
+
+    _ensureStreaks(stats);
+    const streakMilestone = _updateStreak(stats, divisionKey);
+    const newAchievements = _checkAchievements(stats);
+
+    stats.last_updated = new Date().toISOString();
+    writeState('jclaw-stats.json', stats);
+
+    const divStats = (stats.divisions || {})[divisionKey] || {};
+    const xpGrant  = (SKILL_XP[skillName] || {}).amount || 0;
+    _broadcastGamifEvent({
+      event: 'skill_complete', skill: skillName, division: divisionKey,
+      xp_granted: xpGrant, division_xp: divStats.xp, division_rank: divStats.rank,
+      streak: ((stats.streaks[divisionKey] || {}).current) || 0,
+    });
+
+    if (streakMilestone) {
+      _broadcastGamifEvent({ event: 'streak_milestone', division: divisionKey, streak: streakMilestone });
+      logActivity('SYS', `🔥 ${divisionKey} streak: ${streakMilestone} days`, 'yellow');
+    }
+
+    for (const achievement of newAchievements) {
+      _broadcastGamifEvent({ event: 'achievement_unlock', achievement });
+      logActivity('SYS', `🏆 Achievement unlocked: ${achievement}`, 'yellow');
+    }
+
+    _appendXpHistory({ event: 'skill_complete', skill: skillName, div: divisionKey, xp: xpGrant,
+      streak: ((stats.streaks[divisionKey] || {}).current) || 0 });
+  } catch(e) {}
+}
+
+function handleGamifStream(req, res) {
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive', 'X-Accel-Buffering': 'no',
+    'Access-Control-Allow-Origin': '*',
+  });
+  try {
+    const stats = readState('jclaw-stats.json');
+    if (stats) res.write(`data: ${JSON.stringify({ type: 'gamif', event: 'init', stats })}\n\n`);
+  } catch(e) {}
+  const hb = setInterval(() => { try { res.write(': ping\n\n'); } catch(e) {} }, 25000);
+  _gamifSubscribers.add(res);
+  req.on('close', () => { clearInterval(hb); _gamifSubscribers.delete(res); });
 }
 
 // ── API handlers ──
@@ -281,7 +425,9 @@ function handleBestow(body, res) {
     stats.achievements.push('rulers_blessing');
   }
 
+  _ensureStreaks(stats);
   const { leveled, rankChanged } = applyXP(stats, amount);
+  const newAchievements = _checkAchievements(stats);
   writeState('jclaw-stats.json', stats);
 
   logActivity('SYS', `⚔ Ruler bestowed ${amount} XP — ${reason}`, 'yellow');
@@ -289,11 +435,23 @@ function handleBestow(body, res) {
     logActivity('SYS', `⚔ RANK UP: ${oldRank} → ${stats.rank} (Lvl ${stats.level})`, 'purple');
   }
 
+  _broadcastGamifEvent({
+    event: 'xp_grant', source: 'ruler', amount,
+    level: stats.level, rank: stats.rank, rank_up: rankChanged,
+    old_rank: oldRank, base_xp: stats.base_xp, xp_to_next_level: stats.xp_to_next_level,
+  });
+  for (const achievement of newAchievements) {
+    _broadcastGamifEvent({ event: 'achievement_unlock', achievement });
+    logActivity('SYS', `🏆 Achievement unlocked: ${achievement}`, 'yellow');
+  }
+  _appendXpHistory({ event: 'ruler_bestow', amount, level: stats.level, rank: stats.rank, reason });
+
   jsonOk(res, {
     ok: true, amount, reason,
     new_level: stats.level, new_rank: stats.rank,
     base_xp: stats.base_xp, xp_to_next_level: stats.xp_to_next_level,
     rank_up: rankChanged, old_rank: oldRank,
+    achievements_unlocked: newAchievements,
   });
 }
 
@@ -1348,6 +1506,7 @@ const MOBILE_ALLOWED_ACTIONS = new Set([
   'pause_division', // disable a division agent via agent-overrides.json
   'resume_division',// re-enable a division agent
   'restart_server', // graceful process.exit(0) — PM2 auto-restarts
+  'restart_pm2',    // spawns a new PowerShell window running: pm2 restart openclaw
   'approve_coding', // keep file edits made by a mobile coding session
   'revert_coding',  // git reset --hard back to pre-session HEAD
 ]);
@@ -1435,6 +1594,8 @@ async function handleMobileAction(body, req, res) {
         result = mobileDivisionControl(division, true); break;
       case 'restart_server':
         result = mobileRestartServer(); break;
+      case 'restart_pm2':
+        result = mobileRestartPm2(); break;
       case 'approve_coding':
         result = mobileApproveCoding(targetId); break;
       case 'revert_coding':
@@ -1524,6 +1685,24 @@ function mobileRestartServer() {
   // Delay exit to allow the HTTP response to flush to the client first
   setTimeout(() => { process.exit(0); }, 300);
   return { ok: true, message: 'Server restarting — reconnect in ~5 seconds' };
+}
+
+function mobileRestartPm2() {
+  try {
+    // Open a new visible PowerShell window on the desktop and run pm2 restart openclaw.
+    // cmd /c start spawns an independent window; -NoExit keeps it open so Tyler can see output.
+    const proc = spawn(
+      'cmd.exe',
+      ['/c', 'start', 'powershell.exe', '-NoExit', '-Command', 'pm2 restart openclaw'],
+      { detached: true, stdio: 'ignore', windowsHide: false }
+    );
+    proc.unref();
+    logActivity('SYS', '[MOBILE] PM2 restart triggered — PowerShell window opened on desktop', 'yellow');
+    mobileAuditLog({ action: 'restart_pm2', actor: 'mobile-operator', result: 'succeeded' });
+    return { ok: true, message: 'PowerShell window opened — running pm2 restart openclaw' };
+  } catch(e) {
+    return { ok: false, message: 'Failed to open PowerShell: ' + e.message };
+  }
 }
 
 async function mobileTradingControl(cmd) {
@@ -1918,6 +2097,7 @@ const server = http.createServer(async (req, res) => {
       if (method === 'POST' && reqPath === '/api/control') {
         const body = await parseBody(req); return handleControl(body, res);
       }
+      if (method === 'GET' && reqPath === '/api/gamif/stream') { return handleGamifStream(req, res); }
       if (method === 'GET' && reqPath === '/api/jobs') { return handleGetJobs(res); }
       if (method === 'GET' && reqPath === '/api/grants') { return handleGetGrants(res); }
       if (method === 'GET' && reqPath === '/api/packets') { return handleGetPackets(res); }
@@ -2160,6 +2340,9 @@ const server = http.createServer(async (req, res) => {
       if (method === 'GET' && reqPath === '/mobile/api/alerts/stream') {
         return handleMobileAlertStream(req, res);
       }
+      if (method === 'GET' && reqPath === '/mobile/api/gamif/stream') {
+        return handleGamifStream(req, res);
+      }
       if (method === 'GET' && reqPath === '/mobile/api/divisions') {
         return handleMobileDivisions(res);
       }
@@ -2265,6 +2448,7 @@ function runSkillViaPython(skillName, logDiv, extraArgs = []) {
       updateDivisionState(mapping.divState, 'idle');
       if (code === 0) {
         logActivity(logDiv || 'SYS', `${skillName} complete`, 'green');
+        handleGamifCheck(skillName, mapping.divState);
         resolve(true);
       } else {
         const errLine = stderr.split('\n').filter(l => l.includes('ERROR') || l.includes('FAILED')).pop()
@@ -2390,7 +2574,7 @@ async function runJobIntakeNative() {
 
   logActivity('OPPS', `job-intake complete — ${newJobs.length} new jobs found (${seen.total_seen} total seen)`, 'blue');
   updateDivisionState('opportunity', 'idle');
-  grantDivisionXP('opportunity', 10);
+  grantDivisionXP('opportunity', 10, 'job-intake');
 }
 
 // ─────────────────────────────────────────────
