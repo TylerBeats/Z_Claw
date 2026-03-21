@@ -420,6 +420,24 @@
     }
     #sheet-backdrop.open { display: block; }
 
+    /* ── Coding approval banner ── */
+    #coding-approval-banner {
+      position: fixed; top: calc(var(--safe-top) + 8px); left: 12px; right: 12px;
+      background: var(--surface); border: 1px solid var(--yellow);
+      border-radius: 14px; padding: 14px 16px; z-index: 300;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+      transform: translateY(-120%); transition: transform 0.3s ease;
+    }
+    #coding-approval-banner.open { transform: translateY(0); }
+    .approval-title { font-size: 13px; font-weight: 600; color: var(--yellow); margin-bottom: 4px; }
+    .approval-body  { font-size: 12px; color: var(--subtext); margin-bottom: 12px; line-height: 1.5; }
+    .approval-diff  { font-size: 11px; color: var(--subtext); background: var(--overlay); border-radius: 8px;
+                      padding: 8px 10px; margin-bottom: 12px; white-space: pre-wrap; font-family: monospace;
+                      max-height: 80px; overflow-y: auto; }
+    .approval-actions { display: flex; gap: 10px; }
+    .approval-actions .btn { flex: 1; font-size: 13px; padding: 10px; }
+    .approval-timer { font-size: 11px; color: var(--subtext); text-align: center; margin-top: 8px; }
+
     /* ── Chat mode toggle ── */
     .mode-btn {
       flex: 1; padding: 12px 8px; border: none; background: none;
@@ -810,6 +828,18 @@
 <!-- Toast -->
 <div id="toast"></div>
 
+<!-- Coding approval banner -->
+<div id="coding-approval-banner">
+  <div class="approval-title">⚠ Claude made file edits — approve to keep</div>
+  <div class="approval-body" id="approval-body"></div>
+  <div class="approval-diff" id="approval-diff" style="display:none;"></div>
+  <div class="approval-actions">
+    <button class="btn btn-danger" onclick="_rejectCodingChanges()">Revert</button>
+    <button class="btn btn-primary" onclick="_approveCodingChanges()">✓ Approve</button>
+  </div>
+  <div class="approval-timer" id="approval-timer"></div>
+</div>
+
 <!-- PIN sheet -->
 <div id="pin-sheet-backdrop" onclick="cancelPin()"></div>
 <div id="pin-sheet">
@@ -1009,13 +1039,14 @@ function _connectAlertStream() {
         const data = JSON.parse(e.data);
         if (data.type === 'init' || data.type === 'update') {
           const alerts = data.alerts || [];
-          // Update badge from any screen
-          const approvalCount = document.getElementById('alert-badge') ? 0 : 0; // badge includes approvals too — just update alert portion
           updateBadge('alert-badge', alerts.length);
-          // If alerts tab is active, re-render it
-          if (_currentTab === 'alerts') {
-            loadAlerts(true);
-          }
+          if (_currentTab === 'alerts') loadAlerts(true);
+        }
+        if (data.type === 'coding_approval') {
+          _showCodingApprovalBanner(data.session_id, data.files_changed, data.diff_stat);
+        }
+        if (data.type === 'coding_resolved') {
+          _dismissCodingApprovalBanner(data.session_id, data.decision);
         }
       } catch(err) {}
     };
@@ -1917,11 +1948,99 @@ async function loadOps(silent = false) {
       html += '</div>';
     }
 
+    // ── SYSTEM CONTROLS ──
+    html += '<div class="section-title">System</div>';
+    html += '<div class="card">';
+    html += '<div class="card-title">Server Control</div>';
+    html += '<div class="card-body" style="font-size:12px;color:var(--subtext);margin-bottom:12px;">Restart the J_Claw server process. PM2 will auto-restart within ~3 seconds. Requires biometric or PIN confirmation.</div>';
+    html += '<button class="btn btn-danger" style="width:100%;" onclick="restartServer()">⟳ Restart Server</button>';
+    html += '</div>';
+
     el.innerHTML = html;
   } catch(e) {
     setConnected(false);
     renderError(el, e.message, () => loadOps());
   }
+}
+
+async function restartServer() {
+  openSheet(
+    'Restart Server',
+    'This will restart the J_Claw process. PM2 will bring it back online in ~3 seconds. All active connections will drop.',
+    'Restart',
+    'btn-danger',
+    async () => {
+      let challengeId;
+      try {
+        const ch = await api('/mobile/api/challenge?action=restart_server');
+        challengeId = ch.challenge_id;
+      } catch(e) {
+        showToast('Could not get challenge: ' + e.message);
+        haptic('error');
+        return;
+      }
+
+      let authed = false;
+      try {
+        if (window.PublicKeyCredential) {
+          const cred = await navigator.credentials.get({
+            publicKey: {
+              challenge: new TextEncoder().encode(challengeId),
+              timeout: 20000,
+              userVerification: 'required',
+              rpId: location.hostname,
+            }
+          });
+          authed = !!cred;
+        }
+      } catch(e) { authed = false; }
+
+      if (!authed) {
+        try {
+          const pin = await openPinSheet();
+          const storedHash = _getStored('mc_pin_hash');
+          if (storedHash) {
+            const h = await sha256(pin);
+            if (h !== storedHash) { showToast('Incorrect PIN'); haptic('error'); return; }
+          } else {
+            _setStored('mc_pin_hash', await sha256(pin));
+            showToast('PIN saved');
+          }
+          authed = true;
+        } catch(e) { showToast('Cancelled'); return; }
+      }
+
+      if (!authed) { showToast('Auth failed'); haptic('error'); return; }
+
+      try {
+        await api('/mobile/api/action', {
+          method: 'POST',
+          body: JSON.stringify({ action: 'restart_server', challenge_id: challengeId }),
+        });
+      } catch(e) { /* server closing mid-request is expected */ }
+
+      haptic('medium');
+      showToast('Restarting… reconnecting in 5s');
+      setConnected(false);
+
+      // Auto-reconnect after PM2 brings the server back
+      let attempts = 0;
+      const tryReconnect = async () => {
+        attempts++;
+        try {
+          await api('/mobile/api/status');
+          setConnected(true);
+          showToast('Server back online');
+          haptic('light');
+          loadTab(_currentTab);
+        } catch(e) {
+          if (attempts < 12) setTimeout(tryReconnect, 2000);
+          else showToast('Server not responding — check desktop');
+        }
+      };
+      setTimeout(tryReconnect, 5000);
+    }
+  );
 }
 
 // ══════════════════════════════════════════════════════

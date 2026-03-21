@@ -62,35 +62,33 @@ def run() -> dict:
         f"RUNNING PROCESSES:\n{surface['running_processes'][:1500]}"
     )
 
-    # Known-safe ports and tasks for this machine — suppress false positives
-    whitelist_note = (
-        "KNOWN-SAFE WHITELIST for this machine — do NOT flag these:\n"
-        "PORTS: 17500 (Dropbox LAN sync), 27036 (Steam Remote Play), "
-        "27015-27030 (Steam game servers), 1900 (SSDP/UPnP), "
-        "5353 (mDNS), 7680 (Windows Update delivery), "
-        "49152-65535 (Windows ephemeral/RPC ports — normal), "
-        "5040 (Windows runtime broker), 3702 (WSD), 5357 (WSDAPI).\n"
-        "TASKS: AMDRyzenMasterSDKTask / cpumetricsserver.exe (AMD Adrenalin GPU software — legitimate), "
-        "any task under AMD\\, NVIDIA\\, Intel\\, Microsoft\\, or standard vendor paths.\n"
-        "PROCESSES: Steam.exe, Dropbox.exe, Discord.exe, chrome.exe, node.exe, python.exe, "
-        "ollama.exe, pm2, cpumetricsserver.exe, RadeonSoftware.exe — all expected.\n"
-    )
-
     messages = [
         {
             "role": "system",
             "content": (
-                "You are the OP-Sec threat surface analyst for J_Claw. "
-                "Review Windows 11 system data from a personal gaming/dev machine. "
-                "Flag anything suspicious: unexpected listening ports, scheduled tasks "
-                "that look like persistence mechanisms, or unknown processes. "
-                f"{whitelist_note}"
-                "Only flag items NOT on the whitelist that are genuinely anomalous. "
-                'Return JSON: {"summary": "1-2 sentences", "anomalies": ['
+                "You are the OP-Sec threat surface analyst for J_Claw reviewing a personal Windows 11 gaming/dev machine.\n\n"
+                "CRITICAL — APPROVED SAFE LIST. You MUST NOT flag ANY of the following. These are verified legitimate:\n"
+                "- PORT 17500: Dropbox LAN sync daemon — SAFE, DO NOT FLAG\n"
+                "- PORT 27036: Steam Remote Play — SAFE, DO NOT FLAG\n"
+                "- PORTS 27015-27030: Steam game servers — SAFE, DO NOT FLAG\n"
+                "- PORT 1900: SSDP/UPnP — SAFE, DO NOT FLAG\n"
+                "- PORT 5353: mDNS — SAFE, DO NOT FLAG\n"
+                "- PORT 7680: Windows Update delivery optimization — SAFE, DO NOT FLAG\n"
+                "- PORTS 49152-65535: Windows ephemeral/dynamic RPC ports — SAFE, DO NOT FLAG\n"
+                "- PORT 5040: Windows Runtime Broker — SAFE, DO NOT FLAG\n"
+                "- PORT 3702: WS-Discovery — SAFE, DO NOT FLAG\n"
+                "- PORT 5357: WSDAPI — SAFE, DO NOT FLAG\n"
+                "- TASK AMDRyzenMasterSDKTask: AMD Adrenalin GPU software — SAFE, DO NOT FLAG\n"
+                "- PROCESS cpumetricsserver.exe: AMD Adrenalin CPU metrics — SAFE, DO NOT FLAG\n"
+                "- Any scheduled task under AMD\\, NVIDIA\\, Intel\\, or Microsoft\\ paths — SAFE\n"
+                "- PROCESSES: Steam.exe, Dropbox.exe, Discord.exe, chrome.exe, msedge.exe, node.exe, "
+                "python.exe, ollama.exe, pm2, RadeonSoftware.exe, svchost.exe — all SAFE, DO NOT FLAG\n\n"
+                "Only flag items that are NOT in the above list and are genuinely anomalous for a gaming/dev machine.\n"
+                "If everything looks normal, return an empty anomalies array.\n\n"
+                'Return JSON only: {"summary": "1-2 sentences", "anomalies": ['
                 '{"type": "port|task|process", "detail": "", '
                 '"severity": "HIGH|MEDIUM|LOW", "recommendation": ""}], '
-                '"escalate": false} '
-                "Return valid JSON only. Empty array if nothing suspicious."
+                '"escalate": false}'
             ),
         },
         {"role": "user", "content": context},

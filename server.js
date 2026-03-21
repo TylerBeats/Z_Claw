@@ -17,6 +17,9 @@ const PORT      = 3000;
 // ── Mobile SSE subscribers ──
 const _mobileAlertSubscribers = new Set();
 
+// ── Pending coding approvals: sessionId → { preSessionHead, filesChanged, diffStat, timer } ──
+const _pendingCodingApprovals = new Map();
+
 // ── Load .env into process.env ──
 function loadEnv() {
   try {
@@ -1127,6 +1130,27 @@ async function handleMobileChatCoding(body, res) {
         exit_code:       code,
       });
 
+      // ── Approval gate: if files changed, require biometric confirmation to keep ──
+      if (filesChanged > 0) {
+        const autoRevertTimer = setTimeout(() => {
+          if (_pendingCodingApprovals.has(sessionId)) {
+            _pendingCodingApprovals.delete(sessionId);
+            try {
+              spawnSync('git', ['reset', '--hard', preSessionHead], { cwd: ROOT, timeout: 15000 });
+              logActivity('OP_SEC', `[MOBILE] Session ${sessionId} auto-reverted — no approval within 120s`, 'yellow');
+            } catch(e) {}
+            _broadcastCodingEvent({ type: 'coding_resolved', session_id: sessionId, decision: 'auto_reverted' });
+          }
+        }, 120_000);
+        _pendingCodingApprovals.set(sessionId, { preSessionHead, filesChanged, diffStat, timer: autoRevertTimer });
+        _broadcastCodingEvent({
+          type:         'coding_approval',
+          session_id:   sessionId,
+          files_changed: filesChanged,
+          diff_stat:    diffStat.slice(0, 600),
+        });
+      }
+
       // ── Tripwire: sensitive file touched → write OP-Sec alert + SSE push ──
       if (sensitiveHit.length > 0) {
         try {
@@ -1213,6 +1237,9 @@ const MOBILE_ALLOWED_ACTIONS = new Set([
   'resume_trading', // resume the trading cycle
   'pause_division', // disable a division agent via agent-overrides.json
   'resume_division',// re-enable a division agent
+  'restart_server', // graceful process.exit(0) — PM2 auto-restarts
+  'approve_coding', // keep file edits made by a mobile coding session
+  'revert_coding',  // git reset --hard back to pre-session HEAD
 ]);
 
 // In-memory challenge store: id → { action, expires, used }
@@ -1296,6 +1323,12 @@ async function handleMobileAction(body, req, res) {
         result = mobileDivisionControl(division, false); break;
       case 'resume_division':
         result = mobileDivisionControl(division, true); break;
+      case 'restart_server':
+        result = mobileRestartServer(); break;
+      case 'approve_coding':
+        result = mobileApproveCoding(targetId); break;
+      case 'revert_coding':
+        result = mobileRevertCoding(targetId); break;
       default:
         result = { ok: false, message: 'Unhandled action' };
     }
@@ -1333,6 +1366,49 @@ function mobileAckAlert(alertId, division) {
   logActivity(division || 'SYS', `[MOBILE] Alert ack'd: ${alertId}`, 'yellow');
   _broadcastAlertUpdate();
   return { ok: true, message: 'Alert acknowledged' };
+}
+
+function _broadcastCodingEvent(payload) {
+  if (_mobileAlertSubscribers.size === 0) return;
+  const msg = JSON.stringify(payload);
+  for (const r of _mobileAlertSubscribers) {
+    try { r.write(`data: ${msg}\n\n`); } catch(e) { _mobileAlertSubscribers.delete(r); }
+  }
+}
+
+function mobileApproveCoding(sessionId) {
+  const pending = _pendingCodingApprovals.get(sessionId);
+  if (!pending) return { ok: false, message: 'Session not found or already resolved' };
+  clearTimeout(pending.timer);
+  _pendingCodingApprovals.delete(sessionId);
+  logActivity('OP_SEC', `[MOBILE] Coding session ${sessionId} approved — ${pending.filesChanged} file(s) kept`, 'green');
+  mobileAuditLog({ action: 'coding_approved', session_id: sessionId, files_changed: pending.filesChanged });
+  _broadcastCodingEvent({ type: 'coding_resolved', session_id: sessionId, decision: 'approved' });
+  return { ok: true, message: `Changes approved — ${pending.filesChanged} file(s) kept` };
+}
+
+function mobileRevertCoding(sessionId) {
+  const pending = _pendingCodingApprovals.get(sessionId);
+  if (!pending) return { ok: false, message: 'Session not found or already resolved' };
+  clearTimeout(pending.timer);
+  _pendingCodingApprovals.delete(sessionId);
+  try {
+    spawnSync('git', ['reset', '--hard', pending.preSessionHead], { cwd: ROOT, timeout: 15000 });
+    logActivity('OP_SEC', `[MOBILE] Coding session ${sessionId} reverted — reset to ${pending.preSessionHead.slice(0,7)}`, 'yellow');
+    mobileAuditLog({ action: 'coding_reverted', session_id: sessionId, reverted_to: pending.preSessionHead });
+  } catch(e) {
+    logActivity('OP_SEC', `[MOBILE] Revert failed for ${sessionId}: ${e.message}`, 'red');
+    return { ok: false, message: 'Revert failed: ' + e.message };
+  }
+  _broadcastCodingEvent({ type: 'coding_resolved', session_id: sessionId, decision: 'reverted' });
+  return { ok: true, message: 'Changes reverted — filesystem restored to pre-session state' };
+}
+
+function mobileRestartServer() {
+  logActivity('SYS', '[MOBILE] Server restart requested — exiting for PM2 auto-restart', 'yellow');
+  // Delay exit to allow the HTTP response to flush to the client first
+  setTimeout(() => { process.exit(0); }, 300);
+  return { ok: true, message: 'Server restarting — reconnect in ~5 seconds' };
 }
 
 async function mobileTradingControl(cmd) {
@@ -1955,6 +2031,9 @@ const server = http.createServer(async (req, res) => {
 
       if (method === 'GET' && reqPath === '/mobile/api/overview') {
         return handleMobileOverview(res);
+      }
+      if (method === 'GET' && reqPath === '/mobile/api/status') {
+        return jsonOk(res, { ok: true, uptime: Math.floor(process.uptime()) });
       }
       if (method === 'GET' && reqPath === '/mobile/api/alerts') {
         return handleMobileAlerts(res);

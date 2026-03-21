@@ -1,0 +1,63 @@
+{
+  "date": "2026-03-21",
+  "generated_at": "2026-03-21T05:02:42.528069+00:00",
+  "summary": "Several files contain large functions that could be refactored into smaller, more manageable pieces to improve readability and maintainability.",
+  "findings": [
+    {
+      "file": "runtime\\orchestrators\\dev_automation.py",
+      "severity": "high",
+      "type": "oversized_function",
+      "detail": "The function `_synthesize_dev_state` is 58 lines long, which is considered large. It could be broken down into smaller functions.",
+      "suggestion": "Refactor `_synthesize_dev_state` into multiple smaller functions."
+    },
+    {
+      "file": "runtime\\tools\\jobs.py",
+      "severity": "high",
+      "type": "oversized_function",
+      "detail": "The function `fetch_adzuna` is 68 lines long, which is considered large. It could be broken down into smaller functions.",
+      "suggestion": "Refactor `fetch_adzuna` into multiple smaller functions."
+    },
+    {
+      "file": "runtime\\skills\\hard_filter.py",
+      "severity": "high",
+      "type": "oversized_function",
+      "detail": "The function `_score_job_deterministic` is 51 lines long, which is considered large. It could be broken down into smaller functions.",
+      "suggestion": "Refactor `_score_job_deterministic` into multiple smaller functions."
+    },
+    {
+      "file": "runtime\\skills\\repo_monitor.py",
+      "severity": "high",
+      "type": "oversized_function",
+      "detail": "The function `_scan_repo` is 82 lines long, which is considered large. It could be broken down into smaller functions.",
+      "suggestion": "Refactor `_scan_repo` into multiple smaller functions."
+    },
+    {
+      "file": "runtime\\skills\\mobile_audit_review.py",
+      "severity": "high",
+      "type": "oversized_function",
+      "detail": "The function `_flag_patterns` is 53 lines long, which is considered large. It could be broken down into smaller functions.",
+      "suggestion": "Refactor `_flag_patterns` into multiple smaller functions."
+    },
+    {
+      "file": "runtime\\orchestrators\\opportunity.py",
+      "severity": "high",
+      "type": "oversized_function",
+      "detail": "The function `run_job_intake` is 98 lines long, which is considered large. It could be broken down into smaller functions.",
+      "suggestion": "Refactor `run_job_intake` into multiple smaller functions."
+    },
+    {
+      "file": "runtime\\skills\\funding_finder.py",
+      "severity": "high",
+      "type": "oversized_function",
+      "detail": "The function `run` is 79 lines long, which is considered large. It could be broken down into smaller functions.",
+      "suggestion": "Refactor `run` into multiple smaller functions."
+    },
+    {
+      "file": "runtime\\orchestrators\\personal.py",
+      "severity": "high",
+      "type": "oversized_function",
+      "detail": "The function `_synthesize_personal_state` is 54 lines long, which is considered large. It could be broken down into smaller functions.",
+      "suggestion": "Refactor `_synthesize_personal_state` into multiple smaller functions."
+    }
+  ]
+}

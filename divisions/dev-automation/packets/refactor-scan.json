@@ -1,38 +1,38 @@
 {
   "division": "dev-automation",
-  "generated_at": "2026-03-21T02:02:04.262704+00:00",
+  "generated_at": "2026-03-21T05:02:42.528954+00:00",
   "skill": "refactor-scan",
   "status": "success",
-  "summary": "Several files contain large functions that could be refactored to improve maintainability and readability.",
+  "summary": "Several files contain large functions that could be refactored into smaller, more manageable pieces to improve readability and maintainability.",
   "action_items": [
     {
       "priority": "high",
-      "description": "[high] runtime\\orchestrators\\dev_automation.py: The function `_synthesize_dev_state` is 58 lines long, which is considered large and could be broken down into smaller functions. — Refactor `_synthesize_dev_state` into smaller, more focused functions.",
+      "description": "[high] runtime\\orchestrators\\dev_automation.py: The function `_synthesize_dev_state` is 58 lines long, which is considered large. It could be broken down into smaller functions. — Refactor `_synthesize_dev_state` into multiple smaller functions.",
       "requires_matthew": false
     },
     {
       "priority": "high",
-      "description": "[high] runtime\\tools\\jobs.py: The function `fetch_adzuna` is 68 lines long, which could be refactored to improve readability and maintainability. — Refactor `fetch_adzuna` into smaller functions.",
+      "description": "[high] runtime\\tools\\jobs.py: The function `fetch_adzuna` is 68 lines long, which is considered large. It could be broken down into smaller functions. — Refactor `fetch_adzuna` into multiple smaller functions.",
       "requires_matthew": false
     },
     {
       "priority": "high",
-      "description": "[high] runtime\\skills\\hard_filter.py: The function `_score_job_deterministic` is 51 lines long, which could be broken down into smaller functions. — Refactor `_score_job_deterministic` into smaller, more focused functions.",
+      "description": "[high] runtime\\skills\\hard_filter.py: The function `_score_job_deterministic` is 51 lines long, which is considered large. It could be broken down into smaller functions. — Refactor `_score_job_deterministic` into multiple smaller functions.",
       "requires_matthew": false
     },
     {
       "priority": "high",
-      "description": "[high] runtime\\skills\\repo_monitor.py: The function `_scan_repo` is 82 lines long, which could be refactored to improve readability and maintainability. — Refactor `_scan_repo` into smaller functions.",
+      "description": "[high] runtime\\skills\\repo_monitor.py: The function `_scan_repo` is 82 lines long, which is considered large. It could be broken down into smaller functions. — Refactor `_scan_repo` into multiple smaller functions.",
       "requires_matthew": false
     },
     {
       "priority": "high",
-      "description": "[high] runtime\\orchestrators\\opportunity.py: The function `run_job_intake` is 98 lines long, which could be broken down into smaller functions. — Refactor `run_job_intake` into smaller, more focused functions.",
+      "description": "[high] runtime\\skills\\mobile_audit_review.py: The function `_flag_patterns` is 53 lines long, which is considered large. It could be broken down into smaller functions. — Refactor `_flag_patterns` into multiple smaller functions.",
       "requires_matthew": false
     },
     {
       "priority": "high",
-      "description": "[high] runtime\\orchestrators\\personal.py: The function `_synthesize_personal_state` is 54 lines long, which could be broken down into smaller functions. — Refactor `_synthesize_personal_state` into smaller, more focused functions.",
+      "description": "[high] runtime\\orchestrators\\opportunity.py: The function `run_job_intake` is 98 lines long, which is considered large. It could be broken down into smaller functions. — Refactor `run_job_intake` into multiple smaller functions.",
       "requires_matthew": false
     }
   ],
