@@ -183,11 +183,18 @@ def _save_stats(stats: dict) -> None:
 
 # ── Public API ────────────────────────────────────────────────────────────────
 
+def _streak_multiplier(stats: dict, division: str) -> float:
+    """Streak XP multiplier: +10% per 7-day milestone, capped at +50% (×1.5)."""
+    streak = stats.get("streaks", {}).get(division, {}).get("current", 0)
+    return min(1.5, 1.0 + (streak // 7) * 0.1)
+
+
 def grant_skill_xp(skill_name: str) -> dict:
     """
     Grant division XP for a completed skill.
     Returns progression_packet dict.
     Division XP NEVER converts to base XP automatically.
+    Streak and prestige multipliers are applied here.
     """
     if skill_name not in SKILL_XP:
         return {"skill": skill_name, "xp_granted": 0, "rank_up": False}
@@ -195,9 +202,14 @@ def grant_skill_xp(skill_name: str) -> dict:
     division, xp_amount = SKILL_XP[skill_name]
     stats = _load_stats()
 
+    # Apply streak multiplier (based on current streak before today's run)
+    streak_mult    = _streak_multiplier(stats, division)
+    prestige_mult  = stats.get("prestige_multiplier", 1.0)
+    xp_actual      = round(xp_amount * streak_mult * prestige_mult)
+
     div_stats = stats["divisions"].setdefault(division, {"xp": 0, "rank": ""})
     old_div_rank = div_stats.get("rank", "")
-    div_stats["xp"] = div_stats.get("xp", 0) + xp_amount
+    div_stats["xp"] = div_stats.get("xp", 0) + xp_actual
     new_div_rank = _division_rank(division, div_stats["xp"])
     div_stats["rank"] = new_div_rank
     stats["divisions"][division] = div_stats
@@ -205,17 +217,18 @@ def grant_skill_xp(skill_name: str) -> dict:
     rank_up = new_div_rank != old_div_rank and old_div_rank != ""
     _save_stats(stats)
 
-    log.info("XP granted: %s +%d div XP (%s → %s)",
-             skill_name, xp_amount, old_div_rank, new_div_rank)
+    log.info("XP granted: %s +%d div XP (×%.1f streak, ×%.2f prestige) (%s → %s)",
+             skill_name, xp_actual, streak_mult, prestige_mult, old_div_rank, new_div_rank)
 
     return {
-        "skill":        skill_name,
-        "division":     division,
-        "xp_granted":   xp_amount,
-        "division_xp":  div_stats["xp"],
+        "skill":         skill_name,
+        "division":      division,
+        "xp_granted":    xp_actual,
+        "multiplier":    round(streak_mult * prestige_mult, 3),
+        "division_xp":   div_stats["xp"],
         "division_rank": new_div_rank,
-        "rank_up":      rank_up,
-        "rank_up_msg":  f"{old_div_rank} → {new_div_rank}" if rank_up else "",
+        "rank_up":       rank_up,
+        "rank_up_msg":   f"{old_div_rank} → {new_div_rank}" if rank_up else "",
     }
 
 

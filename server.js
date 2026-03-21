@@ -231,26 +231,37 @@ function grantDivisionXP(division, amount, skillName = null) {
       stats.divisions[division] = { xp: 0, rank: (DIV_RANKS[division] || ['Unknown'])[0] };
     }
 
+    // Streak XP multiplier: +10% per 7-day milestone, stacks to +50% at 35 days
+    _ensureStreaks(stats);
+    const streakDays   = ((stats.streaks || {})[division] || {}).current || 0;
+    const streakMult   = Math.min(1.5, 1.0 + Math.floor(streakDays / 7) * 0.1);
+    // Prestige multiplier: permanent +5% per prestige (stacks)
+    const prestigeMult = stats.prestige_multiplier || 1.0;
+    const actualAmount = Math.round(amount * streakMult * prestigeMult);
+
     const oldDivXP = stats.divisions[division].xp;
-    stats.divisions[division].xp += amount;
+    const oldRank  = stats.divisions[division].rank;
+    stats.divisions[division].xp += actualAmount;
     const newDivXP = stats.divisions[division].xp;
 
     // Update division rank based on thresholds
     const divRanks = DIV_RANKS[division] || [];
     const rankIdx = DIV_XP_THRESHOLDS.filter(t => newDivXP >= t).length - 1;
     stats.divisions[division].rank = divRanks[Math.min(rankIdx, divRanks.length - 1)] || stats.divisions[division].rank;
+    const newRank = stats.divisions[division].rank;
 
-    // Log division rank milestone (new tier unlocked)
+    // Log and broadcast rank-up when division tier changes
     const oldRankIdx = DIV_XP_THRESHOLDS.filter(t => oldDivXP >= t).length - 1;
     if (rankIdx > oldRankIdx) {
-      logActivity('SYS', `⚔ ${division} rank up: ${stats.divisions[division].rank}`, 'purple');
+      logActivity('SYS', `⚔ ${division} rank up: ${newRank}`, 'purple');
+      _broadcastGamifEvent({ event: 'rank_up', division, old_rank: oldRank, new_rank: newRank });
     }
 
     stats.last_updated = new Date().toISOString();
     writeState('jclaw-stats.json', stats);
 
     const resolved = skillName || Object.keys(SKILL_XP).find(k => SKILL_XP[k].division === division) || 'unknown';
-    setImmediate(() => handleGamifCheck(resolved, division));
+    setImmediate(() => handleGamifCheck(resolved, division, actualAmount, streakMult));
   } catch(e) {}
 }
 
@@ -345,7 +356,9 @@ function _appendXpHistory(entry) {
 
 // Called after every skill completion. Updates streak, checks achievements,
 // broadcasts SSE, appends telemetry. Does NOT modify division XP.
-function handleGamifCheck(skillName, divisionKey) {
+// actualXp / streakMult are forwarded from grantDivisionXP (Node path).
+// For Python-run skills they default to the base SKILL_XP amount / 1.0.
+function handleGamifCheck(skillName, divisionKey, actualXp = null, streakMult = null) {
   try {
     const stats = readState('jclaw-stats.json');
     if (!stats) return;
@@ -357,11 +370,14 @@ function handleGamifCheck(skillName, divisionKey) {
     stats.last_updated = new Date().toISOString();
     writeState('jclaw-stats.json', stats);
 
-    const divStats = (stats.divisions || {})[divisionKey] || {};
-    const xpGrant  = (SKILL_XP[skillName] || {}).amount || 0;
+    const divStats  = (stats.divisions || {})[divisionKey] || {};
+    const baseXp    = (SKILL_XP[skillName] || {}).amount || 0;
+    const xpGranted = actualXp !== null ? actualXp : baseXp;
+    const mult      = streakMult !== null ? streakMult : 1.0;
     _broadcastGamifEvent({
       event: 'skill_complete', skill: skillName, division: divisionKey,
-      xp_granted: xpGrant, division_xp: divStats.xp, division_rank: divStats.rank,
+      xp_granted: xpGranted, multiplier: mult,
+      division_xp: divStats.xp, division_rank: divStats.rank,
       streak: ((stats.streaks[divisionKey] || {}).current) || 0,
     });
 
@@ -375,7 +391,8 @@ function handleGamifCheck(skillName, divisionKey) {
       logActivity('SYS', `🏆 Achievement unlocked: ${achievement}`, 'yellow');
     }
 
-    _appendXpHistory({ event: 'skill_complete', skill: skillName, div: divisionKey, xp: xpGrant,
+    _appendXpHistory({ event: 'skill_complete', skill: skillName, div: divisionKey,
+      xp: xpGranted, multiplier: mult,
       streak: ((stats.streaks[divisionKey] || {}).current) || 0 });
   } catch(e) {}
 }
@@ -396,6 +413,76 @@ function handleGamifStream(req, res) {
 }
 
 // ── API handlers ──
+
+// GET /api/stats/summary  (also /mobile/api/stats/summary)
+function handleStatsSummary(res) {
+  try {
+    const stats = readState('jclaw-stats.json') || {};
+    let xpPerDay7d = 0;
+    try {
+      const histFile = path.join(STATE_DIR, 'xp-history.jsonl');
+      const cutoff   = new Date(); cutoff.setDate(cutoff.getDate() - 7);
+      const lines    = fs.readFileSync(histFile, 'utf8').split('\n').filter(l => l.trim());
+      const recent   = lines.reduce((sum, line) => {
+        try { const e = JSON.parse(line); if (e.xp && e.ts && new Date(e.ts) >= cutoff) return sum + (e.xp || 0); } catch(e) {}
+        return sum;
+      }, 0);
+      xpPerDay7d = Math.round((recent / 7) * 10) / 10;
+    } catch(e) {}
+
+    const longestStreaks = {};
+    for (const [div, s] of Object.entries(stats.streaks || {})) {
+      longestStreaks[div] = s.longest || 0;
+    }
+
+    jsonOk(res, {
+      total_xp_earned:     stats.total_xp_earned    || 0,
+      level:               stats.level               || 1,
+      rank:                stats.rank                || 'Apprentice of the Realm',
+      prestige:            stats.prestige            || 0,
+      prestige_multiplier: stats.prestige_multiplier || 1.0,
+      longest_streaks:     longestStreaks,
+      achievements_earned: (stats.achievements || []).length,
+      achievements_total:  8,
+      xp_per_day_7d:       xpPerDay7d,
+    });
+  } catch(e) { jsonError(res, 500, 'stats summary error'); }
+}
+
+// POST /api/prestige  — PC only, Tyler confirms
+// Condition: all 5 divisions >= 500 XP. Resets division XP, grants +5% permanent multiplier.
+function handlePrestige(res) {
+  const stats = readState('jclaw-stats.json');
+  if (!stats) return jsonError(res, 500, 'stats not found');
+
+  const DIVISIONS = ['opportunity', 'trading', 'dev_automation', 'personal', 'op_sec'];
+  const notReady  = DIVISIONS.filter(d => ((stats.divisions || {})[d] || {}).xp < 500);
+  if (notReady.length > 0) {
+    return jsonError(res, 400, `Not eligible — divisions below 500 XP: ${notReady.join(', ')}`);
+  }
+
+  // Reset all division XP to 0, reset ranks to entry tier
+  for (const d of DIVISIONS) {
+    stats.divisions[d].xp   = 0;
+    stats.divisions[d].rank = (DIV_RANKS[d] || ['Unknown'])[0];
+  }
+
+  stats.prestige            = (stats.prestige || 0) + 1;
+  stats.prestige_multiplier = Math.round((1.0 + stats.prestige * 0.05) * 1000) / 1000;
+  stats.last_updated        = new Date().toISOString();
+  writeState('jclaw-stats.json', stats);
+
+  logActivity('SYS', `⭐ PRESTIGE ${stats.prestige} — permanent XP multiplier: ×${stats.prestige_multiplier}`, 'purple');
+  _broadcastGamifEvent({ event: 'prestige', prestige: stats.prestige, multiplier: stats.prestige_multiplier });
+  _appendXpHistory({ event: 'prestige', prestige: stats.prestige, multiplier: stats.prestige_multiplier });
+
+  jsonOk(res, {
+    ok: true,
+    prestige:            stats.prestige,
+    prestige_multiplier: stats.prestige_multiplier,
+    message:             `Prestige ${stats.prestige} achieved — permanent ×${stats.prestige_multiplier} XP multiplier`,
+  });
+}
 
 // POST /api/control  { skill: "job-intake" }
 function handleControl(body, res) {
@@ -442,6 +529,9 @@ function handleBestow(body, res) {
     level: stats.level, rank: stats.rank, rank_up: rankChanged,
     old_rank: oldRank, base_xp: stats.base_xp, xp_to_next_level: stats.xp_to_next_level,
   });
+  if (rankChanged) {
+    _broadcastGamifEvent({ event: 'rank_up', source: 'base', old_rank: oldRank, new_rank: stats.rank });
+  }
   for (const achievement of newAchievements) {
     _broadcastGamifEvent({ event: 'achievement_unlock', achievement });
     logActivity('SYS', `🏆 Achievement unlocked: ${achievement}`, 'yellow');
@@ -2148,6 +2238,8 @@ const server = http.createServer(async (req, res) => {
         const body = await parseBody(req); return handleControl(body, res);
       }
       if (method === 'GET' && reqPath === '/api/gamif/stream') { return handleGamifStream(req, res); }
+      if (method === 'GET' && reqPath === '/api/stats/summary') { return handleStatsSummary(res); }
+      if (method === 'POST' && reqPath === '/api/prestige') { return handlePrestige(res); }
       if (method === 'GET' && reqPath === '/api/jobs') { return handleGetJobs(res); }
       if (method === 'GET' && reqPath === '/api/grants') { return handleGetGrants(res); }
       if (method === 'GET' && reqPath === '/api/packets') { return handleGetPackets(res); }
@@ -2393,6 +2485,7 @@ const server = http.createServer(async (req, res) => {
       if (method === 'GET' && reqPath === '/mobile/api/gamif/stream') {
         return handleGamifStream(req, res);
       }
+      if (method === 'GET' && reqPath === '/mobile/api/stats/summary') { return handleStatsSummary(res); }
       if (method === 'GET' && reqPath === '/mobile/api/divisions') {
         return handleMobileDivisions(res);
       }

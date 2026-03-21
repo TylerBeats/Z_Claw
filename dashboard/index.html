@@ -319,6 +319,29 @@
       background: var(--surface);
     }
 
+    /* ── Rank-up / achievement celebration banner ── */
+    #rank-up-banner {
+      position: fixed; top: -90px; left: 0; right: 0; z-index: 9999;
+      background: linear-gradient(135deg, #4b0082, #7c3aed);
+      color: #fff; text-align: center; padding: 16px 20px;
+      font-family: 'Press Start 2P', monospace; font-size: 10px; letter-spacing: 1px;
+      transition: top 0.4s cubic-bezier(0.34,1.56,0.64,1);
+      box-shadow: 0 4px 24px rgba(124,58,237,0.5);
+      cursor: pointer;
+    }
+    #rank-up-banner.show { top: 0; }
+
+    /* ── Stats panel ── */
+    .stats-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%;
+    }
+    .stats-cell {
+      background: var(--overlay); border: 1px solid var(--border);
+      padding: 8px; text-align: center;
+    }
+    .stats-cell-label { font-size: 7px; color: var(--subtext); margin-bottom: 4px; }
+    .stats-cell-value { font-size: 10px; color: var(--purple); }
+
     .rank-panel {
       display: flex;
       align-items: center;
@@ -745,11 +768,15 @@
     </div>
   </header>
 
+  <!-- ── Rank-up / Achievement celebration banner ── -->
+  <div id="rank-up-banner" onclick="this.classList.remove('show')"></div>
+
   <!-- ── J_Claw Rank Card ── -->
   <div id="rank-card">
     <div class="rank-card-tabs">
       <button class="rank-tab active-rank-tab" id="rtab-jclaw" onclick="switchRankTab('jclaw')">J_CLAW</button>
       <button class="rank-tab" id="rtab-divisions" onclick="switchRankTab('divisions')">DIVISIONS</button>
+      <button class="rank-tab" id="rtab-stats" onclick="switchRankTab('stats')">STATS</button>
     </div>
 
     <!-- J_CLAW tab -->
@@ -765,6 +792,7 @@
       <div>
         <div id="streak-display" style="font-size:9px;color:var(--yellow);margin-bottom:6px;letter-spacing:0.05em;min-height:12px;"></div>
         <div id="achievements-row" style="margin-bottom:8px;max-width:220px;"></div>
+        <div id="prestige-badge" style="display:none;font-size:8px;color:var(--yellow);margin-bottom:4px;"></div>
         <button class="bestow-btn" onclick="openBestowModal()">⚔ BESTOW HONOR</button>
       </div>
     </div>
@@ -777,6 +805,13 @@
         <div class="div-badge"><span>DEV TEAM</span><span id="badge-dev_automation">Code Ward</span><span id="xp-dev_automation" class="div-xp">0 XP</span></div>
         <div class="div-badge"><span>PERSONAL</span><span id="badge-personal">Keeper</span><span id="xp-personal" class="div-xp">0 XP</span></div>
         <div class="div-badge"><span>OP-SEC</span><span id="badge-op_sec">Watchman</span><span id="xp-op_sec" class="div-xp">0 XP</span></div>
+      </div>
+    </div>
+
+    <!-- STATS tab -->
+    <div id="rank-panel-stats" class="rank-panel" style="display:none">
+      <div id="stats-panel-content" style="width:100%">
+        <div style="font-size:8px;color:var(--subtext);">Loading...</div>
       </div>
     </div>
   </div>
@@ -2200,6 +2235,16 @@ Hit ⚡ GENERATE NOW to compile immediately.
           ALL_ACHIEVEMENTS.map(a =>
             `<span class="achievement-badge${earned.has(a.id) ? ' earned' : ''}">${a.name}</span>`
           ).join('');
+
+        // Prestige badge
+        const prestigeBadge = document.getElementById('prestige-badge');
+        if (prestigeBadge) {
+          const p = s.prestige || 0;
+          if (p > 0) {
+            prestigeBadge.textContent = `${'⭐'.repeat(p)} PRESTIGE ${p}  ×${s.prestige_multiplier || 1}`;
+            prestigeBadge.style.display = 'block';
+          } else { prestigeBadge.style.display = 'none'; }
+        }
       } catch(e) {}
     }
 
@@ -2207,8 +2252,57 @@ Hit ⚡ GENERATE NOW to compile immediately.
     function switchRankTab(tab) {
       document.getElementById('rank-panel-jclaw').style.display     = tab === 'jclaw'     ? 'flex' : 'none';
       document.getElementById('rank-panel-divisions').style.display = tab === 'divisions' ? 'flex' : 'none';
-      document.getElementById('rtab-jclaw').classList.toggle('active-rank-tab',     tab === 'jclaw');
-      document.getElementById('rtab-divisions').classList.toggle('active-rank-tab', tab === 'divisions');
+      document.getElementById('rank-panel-stats').style.display     = tab === 'stats'     ? 'flex' : 'none';
+      document.getElementById('rtab-jclaw').classList.toggle('active-rank-tab',      tab === 'jclaw');
+      document.getElementById('rtab-divisions').classList.toggle('active-rank-tab',  tab === 'divisions');
+      document.getElementById('rtab-stats').classList.toggle('active-rank-tab',      tab === 'stats');
+      if (tab === 'stats') loadStatsPanel();
+    }
+
+    // ── Stats Panel ──
+    async function loadStatsPanel() {
+      try {
+        const d   = await fetch('/api/stats/summary').then(r => r.json());
+        const div = { opportunity: 'OPPS', trading: 'TRADE', dev_automation: 'DEV', personal: 'PERS', op_sec: 'OPSEC' };
+        let streakRows = Object.entries(d.longest_streaks || {})
+          .map(([k,v]) => `<span style="margin-right:8px">${div[k]||k} 🔥${v}d</span>`).join('');
+        const html = `
+          <div class="stats-grid">
+            <div class="stats-cell"><div class="stats-cell-label">TOTAL XP EARNED</div><div class="stats-cell-value">${d.total_xp_earned || 0}</div></div>
+            <div class="stats-cell"><div class="stats-cell-label">XP / DAY (7D AVG)</div><div class="stats-cell-value">${d.xp_per_day_7d || 0}</div></div>
+            <div class="stats-cell"><div class="stats-cell-label">ACHIEVEMENTS</div><div class="stats-cell-value">${d.achievements_earned}/${d.achievements_total}</div></div>
+            <div class="stats-cell"><div class="stats-cell-label">PRESTIGE</div><div class="stats-cell-value">${d.prestige > 0 ? '⭐'.repeat(d.prestige) : '—'}</div></div>
+          </div>
+          <div style="margin-top:8px;font-size:8px;color:var(--subtext);">LONGEST STREAKS</div>
+          <div style="font-size:9px;color:var(--yellow);margin-top:4px;">${streakRows || '—'}</div>
+          ${d.prestige_multiplier > 1.0 ? `<div style="font-size:8px;color:var(--green);margin-top:6px;">PRESTIGE BONUS: ×${d.prestige_multiplier}</div>` : ''}
+        `;
+        document.getElementById('stats-panel-content').innerHTML = html;
+      } catch(e) {}
+    }
+
+    // ── Rank-up Banner ──
+    function showRankUpBanner(text) {
+      const el = document.getElementById('rank-up-banner');
+      el.textContent = text;
+      el.classList.add('show');
+      clearTimeout(el._timer);
+      el._timer = setTimeout(() => el.classList.remove('show'), 3500);
+    }
+
+    function playRankUpChime() {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        [523.25, 659.25, 783.99].forEach((freq, i) => {
+          const osc = ctx.createOscillator(), gain = ctx.createGain();
+          osc.connect(gain); gain.connect(ctx.destination);
+          osc.frequency.value = freq; osc.type = 'sine';
+          gain.gain.setValueAtTime(0.25, ctx.currentTime + i * 0.15);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.15 + 0.5);
+          osc.start(ctx.currentTime + i * 0.15);
+          osc.stop(ctx.currentTime + i * 0.15 + 0.5);
+        });
+      } catch(e) {}
     }
 
     // ── Bestow Modal ──
@@ -2252,11 +2346,20 @@ Hit ⚡ GENERATE NOW to compile immediately.
           if (!evt || evt.type !== 'gamif') return;
           if (['init','skill_complete','xp_grant'].includes(evt.event)) {
             loadRankCard(); if (evt.event !== 'init') loadActivityLog();
+          } else if (evt.event === 'rank_up') {
+            loadRankCard(); loadActivityLog();
+            const label = evt.division ? `⚔ ${evt.division.toUpperCase()} RANK UP` : '⚔ RANK UP';
+            showRankUpBanner(`${label} — ${evt.new_rank}`); playRankUpChime();
           } else if (evt.event === 'achievement_unlock') {
             loadRankCard();
             addLog('SYS', `🏆 Achievement unlocked: ${evt.achievement}`, 'yellow');
+            showRankUpBanner(`🏆 ${evt.achievement.replace(/_/g,' ').toUpperCase()}`); playRankUpChime();
           } else if (evt.event === 'streak_milestone') {
             addLog('SYS', `🔥 ${evt.division} streak: ${evt.streak} days!`, 'yellow');
+          } else if (evt.event === 'prestige') {
+            loadRankCard(); loadActivityLog();
+            showRankUpBanner(`⭐ PRESTIGE ${evt.prestige} — +${Math.round((evt.multiplier-1)*100)}% PERMANENT XP`);
+            playRankUpChime();
           }
         } catch(e) {}
       };

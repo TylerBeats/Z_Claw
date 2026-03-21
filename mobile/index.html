@@ -795,9 +795,14 @@
     </div>
   </div>
 
+  <!-- ── STATS ── -->
+  <div id="screen-stats" class="screen">
+    <div id="stats-content"><div class="loading">Loading...</div></div>
+  </div>
+
 </div>
 
-<!-- Bottom tab bar (5 tabs — Apple HIG) -->
+<!-- Bottom tab bar (6 tabs) -->
 <nav id="tab-bar">
   <button class="tab-btn active" onclick="switchTab('home')" id="tab-home">
     <div class="tab-wrap">
@@ -828,6 +833,12 @@
     <div class="tab-wrap">
       <span class="tab-icon">💬</span>
       <span>Chat</span>
+    </div>
+  </button>
+  <button class="tab-btn" onclick="switchTab('stats')" id="tab-stats">
+    <div class="tab-wrap">
+      <span class="tab-icon">⭐</span>
+      <span>Stats</span>
     </div>
   </button>
 </nav>
@@ -1092,11 +1103,18 @@ function _connectGamifStream() {
         if (!evt || evt.type !== 'gamif') return;
         if (['skill_complete','xp_grant','init'].includes(evt.event)) {
           if (_currentTab === 'home') refreshCurrent();
+        } else if (evt.event === 'rank_up') {
+          const label = evt.division ? `⚔ ${evt.division.toUpperCase()} RANK UP` : '⚔ RANK UP';
+          showRankUpBanner(`${label}\n${evt.new_rank}`); _playChime();
+          if (_currentTab === 'home') refreshCurrent();
         } else if (evt.event === 'achievement_unlock') {
-          showToast(`🏆 Achievement: ${evt.achievement.replace(/_/g,' ')}`);
+          showRankUpBanner(`🏆 ${evt.achievement.replace(/_/g,' ').toUpperCase()}`); _playChime();
           if (_currentTab === 'home') refreshCurrent();
         } else if (evt.event === 'streak_milestone') {
           showToast(`🔥 ${evt.division} streak: ${evt.streak} days!`);
+        } else if (evt.event === 'prestige') {
+          showRankUpBanner(`⭐ PRESTIGE ${evt.prestige}\n+${Math.round((evt.multiplier-1)*100)}% PERMANENT XP`);
+          _playChime(); if (_currentTab === 'home') refreshCurrent();
         }
       } catch(err) {}
     };
@@ -1104,6 +1122,35 @@ function _connectGamifStream() {
       _gamifSSE.close(); _gamifSSE = null;
       setTimeout(_connectGamifStream, 20000);
     };
+  } catch(e) {}
+}
+
+function showRankUpBanner(text) {
+  let el = document.getElementById('rank-up-banner');
+  if (!el) {
+    el = document.createElement('div'); el.id = 'rank-up-banner';
+    el.style.cssText = 'position:fixed;top:-100px;left:0;right:0;z-index:9999;background:linear-gradient(135deg,#4b0082,#7c3aed);color:#fff;text-align:center;padding:16px 20px;font-family:monospace;font-size:13px;letter-spacing:1px;transition:top 0.4s cubic-bezier(0.34,1.56,0.64,1);box-shadow:0 4px 24px rgba(124,58,237,0.5);cursor:pointer;white-space:pre-line;';
+    el.onclick = () => el.style.top = '-100px';
+    document.body.appendChild(el);
+  }
+  el.textContent = text;
+  el.style.top = '0';
+  clearTimeout(el._t);
+  el._t = setTimeout(() => { el.style.top = '-100px'; }, 3500);
+}
+
+function _playChime() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [523.25, 659.25, 783.99].forEach((freq, i) => {
+      const osc = ctx.createOscillator(), gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.frequency.value = freq; osc.type = 'sine';
+      gain.gain.setValueAtTime(0.25, ctx.currentTime + i * 0.15);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.15 + 0.5);
+      osc.start(ctx.currentTime + i * 0.15);
+      osc.stop(ctx.currentTime + i * 0.15 + 0.5);
+    });
   } catch(e) {}
 }
 
@@ -1159,6 +1206,7 @@ function loadTab(name, silent = false) {
     case 'command':  loadCommand(silent);  break;
     case 'trading':  loadTrading(silent);  break;
     case 'chat':     initChat();           break;
+    case 'stats':    loadStatsTab();       break;
   }
 }
 
@@ -1166,6 +1214,50 @@ function loadCommand(silent = false) {
   // Load the active segment; pre-load the other in background
   loadIntel(silent);
   loadOps(true);
+}
+
+async function loadStatsTab() {
+  const el = document.getElementById('stats-content');
+  if (!el) return;
+  try {
+    const d = await api('/mobile/api/stats/summary');
+    const divLabels = { opportunity:'OPPS', trading:'TRADE', dev_automation:'DEV', personal:'PERS', op_sec:'OPSEC' };
+    const streakRows = Object.entries(d.longest_streaks || {})
+      .map(([k,v]) => `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);"><span style="color:var(--subtext)">${divLabels[k]||k}</span><span style="color:var(--yellow)">🔥 ${v}d</span></div>`)
+      .join('');
+    const prestige = d.prestige || 0;
+
+    el.innerHTML = `
+      <div class="card" style="margin-bottom:12px;">
+        <div class="card-title">REALM STATS</div>
+        <div class="card-body">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+            <div style="background:var(--overlay);border:1px solid var(--border);padding:10px;text-align:center;">
+              <div style="font-size:9px;color:var(--subtext);margin-bottom:4px;">TOTAL XP EARNED</div>
+              <div style="font-size:16px;color:var(--purple);">${d.total_xp_earned || 0}</div>
+            </div>
+            <div style="background:var(--overlay);border:1px solid var(--border);padding:10px;text-align:center;">
+              <div style="font-size:9px;color:var(--subtext);margin-bottom:4px;">XP / DAY (7D)</div>
+              <div style="font-size:16px;color:var(--green);">${d.xp_per_day_7d || 0}</div>
+            </div>
+            <div style="background:var(--overlay);border:1px solid var(--border);padding:10px;text-align:center;">
+              <div style="font-size:9px;color:var(--subtext);margin-bottom:4px;">ACHIEVEMENTS</div>
+              <div style="font-size:16px;color:var(--yellow);">${d.achievements_earned}/${d.achievements_total}</div>
+            </div>
+            <div style="background:var(--overlay);border:1px solid var(--border);padding:10px;text-align:center;">
+              <div style="font-size:9px;color:var(--subtext);margin-bottom:4px;">PRESTIGE</div>
+              <div style="font-size:16px;color:var(--yellow);">${prestige > 0 ? '⭐'.repeat(prestige) : '—'}</div>
+            </div>
+          </div>
+          ${d.prestige_multiplier > 1.0 ? `<div style="font-size:10px;color:var(--green);margin-bottom:10px;text-align:center;">PRESTIGE BONUS: ×${d.prestige_multiplier} XP</div>` : ''}
+          <div style="font-size:10px;color:var(--subtext);margin-bottom:6px;letter-spacing:0.05em;">LONGEST STREAKS</div>
+          ${streakRows || '<div style="color:var(--subtext);font-size:10px;">No streaks yet</div>'}
+        </div>
+      </div>
+    `;
+  } catch(e) {
+    el.innerHTML = '<div class="card"><div class="card-body" style="color:var(--subtext)">Failed to load stats</div></div>';
+  }
 }
 
 // ── Toast ─────────────────────────────────────────────────
@@ -1533,6 +1625,9 @@ async function loadOverview(silent = false) {
       html += '</div>';
       html += '<div class="xp-bar-wrap"><div class="xp-bar-fill" style="width:' + pct + '%"></div></div>';
       html += `<div class="xp-label">${baseXp} / ${xpToNext} XP · ${s.total_xp_earned || 0} total earned</div>`;
+      if ((s.prestige || 0) > 0) {
+        html += `<div style="font-size:9px;color:var(--yellow);margin-bottom:4px;">${'⭐'.repeat(s.prestige)} PRESTIGE ${s.prestige}  ×${s.prestige_multiplier || 1} XP</div>`;
+      }
       const activeStreaks = Object.entries(streaks).filter(([,v]) => v.current > 0);
       if (activeStreaks.length) {
         const sl = {opportunity:'OPPS',trading:'TRADE',dev_automation:'DEV',personal:'PERS',op_sec:'OPSEC'};
