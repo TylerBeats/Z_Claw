@@ -71,7 +71,15 @@
     {
       "role": "assistant",
       "content": "Here's the full picture:\n\n## What Mobile J_Claw Is Currently Using\n\n**`qwen2.5:7b-instruct-q4_K_M`** (7.6B, ~4.4GB) -- the `.env` doesn't define `MODEL_7B`, so it falls back to that hardcoded default in server.js.\n\n## What's Available on Your GPU\n\n| Model | Size | Notes |\n|---|---|---|\n| `zenith-expert:latest` | **20.9B MXFP4** | Your premium Zenith model |\n| `qwen2.5-coder:14b-instruct-q4_K_M` | 14.8B | Good for code |\n| `qwen2.5:7b-instruct-q4_K_M` | 7.6B | Current mobile default |\n\n## The Fix\n\nJust add one line to `.env`:\n\n```\nMODEL_7B=zenith-expert:latest\n```\n\nThat'll make mobile J_Claw use the same 20.9B Zenith model the desktop uses. Only downside is slightly slower first response (model load), but it's already loaded since Zenith/Discord bot uses it.\n\n**Want me to make that change?** Or would you prefer the 14B coder model instead?"
+    },
+    {
+      "role": "user",
+      "content": "What do you recommend and why?"
+    },
+    {
+      "role": "assistant",
+      "content": "## Recommendation: `zenith-expert:latest`\n\nHere's why it's the clear winner:\n\n---\n\n### ✅ Already Warm in VRAM\nThe Discord bot keeps Zenith loaded 24/7. No cold start penalty -- mobile chat would respond just as fast as if it were the 7B model sitting idle.\n\n### ✅ Best Quality by Far\n20.9B vs 7B is a massive gap in reasoning, context handling, and nuance. Your mobile chat gets full-quality responses instead of the \"lite\" experience.\n\n### ✅ It's *Your* Model\nZenith was built and tuned for J_Claw specifically. Using the 7B generic Qwen model for your personal AI orchestration system is underselling what the system can do.\n\n### ✅ GPU Has Room\nYour 9070 XT has 16GB VRAM. Zenith in MXFP4 sits around 10-11GB -- plenty of headroom. No conflict.\n\n---\n\n### When 14B Coder Would Make Sense\nOnly if mobile chat was primarily for **writing/reviewing code**. For general J_Claw chat (planning, ops, status), Zenith wins.\n\n---\n\n**Want me to make the change now?** It's one line in `.env`:\n```\nMODEL_7B=zenith-expert:latest\n```\nJust say the word."
     }
   ],
-  "last_updated": "2026-03-21T06:47:38.150Z"
+  "last_updated": "2026-03-21T06:48:37.625Z"
 }
