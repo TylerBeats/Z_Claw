@@ -57,11 +57,13 @@ def run(division: str, task: str, args: list) -> dict:
 
     # ── Trading ───────────────────────────────────────────────────────────────
     elif division == "trading":
-        from runtime.orchestrators.trading import run_trading_report, run_market_scan
+        from runtime.orchestrators.trading import run_trading_report, run_market_scan, run_virtual_trader
         if task == "trading-report":
             return run_trading_report()
         if task == "market-scan":
             return run_market_scan()
+        if task == "virtual-trader":
+            return run_virtual_trader()
         raise ValueError(f"Unknown task for trading: {task}")
 
     # ── Personal ──────────────────────────────────────────────────────────────

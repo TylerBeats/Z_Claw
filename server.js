@@ -138,6 +138,7 @@ const DIV_XP_THRESHOLDS = [0, 51, 151, 301, 500];
 const SKILL_XP = {
   'job-intake':       { division: 'opportunity',    amount: 10 },
   'hard-filter':      { division: 'opportunity',    amount: 5  },
+  'virtual-trader':   { division: 'trading',        amount: 10 },
   'trading-report':   { division: 'trading',        amount: 15 },
   'repo-monitor':     { division: 'dev_automation', amount: 10 },
   'security-scan':    { division: 'op_sec',         amount: 15 },
@@ -159,6 +160,7 @@ const SKILL_TASK_MAP = {
   'job-intake':       { divState: 'opportunity',    division: 'opportunity',    task: 'job-intake'       },
   'hard-filter':      { divState: 'opportunity',    division: 'opportunity',    task: 'job-intake'       }, // hard-filter runs inside job-intake Python pipeline
   'funding-finder':   { divState: 'opportunity',    division: 'opportunity',    task: 'funding-finder'   },
+  'virtual-trader':   { divState: 'trading',        division: 'trading',        task: 'virtual-trader'   },
   'trading-report':   { divState: 'trading',        division: 'trading',        task: 'trading-report'   },
   'market-scan':      { divState: 'trading',        division: 'trading',        task: 'market-scan'      },
   'health-logger':    { divState: 'personal',       division: 'personal',       task: 'health-logger'    },

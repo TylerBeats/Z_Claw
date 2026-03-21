@@ -9,7 +9,7 @@ import logging
 
 from runtime.config import SKILL_MODELS, OLLAMA_HOST
 from runtime.ollama_client import chat, is_available
-from runtime.skills import trading_report, market_scan
+from runtime.skills import trading_report, market_scan, virtual_trader
 from runtime import packet
 from runtime.tools.xp import grant_skill_xp
 from runtime.tools.trading import load_cycle_state, load_active_strategy
@@ -157,6 +157,39 @@ def run_trading_report() -> dict:
     packet.write(pkt)
     grant_skill_xp("trading-report")
     log.info("Trading packet written. Status=%s trades=%d", status, stats.get("total_trades", 0))
+    return pkt
+
+
+def run_virtual_trader() -> dict:
+    """Run virtual paper trader for SPX500/Gold and write packet."""
+    log.info("=== Trading Division: virtual-trader run ===")
+
+    result = virtual_trader.run()
+
+    pkt = packet.build(
+        division="trading",
+        skill="virtual-trader",
+        status=result["status"],
+        summary=result.get("summary", "Virtual trader run complete."),
+        metrics={
+            "trades_made":     result.get("trades_made", 0),
+            "open_positions":  result.get("open_positions", 0),
+            "account_balance": result.get("account_balance"),
+            "strategy_id":     result.get("strategy_id", ""),
+        },
+        escalate=result.get("escalate", False),
+        escalation_reason=result.get("escalation_reason", ""),
+    )
+
+    packet.write(pkt)
+    if result["status"] == "success":
+        grant_skill_xp("virtual-trader")
+    log.info(
+        "Virtual-trader packet written. Status=%s trades=%d balance=%.2f",
+        result["status"],
+        result.get("trades_made", 0),
+        result.get("account_balance", 0.0),
+    )
     return pkt
 
 
