@@ -696,6 +696,39 @@ function handleGetTradingCycle(res) {
       return new Date(t.timestamp).toISOString().slice(0, 10) === todayStr;
     });
 
+    // Helper to normalise a raw strategy object (active or history entry)
+    function normStrat(h) {
+      return {
+        name:             h.strategy_name || 'None',
+        sharpe:           h.sharpe,
+        sortino:          h.sortino,
+        win_rate:         h.win_rate != null ? Math.round(h.win_rate * 100) : null,
+        avg_r:            h.avg_r,
+        avg_win_r:        h.avg_win_r,
+        avg_loss_r:       h.avg_loss_r,
+        rr_ratio:         h.rr_ratio,
+        rr_display:       h.rr_display,
+        profit_factor:    h.profit_factor,
+        max_drawdown_pct: h.max_drawdown_pct != null ? h.max_drawdown_pct : (h.max_drawdown != null ? Math.round(h.max_drawdown * 1000) / 10 : null),
+        trade_count:      h.trade_count,
+        oos_sharpe:       h.oos_sharpe,
+        oos_win_rate:     h.oos_win_rate != null ? Math.round(h.oos_win_rate * 100) : null,
+        oos_trade_count:  h.oos_trade_count,
+        theoretical_ev_r: h.theoretical_ev_r,
+        empirical_ev_r:   h.empirical_ev_r,
+        confidence_rating: h.confidence_rating,
+        backtest_years:   (h.recent_window && h.recent_window.years) ? Math.round(h.recent_window.years * 10) / 10 : null,
+        total_pnl_pct:    h.total_pnl_pct != null ? Math.round(h.total_pnl_pct * 1000) / 10 : null,
+      };
+    }
+
+    // Build performance_history (last 10 cycle winners, newest first, equity_curve stripped for size)
+    const rawHistory = (cycleData.performance_history || []).slice(-10).reverse();
+    const perfHistory = rawHistory.map((h, i) => ({
+      ...normStrat(h),
+      label: i === 0 ? 'Current' : `−${i}`,
+    }));
+
     jsonOk(res, {
       available: true,
       cycle_number:     cycleData.cycle_number,
@@ -703,24 +736,15 @@ function handleGetTradingCycle(res) {
       stale,
       hours_since_update: Math.round(hoursSince * 10) / 10,
       last_modified: new Date(mtimeMs).toISOString(),
-      active_strategy: {
-        name:           strat.strategy_name || 'None',
-        sharpe:         strat.sharpe,
-        sortino:        strat.sortino,
-        win_rate:       strat.win_rate ? Math.round(strat.win_rate * 100) : null,
-        avg_r:          strat.avg_r,
-        avg_win_r:      strat.avg_win_r,
-        avg_loss_r:     strat.avg_loss_r,
-        rr_ratio:       strat.rr_ratio,
-        rr_display:     strat.rr_display,
-        profit_factor:  strat.profit_factor,
-        max_drawdown_pct: strat.max_drawdown_pct != null ? strat.max_drawdown_pct : (strat.max_drawdown != null ? Math.round(strat.max_drawdown * 1000) / 10 : null),
-        trade_count:    strat.trade_count,
-        oos_sharpe:     strat.oos_sharpe,
-        oos_win_rate:   strat.oos_win_rate ? Math.round(strat.oos_win_rate * 100) : null,
-        theoretical_ev_r: strat.theoretical_ev_r,
-        empirical_ev_r:   strat.empirical_ev_r,
-      },
+      active_strategy: normStrat(strat),
+      equity_curve:    strat.equity_curve || null,
+      oos_validation:  strat.oos_sharpe != null ? {
+        sharpe:      strat.oos_sharpe,
+        win_rate:    strat.oos_win_rate != null ? Math.round(strat.oos_win_rate * 100) : null,
+        trade_count: strat.oos_trade_count,
+        note:        strat.confidence_rating ? `Confidence: ${strat.confidence_rating}` : null,
+      } : null,
+      performance_history: perfHistory,
       agents: {
         strategy_builder: { role: 'Generates 100 strategies/cycle',      last_output: `Cycle ${cycleData.cycle_number}` },
         backtester:       { role: 'Evaluates & selects top 3 strategies', last_output: strat.strategy_name || '—' },

@@ -2338,161 +2338,192 @@ async function _rejectCodingChanges() {
 // ══════════════════════════════════════════════════════
 // SCREEN: TRADING
 // ══════════════════════════════════════════════════════
+let _tradingData    = null;
+let _tradingHistIdx = 0; // 0 = current (most recent), 1 = previous cycle, etc.
+
 async function loadTrading(silent = false) {
   const el = document.getElementById('trading-content');
   if (!silent) el.innerHTML = '<div class="loading">Loading...</div>';
   try {
     const d = await api('/mobile/api/trading');
     setConnected(true);
-
     if (!d.available) {
       el.innerHTML = `<div class="empty-state"><div class="empty-icon">📈</div><p>Trading system not active</p></div>`;
       return;
     }
+    _tradingData    = d;
+    _tradingHistIdx = 0;
+    _renderTrading(d, 0);
+  } catch(e) {
+    setConnected(false);
+    renderError(el, e.message, () => loadTrading());
+  }
+}
 
-    const s = d.active_strategy || {};
-    let html = '';
+function _switchTradingCycle(idx) {
+  if (!_tradingData) return;
+  _tradingHistIdx = idx;
+  _renderTrading(_tradingData, idx);
+  document.getElementById('trading-content').scrollTop = 0;
+}
 
-    // ── Cycle header card ──
-    const isStale = !!d.stale;
-    html += `<div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-        <span class="pill pill-purple">CYCLE ${escHtml(String(d.cycle_number || '—'))}</span>
-        ${isStale
-          ? '<span class="pill pill-yellow">STALE</span>'
-          : '<span class="pill pill-green" style="animation:pulse-live 2s ease-in-out infinite;">LIVE</span>'}
-      </div>
-      <div style="font-size:14px;font-weight:700;color:var(--teal);margin-bottom:4px;">${escHtml(s.name || 'No active strategy')}</div>
-      ${d.hours_since_update != null ? `<div class="card-meta">Updated ${d.hours_since_update}h ago</div>` : ''}
-    </div>`;
+function _renderTrading(d, histIdx) {
+  const el = document.getElementById('trading-content');
 
-    // ── Win rate ring + sharpe/RR ──
-    if (s.win_rate != null || s.sharpe != null) {
-      html += '<div class="card">';
-      html += '<div class="trading-top">';
+  // Resolve which strategy to display: histIdx 0 = active_strategy, else performance_history entry
+  const history = d.performance_history || [];
+  const isCurrentCycle = histIdx === 0;
+  const s = isCurrentCycle ? (d.active_strategy || {}) : (history[histIdx] || d.active_strategy || {});
+  // Equity curve only available for the current cycle
+  const equityCurve = isCurrentCycle ? d.equity_curve : null;
+  const oosVal      = isCurrentCycle ? d.oos_validation : (s.oos_sharpe != null ? {
+    sharpe: s.oos_sharpe, win_rate: s.oos_win_rate, trade_count: s.oos_trade_count,
+    note: s.confidence_rating ? `Confidence: ${s.confidence_rating}` : null,
+  } : null);
 
-      // Ring
-      html += '<div class="trading-ring-col">';
-      html += renderWinRateRing(s.win_rate ?? 0);
-      html += '<div class="ring-label">Win Rate</div>';
-      html += '</div>';
+  let html = '';
 
-      // Right stats col
-      html += '<div class="trading-stats-col">';
-      if (s.sharpe != null) {
-        html += `<div class="tstat-row"><span class="tstat-lbl">Sharpe</span><span class="tstat-val">${s.sharpe.toFixed(3)}</span></div>`;
-      }
-      if (s.rr_ratio != null || s.rr_display) {
-        html += `<div class="tstat-row"><span class="tstat-lbl">Risk / Reward</span><span class="tstat-val">${escHtml(s.rr_display || (s.rr_ratio ? s.rr_ratio.toFixed(2)+':1' : '—'))}</span></div>`;
-      }
-      if (s.profit_factor != null) {
-        html += `<div class="tstat-row"><span class="tstat-lbl">Prof. Factor</span><span class="tstat-val">${s.profit_factor.toFixed(2)}</span></div>`;
-      }
-      if (s.strategy_name || s.name) {
-        html += `<div class="tstat-row"><span class="tstat-lbl">Strategy</span><span class="tstat-val" style="font-size:11px;color:var(--subtext);max-width:110px;text-align:right;">${escHtml((s.strategy_name || s.name || '').slice(0,30))}</span></div>`;
-      }
-      html += '</div>';
-      html += '</div>';
+  // ── Cycle history switcher (only if more than 1 entry) ──
+  if (history.length > 1) {
+    html += '<div style="display:flex;gap:6px;overflow-x:auto;padding:0 0 10px 0;scrollbar-width:none;-webkit-overflow-scrolling:touch;">';
+    history.forEach((h, i) => {
+      const active = i === histIdx;
+      html += `<button onclick="_switchTradingCycle(${i})" style="flex-shrink:0;padding:5px 12px;border-radius:20px;border:1px solid ${active ? 'var(--purple)' : 'var(--border)'};background:${active ? 'var(--purple)' : 'var(--overlay)'};color:${active ? '#fff' : 'var(--subtext)'};font-size:11px;cursor:pointer;white-space:nowrap;">${escHtml(h.label || (i === 0 ? 'Current' : `−${i}`))}</button>`;
+    });
+    html += '</div>';
+  }
 
-      // Equity sparkline
-      if (d.equity_curve && d.equity_curve.length >= 2) {
-        html += '<div style="margin-top:4px;border-top:1px solid var(--border);padding-top:10px;">';
-        html += '<div style="font-size:10px;color:var(--subtext);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">Equity Curve</div>';
-        html += renderSparkline(d.equity_curve);
-        html += '</div>';
-      }
+  // ── Cycle header card ──
+  const isStale = isCurrentCycle && !!d.stale;
+  const durationStr = s.backtest_years != null ? `${s.backtest_years}yr window` : null;
+  const tradeCountStr = s.trade_count != null ? `${s.trade_count} trades` : null;
+  const tradeInfo = [tradeCountStr, durationStr].filter(Boolean).join(' · ');
 
-      html += '</div>';
-    }
+  html += `<div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <span class="pill pill-purple">CYCLE ${escHtml(String(d.cycle_number || '—'))}${!isCurrentCycle ? ` (${escHtml(s.label || '')})` : ''}</span>
+      ${isCurrentCycle
+        ? (isStale
+            ? '<span class="pill pill-yellow">STALE</span>'
+            : '<span class="pill pill-green" style="animation:pulse-live 2s ease-in-out infinite;">LIVE</span>')
+        : '<span class="pill pill-grey">HISTORY</span>'}
+    </div>
+    <div style="font-size:14px;font-weight:700;color:var(--teal);margin-bottom:4px;">${escHtml(s.name || 'No active strategy')}</div>
+    ${tradeInfo ? `<div style="font-size:11px;color:var(--subtext);margin-bottom:2px;">📊 ${escHtml(tradeInfo)}</div>` : ''}
+    ${isCurrentCycle && d.hours_since_update != null ? `<div class="card-meta">Updated ${d.hours_since_update}h ago</div>` : ''}
+  </div>`;
 
-    // ── Extended metrics row ──
-    const hasExt = s.sortino != null || s.max_drawdown_pct != null || s.profit_factor != null;
-    if (hasExt) {
-      html += '<div class="card">';
-      html += '<div class="metrics-row">';
-      if (s.sortino != null)         html += metricBox(s.sortino.toFixed(3), 'Sortino');
-      if (s.max_drawdown_pct != null) html += metricBox(s.max_drawdown_pct.toFixed(2) + '%', 'Max DD', 'var(--red)');
-      if (s.profit_factor != null)    html += metricBox(s.profit_factor.toFixed(2), 'Prof.F');
-      html += '</div>';
-      html += '</div>';
-    }
-
-    // ── OOS Validation ──
-    if (d.oos_validation) {
-      const oos = d.oos_validation;
-      html += '<div class="card">';
-      html += '<div class="card-title" style="margin-bottom:8px;">OOS Validation</div>';
-      html += '<div class="oos-grid">';
-      if (oos.sharpe != null)     html += `<div class="oos-box"><div class="ov">${oos.sharpe.toFixed(2)}</div><div class="ol">Sharpe</div></div>`;
-      if (oos.win_rate != null)   html += `<div class="oos-box"><div class="ov">${oos.win_rate}%</div><div class="ol">Win</div></div>`;
-      if (oos.trade_count != null) html += `<div class="oos-box"><div class="ov">${oos.trade_count}</div><div class="ol">Trades</div></div>`;
-      html += '</div>';
-      if (oos.note) html += `<div class="card-meta" style="margin-top:8px;">${escHtml(oos.note)}</div>`;
-      html += '</div>';
-    }
-
-    // ── Avg Win / Loss ──
-    if (s.avg_win_r != null || s.avg_loss_r != null) {
-      html += '<div class="metrics-row">';
-      html += metricBox(s.avg_win_r != null ? '+' + s.avg_win_r.toFixed(2) + 'R' : '—', 'Avg Win', 'var(--green)');
-      html += metricBox(s.avg_loss_r != null ? '-' + s.avg_loss_r.toFixed(2) + 'R' : '—', 'Avg Loss', 'var(--red)');
-      if (s.total_trades != null) html += metricBox(s.total_trades, 'Trades');
+  // ── Win rate ring + sharpe/RR ──
+  if (s.win_rate != null || s.sharpe != null) {
+    html += '<div class="card">';
+    html += '<div class="trading-top">';
+    html += '<div class="trading-ring-col">';
+    html += renderWinRateRing(s.win_rate ?? 0);
+    html += '<div class="ring-label">Win Rate</div>';
+    html += '</div>';
+    html += '<div class="trading-stats-col">';
+    if (s.sharpe != null)
+      html += `<div class="tstat-row"><span class="tstat-lbl">Sharpe</span><span class="tstat-val">${s.sharpe.toFixed(3)}</span></div>`;
+    if (s.rr_ratio != null || s.rr_display)
+      html += `<div class="tstat-row"><span class="tstat-lbl">Risk / Reward</span><span class="tstat-val">${escHtml(s.rr_display || (s.rr_ratio ? s.rr_ratio.toFixed(2)+':1' : '—'))}</span></div>`;
+    if (s.profit_factor != null)
+      html += `<div class="tstat-row"><span class="tstat-lbl">Prof. Factor</span><span class="tstat-val">${s.profit_factor.toFixed(2)}</span></div>`;
+    if (s.total_pnl_pct != null)
+      html += `<div class="tstat-row"><span class="tstat-lbl">Backtest P&L</span><span class="tstat-val" style="color:${s.total_pnl_pct >= 0 ? 'var(--green)' : 'var(--red)'}">${s.total_pnl_pct >= 0 ? '+' : ''}${s.total_pnl_pct}%</span></div>`;
+    html += '</div>';
+    html += '</div>';
+    if (equityCurve && equityCurve.length >= 2) {
+      html += '<div style="margin-top:4px;border-top:1px solid var(--border);padding-top:10px;">';
+      html += '<div style="font-size:10px;color:var(--subtext);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">Equity Curve</div>';
+      html += renderSparkline(equityCurve);
       html += '</div>';
     }
+    html += '</div>';
+  }
 
-    // ── Controls ──
+  // ── Extended metrics ──
+  const hasExt = s.sortino != null || s.max_drawdown_pct != null;
+  if (hasExt) {
+    html += '<div class="card"><div class="metrics-row">';
+    if (s.sortino != null)          html += metricBox(s.sortino.toFixed(3), 'Sortino');
+    if (s.max_drawdown_pct != null) html += metricBox(s.max_drawdown_pct.toFixed(2) + '%', 'Max DD', 'var(--red)');
+    if (s.profit_factor != null)    html += metricBox(s.profit_factor.toFixed(2), 'Prof.F');
+    html += '</div></div>';
+  }
+
+  // ── Avg Win / Loss / Trade count ──
+  if (s.avg_win_r != null || s.avg_loss_r != null || s.trade_count != null) {
+    html += '<div class="metrics-row">';
+    if (s.avg_win_r != null)  html += metricBox('+' + s.avg_win_r.toFixed(2) + 'R',  'Avg Win',  'var(--green)');
+    if (s.avg_loss_r != null) html += metricBox('−' + s.avg_loss_r.toFixed(2) + 'R', 'Avg Loss', 'var(--red)');
+    if (s.trade_count != null) html += metricBox(s.trade_count, 'Trades');
+    html += '</div>';
+  }
+
+  // ── OOS Validation ──
+  if (oosVal) {
+    html += '<div class="card">';
+    html += '<div class="card-title" style="margin-bottom:8px;">OOS Validation</div>';
+    html += '<div class="oos-grid">';
+    if (oosVal.sharpe != null)      html += `<div class="oos-box"><div class="ov">${oosVal.sharpe.toFixed(2)}</div><div class="ol">Sharpe</div></div>`;
+    if (oosVal.win_rate != null)    html += `<div class="oos-box"><div class="ov">${oosVal.win_rate}%</div><div class="ol">Win Rate</div></div>`;
+    if (oosVal.trade_count != null) html += `<div class="oos-box"><div class="ov">${oosVal.trade_count}</div><div class="ol">Trades</div></div>`;
+    html += '</div>';
+    if (oosVal.note) html += `<div class="card-meta" style="margin-top:8px;">${escHtml(oosVal.note)}</div>`;
+    html += '</div>';
+  }
+
+  // ── Controls (current cycle only) ──
+  if (isCurrentCycle) {
     html += '<div class="section-title">Controls</div>';
     html += '<div style="background:var(--overlay);border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:12px;color:var(--subtext);">⚠ Face ID required for trading controls</div>';
     html += '<div style="display:flex;gap:10px;margin-bottom:4px;">';
     html += `<button class="btn btn-pause" onclick="tradingControl('pause_trading')">⏸ Pause Trading</button>`;
     html += `<button class="btn btn-resume" onclick="tradingControl('resume_trading')">▶ Resume Trading</button>`;
     html += '</div>';
-
-    // ── Recent trades ──
-    if ((d.recent_trades || []).length) {
-      html += '<div class="section-title">Recent Trades</div>';
-      html += '<div class="card">';
-      d.recent_trades.slice(0, 10).forEach(t => {
-        const pos = (t.pnl || 0) >= 0;
-        const r   = t.r_multiple != null ? (t.r_multiple >= 0 ? '+' : '') + t.r_multiple.toFixed(2) + 'R' : '';
-        const pnlStr = (pos ? '+' : '') + (t.pnl || 0).toFixed(2);
-        html += `<div class="trade-row">
-          <div>
-            <div class="trade-sym">${escHtml(t.symbol || '?')}${t.outcome ? ' · <span style="font-size:10px;color:' + (t.outcome === 'WIN' ? 'var(--green)' : 'var(--red)') + '">' + escHtml(t.outcome) + '</span>' : ''}</div>
-            <div class="trade-meta">${escHtml(t.date || '')}${r ? ' · ' + r : ''}</div>
-          </div>
-          <div>
-            <div class="trade-pnl ${pos ? 'pos' : 'neg'}">${pnlStr}</div>
-            ${t.pnl_dollar != null ? `<div class="trade-meta" style="text-align:right;">${pos ? '+' : ''}$${Math.abs(t.pnl_dollar).toFixed(0)}</div>` : ''}
-          </div>
-        </div>`;
-      });
-      html += '</div>';
-    }
-
-    // ── Agents ──
-    if (d.agents && Object.keys(d.agents).length) {
-      html += '<div class="section-title">Agents</div>';
-      html += '<div class="card">';
-      for (const [name, info] of Object.entries(d.agents)) {
-        const agentStatus = info.status || 'auto';
-        const agentPill = agentStatus === 'running' ? 'pill-blue' : agentStatus === 'error' ? 'pill-red' : 'pill-grey';
-        html += `<div class="trade-row">
-          <div style="flex:1;min-width:0;">
-            <div class="trade-sym">${escHtml(name.replace(/_/g, '-'))}</div>
-            <div class="trade-meta" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;">${escHtml(info.last_output || info.summary || '—')}</div>
-          </div>
-          <span class="pill ${agentPill}">${escHtml(agentStatus.toUpperCase())}</span>
-        </div>`;
-      }
-      html += '</div>';
-    }
-
-    el.innerHTML = html;
-  } catch(e) {
-    setConnected(false);
-    renderError(el, e.message, () => loadTrading());
   }
+
+  // ── Recent trades (current cycle only) ──
+  if (isCurrentCycle && (d.recent_trades || []).length) {
+    html += '<div class="section-title">Recent Trades</div>';
+    html += '<div class="card">';
+    d.recent_trades.slice(0, 10).forEach(t => {
+      const pos = (t.pnl || 0) >= 0;
+      const r   = t.r_multiple != null ? (t.r_multiple >= 0 ? '+' : '') + t.r_multiple.toFixed(2) + 'R' : '';
+      const pnlStr = (pos ? '+' : '') + (t.pnl || 0).toFixed(2);
+      html += `<div class="trade-row">
+        <div>
+          <div class="trade-sym">${escHtml(t.symbol || '?')}${t.outcome ? ' · <span style="font-size:10px;color:' + (t.outcome === 'WIN' ? 'var(--green)' : 'var(--red)') + '">' + escHtml(t.outcome) + '</span>' : ''}</div>
+          <div class="trade-meta">${escHtml(t.date || '')}${r ? ' · ' + r : ''}</div>
+        </div>
+        <div>
+          <div class="trade-pnl ${pos ? 'pos' : 'neg'}">${pnlStr}</div>
+          ${t.pnl_dollar != null ? `<div class="trade-meta" style="text-align:right;">${pos ? '+' : ''}$${Math.abs(t.pnl_dollar).toFixed(0)}</div>` : ''}
+        </div>
+      </div>`;
+    });
+    html += '</div>';
+  }
+
+  // ── Agents (current cycle only) ──
+  if (isCurrentCycle && d.agents && Object.keys(d.agents).length) {
+    html += '<div class="section-title">Agents</div>';
+    html += '<div class="card">';
+    for (const [name, info] of Object.entries(d.agents)) {
+      const agentStatus = info.status || 'auto';
+      const agentPill = agentStatus === 'running' ? 'pill-blue' : agentStatus === 'error' ? 'pill-red' : 'pill-grey';
+      html += `<div class="trade-row">
+        <div style="flex:1;min-width:0;">
+          <div class="trade-sym">${escHtml(name.replace(/_/g, '-'))}</div>
+          <div class="trade-meta" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;">${escHtml(info.last_output || info.summary || '—')}</div>
+        </div>
+        <span class="pill ${agentPill}">${escHtml(agentStatus.toUpperCase())}</span>
+      </div>`;
+    }
+    html += '</div>';
+  }
+
+  el.innerHTML = html;
 }
 
 function tradingControl(action) {
