@@ -63,7 +63,15 @@
     {
       "role": "assistant",
       "content": "Here's the current state:\n\n---\n\n## Mobile Chat + Local LLM -- Current Status\n\n**J_Claw mode** on mobile **already uses Ollama** (your local LLM) -- it hits `/mobile/api/chat/jclaw` which is Ollama-only, no Claude fallback.\n\n**Coding mode** uses Claude CLI only (by design -- safer for file edits).\n\n---\n\n## But There's a Catch\n\nThe J_Claw mobile mode uses the **7B model** (`qwen2.5:7b-instruct-q4_K_M` by default), **not** your powerful **20.9B Zenith model** that the desktop uses. The desktop chat has Ollama → Claude fallback with the better model.\n\nSo \"local LLM on mobile\" = **yes, it works**, but you might be getting the lighter 7B model instead of the full Zenith model running on your 9070 XT.\n\n---\n\n## Quick Check\n\nWhat model is currently set for J_Claw mobile? Check your `.env`:\n\n```\nMODEL_7B=???\n```\n\nIf it's not pointing to your Zenith/20.9B model, I can update it. Want me to look at the `.env` and align the mobile J_Claw model with what the desktop uses?"
+    },
+    {
+      "role": "user",
+      "content": "I only see “mobile token” not what model is being used"
+    },
+    {
+      "role": "assistant",
+      "content": "Here's the full picture:\n\n## What Mobile J_Claw Is Currently Using\n\n**`qwen2.5:7b-instruct-q4_K_M`** (7.6B, ~4.4GB) -- the `.env` doesn't define `MODEL_7B`, so it falls back to that hardcoded default in server.js.\n\n## What's Available on Your GPU\n\n| Model | Size | Notes |\n|---|---|---|\n| `zenith-expert:latest` | **20.9B MXFP4** | Your premium Zenith model |\n| `qwen2.5-coder:14b-instruct-q4_K_M` | 14.8B | Good for code |\n| `qwen2.5:7b-instruct-q4_K_M` | 7.6B | Current mobile default |\n\n## The Fix\n\nJust add one line to `.env`:\n\n```\nMODEL_7B=zenith-expert:latest\n```\n\nThat'll make mobile J_Claw use the same 20.9B Zenith model the desktop uses. Only downside is slightly slower first response (model load), but it's already loaded since Zenith/Discord bot uses it.\n\n**Want me to make that change?** Or would you prefer the 14B coder model instead?"
     }
   ],
-  "last_updated": "2026-03-21T06:44:07.953Z"
+  "last_updated": "2026-03-21T06:47:38.150Z"
 }
