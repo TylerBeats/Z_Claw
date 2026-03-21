@@ -35,9 +35,19 @@ happen at this layer. J_Claw receives only the compiled executive packet.
 7. Compile and write executive packet to `divisions/trading/packets/market-scan.json`
 8. Notify Realm Keeper: skill `market-scan` completed (triggers XP grant)
 
-### Trading Report (daily 18:00)
+### Virtual Trader (daily 18:00, runs FIRST)
+1. Run virtual-trader skill
+   - Fetches real SPX500 (^GSPC) and Gold (GC=F) prices via yfinance
+   - Loads active strategy from agent-network cycle state
+   - Generates entry/exit signals using strategy indicators (EMA, Bollinger, ATR)
+   - Simulates trade execution against real prices
+   - Writes updated `C:\Users\Tyler\agent-network\state\virtual_account.json`
+2. If status: failed — escalate, skip trading-report
+3. No KYC, no broker account required
+
+### Trading Report (daily 18:00, after virtual-trader)
 1. Call artifact-manager → `cache_ttl_check()`
-2. Run trading-report skill — reads Alpaca state files, calculates session stats
+2. Run trading-report skill — reads virtual_account.json (written by virtual-trader above)
 3. Save today's trade bundle to `divisions/trading/hot/`
 4. Call artifact-manager → `index_extracted()` on trade bundle
 5. Compile executive packet with session metrics

@@ -23,6 +23,15 @@
       "last_run": null,
       "status": "idle"
     },
+    "virtual-trader": {
+      "schedule": "daily 18:00",
+      "run_order": "first",
+      "skill": "virtual-trader",
+      "enabled": true,
+      "last_run": null,
+      "status": "idle",
+      "notes": "Runs before trading-report. Simulates SPX500/Gold trades using real yfinance data. No broker, no KYC. Writes virtual_account.json."
+    },
     "backtester": {
       "schedule": "daily 18:00",
       "skill": "backtester",

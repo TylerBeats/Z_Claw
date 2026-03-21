@@ -6,6 +6,10 @@ pydantic-settings>=2.13.0
 python-dotenv>=1.2.0
 requests>=2.32.0
 
+# Trading — real market data (no broker, no KYC)
+yfinance>=0.2.50
+pandas>=2.0.0
+
 # Optional — only needed if Gemini provider is used
 # google-generativeai>=0.8.0
 
