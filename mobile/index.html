@@ -514,7 +514,10 @@
     .status-quest   { background: #14532d; color: #4ade80; }
     .status-rest    { background: var(--overlay); color: var(--subtext); }
     .status-standby { background: var(--overlay); color: var(--border); }
-    .party-portrait { width: 42px; height: 42px; margin: 6px auto 2px; display: block; }
+    .party-portrait { width: 56px; height: 74px; margin: 4px auto 2px; display: block; }
+    /* FE ornate corner brackets on party cards */
+    .party-card::before { content: ''; position: absolute; top: 5px; left: 5px; width: 9px; height: 9px; border-top: 1.5px solid var(--char-border, var(--border)); border-left: 1.5px solid var(--char-border, var(--border)); border-radius: 1px; opacity: 0.65; }
+    .party-card::after  { content: ''; position: absolute; bottom: 5px; right: 5px; width: 9px; height: 9px; border-bottom: 1.5px solid var(--char-border, var(--border)); border-right: 1.5px solid var(--char-border, var(--border)); border-radius: 1px; opacity: 0.65; }
     .party-name  { font-size: 15px; font-weight: 900; letter-spacing: 0.1em; margin-bottom: 1px; }
     .party-order { font-size: 7px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 3px; }
     .party-class { font-size: 8px; color: var(--subtext); letter-spacing: 0.05em; margin-bottom: 8px; text-transform: uppercase; }
@@ -564,6 +567,24 @@
     .cs-ability:last-child { border-bottom: none; }
     .cs-ability-name { font-size: 12px; font-weight: 700; color: var(--text); min-width: 110px; flex-shrink: 0; }
     .cs-ability-desc { font-size: 11px; color: var(--subtext); line-height: 1.4; }
+    .cs-element-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; padding: 8px 10px; background: var(--overlay); border-radius: 8px; }
+    .cs-element-badge { font-size: 13px; font-weight: 800; letter-spacing: 0.04em; }
+    .cs-element-desc { font-size: 10px; color: var(--subtext); font-style: italic; line-height: 1.4; }
+    .cs-sw-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+    .cs-sw-box { background: var(--overlay); border-radius: 8px; padding: 8px 10px; }
+    .cs-sw-title { font-size: 8px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 5px; }
+    .cs-sw-item { font-size: 10px; color: var(--subtext); line-height: 1.45; padding-left: 10px; position: relative; }
+    .cs-sw-item::before { content: '›'; position: absolute; left: 2px; }
+    .cs-evo-row { margin-bottom: 12px; }
+    .cs-evo-title { font-size: 9px; color: var(--subtext); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 6px; }
+    .cs-evo-chain { display: flex; align-items: center; flex-wrap: wrap; gap: 2px; }
+    .cs-evo-node { font-size: 8px; font-weight: 700; padding: 3px 7px; border-radius: 5px; border: 1px solid; letter-spacing: 0.04em; }
+    .cs-evo-arrow { font-size: 9px; color: var(--subtext); opacity: 0.5; }
+    .cs-soldiers-title { font-size: 9px; color: var(--subtext); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px; margin-top: 4px; }
+    .cs-soldier { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); align-items: flex-start; }
+    .cs-soldier:last-child { border-bottom: none; }
+    .cs-soldier-name { font-size: 11px; font-weight: 700; color: var(--text); min-width: 100px; flex-shrink: 0; }
+    .cs-soldier-desc { font-size: 10px; color: var(--subtext); line-height: 1.4; }
 
     /* ── Rank-Up Overlay (cinematic) ── */
     #rankup-overlay {
@@ -1868,160 +1889,335 @@ const _COMMANDER_DEF = {
   base:           { name:'J_CLAW', order:'Realm Command',         color:'#3b82f6' },
 };
 
+// ── Commander chibi battle sprites (Fire Emblem SD style, 40×52 viewBox) ──────
 function commanderPortraitSVG(key, color, size) {
-  const sz = size || 42;
-  const c  = color;
+  const sz  = size || 40;
+  const szH = Math.round(sz * 52 / 40);
+  const c   = color;
   const portraits = {
-    opportunity: `<svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" width="${sz}" height="${sz}" shape-rendering="crispEdges">
-      <circle cx="20" cy="20" r="16" fill="none" stroke="${c}" stroke-width="1.2" opacity="0.35"/>
-      <line x1="20" y1="4" x2="20" y2="10" stroke="${c}" stroke-width="1.5" opacity="0.55"/>
-      <line x1="20" y1="30" x2="20" y2="36" stroke="${c}" stroke-width="1.5" opacity="0.55"/>
-      <line x1="4" y1="20" x2="10" y2="20" stroke="${c}" stroke-width="1.5" opacity="0.55"/>
-      <line x1="30" y1="20" x2="36" y2="20" stroke="${c}" stroke-width="1.5" opacity="0.55"/>
-      <polygon points="13,27 27,13 27,20 27,13 20,13" fill="none" stroke="${c}" stroke-width="1.8"/>
-      <polygon points="27,13 20,13 27,20" fill="${c}"/>
+
+    // VAEL — hooded scout, amber eyes, short bow over shoulder
+    opportunity: `<svg viewBox="0 0 40 52" xmlns="http://www.w3.org/2000/svg" width="${sz}" height="${szH}" shape-rendering="crispEdges">
+      <circle cx="20" cy="14" r="11" fill="${c}14"/>
+      <path d="M9,14 Q9,3 20,2 Q31,3 31,14 L31,23 L9,23 Z" fill="#0f0900"/>
+      <path d="M9,14 L7,26 L12,23" fill="#160e00"/>
+      <path d="M31,14 L33,26 L28,23" fill="#160e00"/>
+      <rect x="14" y="7" width="12" height="11" rx="2" fill="#c08850"/>
+      <rect x="15" y="9" width="4" height="1" fill="#6b3a10"/>
+      <rect x="21" y="9" width="4" height="1" fill="#6b3a10"/>
+      <rect x="15" y="11" width="4" height="3" rx="1" fill="${c}"/>
+      <rect x="16" y="12" width="2" height="2" fill="#1a0800"/>
+      <rect x="16" y="11" width="1" height="1" fill="#fffbe0"/>
+      <rect x="21" y="11" width="4" height="3" rx="1" fill="${c}"/>
+      <rect x="22" y="12" width="2" height="2" fill="#1a0800"/>
+      <rect x="22" y="11" width="1" height="1" fill="#fffbe0"/>
+      <path d="M18,16 Q20,17 22,16" fill="none" stroke="#9a5030" stroke-width="0.8"/>
+      <rect x="11" y="23" width="18" height="17" fill="#1a3018"/>
+      <rect x="16" y="23" width="8" height="3" fill="${c}35"/>
+      <rect x="11" y="37" width="18" height="2" fill="${c}45"/>
+      <rect x="7" y="23" width="4" height="13" rx="1" fill="#182a14"/>
+      <rect x="29" y="23" width="4" height="13" rx="1" fill="#182a14"/>
+      <rect x="13" y="40" width="6" height="10" fill="#1a1600"/>
+      <rect x="21" y="40" width="6" height="10" fill="#1a1600"/>
+      <rect x="12" y="47" width="7" height="4" rx="1" fill="#0f0e00"/>
+      <rect x="21" y="47" width="7" height="4" rx="1" fill="#0f0e00"/>
+      <path d="M33,16 Q38,25 33,36" fill="none" stroke="${c}" stroke-width="1.3" opacity="0.65"/>
+      <line x1="33" y1="16" x2="33" y2="36" stroke="${c}" stroke-width="0.6" opacity="0.4"/>
     </svg>`,
-    trading: `<svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" width="${sz}" height="${sz}">
-      <path d="M5,20 Q20,7 35,20 Q20,33 5,20 Z" fill="none" stroke="${c}" stroke-width="1.5"/>
-      <circle cx="20" cy="20" r="7" fill="#0e2a30" stroke="${c}" stroke-width="1"/>
-      <circle cx="20" cy="20" r="4" fill="${c}"/>
-      <circle cx="18" cy="18" r="1.5" fill="#e0f9ff" opacity="0.85"/>
+
+    // SEREN — peaked oracle hat, silver hair, large cyan eyes, staff
+    trading: `<svg viewBox="0 0 40 52" xmlns="http://www.w3.org/2000/svg" width="${sz}" height="${szH}" shape-rendering="crispEdges">
+      <circle cx="20" cy="14" r="11" fill="${c}10"/>
+      <polygon points="20,1 11,23 29,23" fill="#060d14"/>
+      <line x1="20" y1="1" x2="20" y2="23" stroke="${c}" stroke-width="0.6" opacity="0.3"/>
+      <rect x="11" y="23" width="18" height="3" fill="#0a1820"/>
+      <rect x="11" y="23" width="18" height="1" fill="${c}" opacity="0.45"/>
+      <rect x="9" y="18" width="5" height="15" rx="2" fill="#a0b0c0"/>
+      <rect x="26" y="18" width="5" height="15" rx="2" fill="#a0b0c0"/>
+      <rect x="13" y="18" width="14" height="11" rx="2" fill="#dce8f0"/>
+      <path d="M14,21 Q16,20 18,21" fill="none" stroke="#705040" stroke-width="0.9"/>
+      <path d="M22,21 Q24,20 26,21" fill="none" stroke="#705040" stroke-width="0.9"/>
+      <rect x="14" y="22" width="4" height="4" rx="1" fill="${c}"/>
+      <rect x="15" y="23" width="3" height="3" fill="#003840"/>
+      <rect x="15" y="22" width="1" height="1" fill="white"/>
+      <rect x="22" y="22" width="4" height="4" rx="1" fill="${c}"/>
+      <rect x="23" y="23" width="3" height="3" fill="#003840"/>
+      <rect x="23" y="22" width="1" height="1" fill="white"/>
+      <rect x="19" y="27" width="2" height="1" fill="#8ca0b0" opacity="0.5"/>
+      <path d="M17,29 Q20,31 23,29" fill="none" stroke="#8090a0" stroke-width="0.8"/>
+      <rect x="12" y="26" width="16" height="16" fill="#060d14"/>
+      <rect x="12" y="26" width="16" height="1" fill="${c}" opacity="0.35"/>
+      <line x1="20" y1="26" x2="20" y2="42" stroke="${c}" stroke-width="0.5" opacity="0.3"/>
+      <rect x="7" y="26" width="5" height="12" rx="2" fill="#060d14"/>
+      <rect x="28" y="26" width="5" height="12" rx="2" fill="#060d14"/>
+      <rect x="14" y="42" width="5" height="10" fill="#040a10"/>
+      <rect x="21" y="42" width="5" height="10" fill="#040a10"/>
+      <line x1="36" y1="6" x2="36" y2="50" stroke="${c}" stroke-width="1.4" opacity="0.6"/>
+      <circle cx="36" cy="6" r="3.5" fill="#040a10" stroke="${c}" stroke-width="1"/>
+      <circle cx="36" cy="6" r="1.8" fill="${c}" opacity="0.65"/>
     </svg>`,
-    dev_automation: `<svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" width="${sz}" height="${sz}" shape-rendering="crispEdges">
-      <polygon points="20,5 33,12 33,28 20,35 7,28 7,12" fill="none" stroke="${c}" stroke-width="2"/>
-      <polygon points="20,11 28,20 20,29 12,20" fill="none" stroke="${c}" stroke-width="1.4" opacity="0.6"/>
-      <circle cx="20" cy="20" r="3" fill="${c}"/>
+
+    // KAELEN — angular helmet, purple visor glow, wide pauldrons, wrench
+    dev_automation: `<svg viewBox="0 0 40 52" xmlns="http://www.w3.org/2000/svg" width="${sz}" height="${szH}" shape-rendering="crispEdges">
+      <circle cx="20" cy="14" r="11" fill="${c}10"/>
+      <rect x="10" y="4" width="20" height="20" rx="2" fill="#0f0a1e"/>
+      <rect x="14" y="4" width="12" height="2" fill="${c}40"/>
+      <rect x="12" y="15" width="16" height="5" rx="1" fill="#07041a"/>
+      <rect x="13" y="16" width="5" height="3" rx="1" fill="${c}cc"/>
+      <rect x="22" y="16" width="5" height="3" rx="1" fill="${c}cc"/>
+      <rect x="14" y="16" width="3" height="2" fill="#200a40"/>
+      <rect x="23" y="16" width="3" height="2" fill="#200a40"/>
+      <rect x="14" y="16" width="1" height="1" fill="#ddd0ff" opacity="0.9"/>
+      <rect x="23" y="16" width="1" height="1" fill="#ddd0ff" opacity="0.9"/>
+      <rect x="14" y="23" width="12" height="4" fill="#0f0a1e"/>
+      <rect x="3" y="23" width="10" height="9" rx="2" fill="#100c1c"/>
+      <rect x="27" y="23" width="10" height="9" rx="2" fill="#100c1c"/>
+      <rect x="3" y="23" width="10" height="2" fill="${c}" opacity="0.5"/>
+      <rect x="27" y="23" width="10" height="2" fill="${c}" opacity="0.5"/>
+      <rect x="12" y="27" width="16" height="16" fill="#0c0818"/>
+      <polygon points="20,31 23,33 23,38 20,40 17,38 17,33" fill="#180c30" stroke="${c}" stroke-width="0.8"/>
+      <circle cx="20" cy="36" r="1.5" fill="${c}" opacity="0.7"/>
+      <rect x="6" y="32" width="6" height="11" rx="1" fill="#100c1c"/>
+      <rect x="28" y="32" width="6" height="11" rx="1" fill="#100c1c"/>
+      <rect x="13" y="43" width="6" height="9" fill="#0c0818"/>
+      <rect x="21" y="43" width="6" height="9" fill="#0c0818"/>
+      <rect x="33" y="35" width="4" height="12" rx="2" fill="#100c1c" stroke="${c}" stroke-width="0.7"/>
+      <rect x="31" y="35" width="8" height="4" rx="1" fill="#100c1c" stroke="${c}" stroke-width="0.7"/>
     </svg>`,
-    personal: `<svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" width="${sz}" height="${sz}">
-      <path d="M20,35 C11,29 9,21 13,15 C15,11 17,14 17,10 C19,14 19,16 20,14 C21,16 21,14 23,10 C23,14 25,11 27,15 C31,21 29,29 20,35 Z" fill="#062014" stroke="${c}" stroke-width="1.4"/>
-      <path d="M20,31 C14,25 14,19 17,16 C18,14 19,16 20,15 C21,16 22,14 23,16 C26,19 26,25 20,31 Z" fill="${c}" opacity="0.65"/>
-      <circle cx="20" cy="23" r="3" fill="${c}" opacity="0.9"/>
+
+    // LYRIN — leaf crown, warm hair, gentle green eyes, healing orb in hand
+    personal: `<svg viewBox="0 0 40 52" xmlns="http://www.w3.org/2000/svg" width="${sz}" height="${szH}" shape-rendering="crispEdges">
+      <circle cx="20" cy="14" r="11" fill="${c}10"/>
+      <path d="M14,10 Q13,4 18,7" fill="#065f3a" stroke="${c}" stroke-width="0.8"/>
+      <path d="M20,8 Q18,2 23,5" fill="#065f3a" stroke="${c}" stroke-width="0.8"/>
+      <path d="M26,10 Q27,4 22,7" fill="#065f3a" stroke="${c}" stroke-width="0.8"/>
+      <rect x="10" y="10" width="20" height="15" rx="3" fill="#7c4a1a"/>
+      <rect x="10" y="14" width="4" height="14" rx="2" fill="#7c4a1a"/>
+      <rect x="26" y="14" width="4" height="14" rx="2" fill="#7c4a1a"/>
+      <rect x="13" y="10" width="14" height="13" rx="3" fill="#dba47a"/>
+      <path d="M15,13 Q17,12 18,13" fill="none" stroke="#6b3a10" stroke-width="0.9"/>
+      <path d="M22,13 Q23,12 25,13" fill="none" stroke="#6b3a10" stroke-width="0.9"/>
+      <rect x="15" y="14" width="3" height="3" rx="1" fill="${c}"/>
+      <rect x="16" y="15" width="2" height="2" fill="#013020"/>
+      <rect x="16" y="14" width="1" height="1" fill="white"/>
+      <rect x="22" y="14" width="3" height="3" rx="1" fill="${c}"/>
+      <rect x="23" y="15" width="2" height="2" fill="#013020"/>
+      <rect x="23" y="14" width="1" height="1" fill="white"/>
+      <rect x="19" y="20" width="2" height="1" fill="#b07855" opacity="0.5"/>
+      <path d="M18,22 Q20,24 22,22" fill="none" stroke="#b07855" stroke-width="0.9"/>
+      <rect x="11" y="24" width="18" height="17" fill="#f0f4ee"/>
+      <rect x="16" y="24" width="8" height="4" fill="${c}30"/>
+      <rect x="11" y="24" width="18" height="1" fill="${c}" opacity="0.5"/>
+      <rect x="11" y="37" width="18" height="2" fill="${c}60"/>
+      <rect x="7" y="24" width="4" height="13" rx="2" fill="#e8eeea"/>
+      <rect x="29" y="24" width="4" height="13" rx="2" fill="#e8eeea"/>
+      <rect x="14" y="41" width="5" height="10" fill="#d8e8d8"/>
+      <rect x="21" y="41" width="5" height="10" fill="#d8e8d8"/>
+      <circle cx="5" cy="36" r="4" fill="#020f08" stroke="${c}" stroke-width="0.9"/>
+      <circle cx="5" cy="36" r="2.2" fill="${c}" opacity="0.3"/>
+      <circle cx="5" cy="36" r="1.2" fill="#34d399" opacity="0.85"/>
     </svg>`,
-    op_sec: `<svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" width="${sz}" height="${sz}">
-      <path d="M20,5 L33,10 L33,22 C33,30 27,36 20,38 C13,36 7,30 7,22 L7,10 Z" fill="#1f0505" stroke="${c}" stroke-width="1.8"/>
-      <ellipse cx="20" cy="22" rx="7.5" ry="5" fill="none" stroke="${c}" stroke-width="1.4"/>
-      <line x1="14" y1="17" x2="26" y2="27" stroke="${c}" stroke-width="1.6"/>
-      <circle cx="20" cy="22" r="2" fill="${c}" opacity="0.75"/>
+
+    // ZETH — shadow hood, only narrow red eye slits, twin blade hints
+    op_sec: `<svg viewBox="0 0 40 52" xmlns="http://www.w3.org/2000/svg" width="${sz}" height="${szH}" shape-rendering="crispEdges">
+      <circle cx="20" cy="14" r="11" fill="${c}0d"/>
+      <path d="M2,10 L20,2 L38,10 L38,52 L2,52 Z" fill="#050000"/>
+      <path d="M4,12 L20,4 L36,12 L36,50 L4,50 Z" fill="#090101"/>
+      <ellipse cx="20" cy="13" rx="13" ry="12" fill="#060000"/>
+      <path d="M7,13 Q7,3 20,2 Q33,3 33,13" fill="#040000"/>
+      <rect x="13" y="10" width="14" height="11" rx="3" fill="#0d0101"/>
+      <rect x="14" y="15" width="5" height="2" rx="1" fill="${c}"/>
+      <rect x="21" y="15" width="5" height="2" rx="1" fill="${c}"/>
+      <rect x="15" y="15" width="3" height="2" fill="#400000"/>
+      <rect x="22" y="15" width="3" height="2" fill="#400000"/>
+      <rect x="13" y="14" width="7" height="4" rx="1" fill="${c}" opacity="0.1"/>
+      <rect x="20" y="14" width="7" height="4" rx="1" fill="${c}" opacity="0.1"/>
+      <rect x="11" y="23" width="18" height="22" fill="#040000"/>
+      <rect x="3" y="23" width="9" height="11" fill="#060000"/>
+      <rect x="28" y="23" width="9" height="11" fill="#060000"/>
+      <line x1="7" y1="28" x2="4" y2="48" stroke="${c}" stroke-width="1" opacity="0.4"/>
+      <line x1="33" y1="28" x2="36" y2="48" stroke="${c}" stroke-width="1" opacity="0.4"/>
+      <rect x="14" y="45" width="5" height="7" fill="#030000"/>
+      <rect x="21" y="45" width="5" height="7" fill="#030000"/>
     </svg>`,
   };
-  return portraits[key] || `<svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" width="${sz}" height="${sz}"><circle cx="20" cy="20" r="14" fill="none" stroke="${c}" stroke-width="2"/></svg>`;
+  return portraits[key] || `<svg viewBox="0 0 40 52" xmlns="http://www.w3.org/2000/svg" width="${sz}" height="${szH}"><circle cx="20" cy="26" r="14" fill="none" stroke="${c}" stroke-width="2"/></svg>`;
 }
 
-// ── Full character portrait SVGs (60×80 viewBox, pixel-art style) ─────────────
+// ── Full bust portraits (Fire Emblem style — 80×100 viewBox, proper faces) ─────
 function commanderFullPortraitSVG(key, color, w, h) {
   const W = w || 56; const H = h || 75;
   const portraits = {
 
-    // VAEL — hooded scout, amber bow over shoulder, slit eyes
-    opportunity: `<svg viewBox="0 0 60 80" xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" shape-rendering="crispEdges">
-      <path d="M5,62 L30,8 L55,62 Q50,74 30,79 Q10,74 5,62 Z" fill="#0b0800"/>
-      <path d="M9,60 L30,12 L51,60" fill="none" stroke="${color}" stroke-width="0.8" opacity="0.25"/>
-      <rect x="19" y="24" width="22" height="18" rx="1" fill="#080500"/>
-      <rect x="21" y="31" width="7" height="2" fill="${color}"/>
-      <rect x="32" y="31" width="7" height="2" fill="${color}"/>
-      <rect x="22" y="31" width="5" height="1" fill="#fde68a" opacity="0.7"/>
-      <rect x="33" y="31" width="5" height="1" fill="#fde68a" opacity="0.7"/>
-      <rect x="20" y="42" width="20" height="20" fill="#110c00"/>
-      <rect x="20" y="42" width="20" height="1" fill="${color}" opacity="0.55"/>
-      <rect x="20" y="42" width="1" height="20" fill="${color}" opacity="0.45"/>
-      <rect x="39" y="42" width="1" height="20" fill="${color}" opacity="0.45"/>
-      <path d="M24,42 L30,39 L36,42" fill="none" stroke="${color}" stroke-width="0.8" opacity="0.5"/>
-      <path d="M41,22 Q48,33 41,48" fill="none" stroke="${color}" stroke-width="1.4" opacity="0.65"/>
-      <line x1="41" y1="22" x2="41" y2="48" stroke="${color}" stroke-width="0.7" opacity="0.4"/>
+    // VAEL — Hooded Scout, amber eyes, determined expression
+    opportunity: `<svg viewBox="0 0 80 100" xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">
+      <rect width="80" height="100" fill="#060400"/>
+      <ellipse cx="40" cy="20" rx="30" ry="22" fill="${color}18"/>
+      <ellipse cx="40" cy="32" rx="20" ry="22" fill="#2a1c08"/>
+      <path d="M0,18 L18,8 L40,5 L62,8 L80,18 L80,100 L0,100 Z" fill="#0d0900" opacity="0.72"/>
+      <path d="M26,26 Q28,17 40,15 Q52,17 54,26 Q52,21 40,19 Q28,21 26,26" fill="#3d2810"/>
+      <path d="M24,28 Q26,18 40,16 Q54,18 56,28" fill="none" stroke="#5a3010" stroke-width="1.2" opacity="0.5"/>
+      <ellipse cx="40" cy="48" rx="15" ry="18" fill="#c08850"/>
+      <ellipse cx="40" cy="58" rx="12" ry="10" fill="#a87038" opacity="0.35"/>
+      <path d="M27,39 Q31,37 34,39" fill="none" stroke="#5a2e0a" stroke-width="1.5" stroke-linecap="round"/>
+      <path d="M46,39 Q49,37 53,39" fill="none" stroke="#5a2e0a" stroke-width="1.5" stroke-linecap="round"/>
+      <path d="M26,44 Q31,41 35,44" fill="${color}60" stroke="#2a1200" stroke-width="0.5"/>
+      <ellipse cx="30.5" cy="46" rx="4" ry="3.5" fill="${color}"/>
+      <circle cx="30.5" cy="47" r="2.2" fill="#1c0a00"/>
+      <circle cx="29" cy="44.5" r="1.3" fill="white" opacity="0.88"/>
+      <path d="M26,49 Q31,51 35,49" fill="none" stroke="#5a3010" stroke-width="0.5" opacity="0.4"/>
+      <path d="M45,44 Q49,41 53,44" fill="${color}60" stroke="#2a1200" stroke-width="0.5"/>
+      <ellipse cx="49.5" cy="46" rx="4" ry="3.5" fill="${color}"/>
+      <circle cx="49.5" cy="47" r="2.2" fill="#1c0a00"/>
+      <circle cx="48" cy="44.5" r="1.3" fill="white" opacity="0.88"/>
+      <path d="M45,49 Q49,51 53,49" fill="none" stroke="#5a3010" stroke-width="0.5" opacity="0.4"/>
+      <path d="M38,55 Q40,57 42,55" fill="none" stroke="#9a6030" stroke-width="0.9" opacity="0.6"/>
+      <path d="M36,61 Q40,63 44,61" fill="none" stroke="#9a4028" stroke-width="1.2"/>
+      <path d="M26,24 Q24,30 22,42" fill="none" stroke="#4a2a0e" stroke-width="2.5"/>
+      <path d="M32,19 Q30,26 28,35" fill="none" stroke="#3d2408" stroke-width="1.8"/>
+      <rect x="34" y="64" width="12" height="12" fill="#a87848"/>
+      <path d="M18,82 L34,68 L40,72 L46,68 L62,82 L62,100 L18,100 Z" fill="#1a3018"/>
+      <path d="M34,68 L40,72 L46,68" fill="none" stroke="${color}" stroke-width="1.3" opacity="0.6"/>
+      <rect x="16" y="78" width="13" height="5" rx="2" fill="#223820" stroke="${color}" stroke-width="0.5" opacity="0.55"/>
+      <rect x="51" y="78" width="13" height="5" rx="2" fill="#223820" stroke="${color}" stroke-width="0.5" opacity="0.55"/>
     </svg>`,
 
-    // SEREN — peaked oracle hat, flowing robes, staff with data-orb, almond eyes
-    trading: `<svg viewBox="0 0 60 80" xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" shape-rendering="crispEdges">
-      <polygon points="30,2 17,22 43,22" fill="#080f14"/>
-      <line x1="30" y1="2" x2="30" y2="22" stroke="${color}" stroke-width="0.6" opacity="0.35"/>
-      <rect x="13" y="22" width="34" height="3" fill="#0b1820"/>
-      <rect x="13" y="22" width="34" height="1" fill="${color}" opacity="0.35"/>
-      <rect x="17" y="24" width="26" height="15" fill="#060d12"/>
-      <ellipse cx="24" cy="32" rx="3.5" ry="2" fill="${color}"/>
-      <ellipse cx="36" cy="32" rx="3.5" ry="2" fill="${color}"/>
-      <ellipse cx="24" cy="32" rx="1.8" ry="0.9" fill="#a5f3fc" opacity="0.75"/>
-      <ellipse cx="36" cy="32" rx="1.8" ry="0.9" fill="#a5f3fc" opacity="0.75"/>
-      <path d="M17,39 Q12,52 13,74 Q30,80 47,74 Q48,52 43,39 Z" fill="#060d12"/>
-      <path d="M21,39 Q17,52 18,72 Q30,77 42,72 Q43,52 39,39 Z" fill="#0a1820" opacity="0.6"/>
-      <line x1="30" y1="39" x2="30" y2="74" stroke="${color}" stroke-width="0.6" opacity="0.35"/>
-      <path d="M17,39 L30,35 L43,39" fill="none" stroke="${color}" stroke-width="0.7" opacity="0.5"/>
-      <line x1="47" y1="39" x2="47" y2="76" stroke="${color}" stroke-width="1.4" opacity="0.65"/>
-      <circle cx="47" cy="35" r="5" fill="#060d12" stroke="${color}" stroke-width="1"/>
-      <circle cx="47" cy="35" r="3" fill="${color}" opacity="0.25"/>
-      <circle cx="47" cy="35" r="1.5" fill="${color}" opacity="0.7"/>
+    // SEREN — Oracle, silver hair, peaked hat, large luminous cyan eyes
+    trading: `<svg viewBox="0 0 80 100" xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">
+      <rect width="80" height="100" fill="#030609"/>
+      <ellipse cx="40" cy="15" rx="28" ry="18" fill="${color}16"/>
+      <polygon points="40,2 24,28 56,28" fill="#06101a"/>
+      <line x1="40" y1="2" x2="40" y2="28" stroke="${color}" stroke-width="0.8" opacity="0.35"/>
+      <rect x="24" y="28" width="32" height="4" fill="#0a1820"/>
+      <rect x="24" y="28" width="32" height="1.5" fill="${color}" opacity="0.45"/>
+      <path d="M14,30 Q18,24 22,20 L22,60 Q16,68 14,100 L0,100 L0,30 Z" fill="#a0b8cc"/>
+      <path d="M66,30 Q62,24 58,20 L58,60 Q64,68 66,100 L80,100 L80,30 Z" fill="#a0b8cc"/>
+      <ellipse cx="18" cy="46" rx="5" ry="16" fill="#b8ccd8"/>
+      <ellipse cx="62" cy="46" rx="5" ry="16" fill="#b8ccd8"/>
+      <ellipse cx="40" cy="49" rx="15" ry="18" fill="#dce8f2"/>
+      <ellipse cx="40" cy="59" rx="12" ry="11" fill="#c8d8e8" opacity="0.3"/>
+      <path d="M27,40 Q30,38 33,40" fill="none" stroke="#705848" stroke-width="1.4" stroke-linecap="round"/>
+      <path d="M47,40 Q50,38 53,40" fill="none" stroke="#705848" stroke-width="1.4" stroke-linecap="round"/>
+      <path d="M25,46 Q30,42 35,46" fill="${color}70" stroke="#002840" stroke-width="0.5"/>
+      <ellipse cx="30" cy="48" rx="5" ry="4" fill="${color}"/>
+      <circle cx="30" cy="49" r="2.5" fill="#003850"/>
+      <circle cx="28" cy="46.5" r="1.5" fill="white" opacity="0.9"/>
+      <ellipse cx="30" cy="48" rx="5.5" ry="4.5" fill="${color}" opacity="0.15"/>
+      <path d="M25,53 Q30,55 35,53" fill="none" stroke="#708090" stroke-width="0.5" opacity="0.4"/>
+      <path d="M45,46 Q50,42 55,46" fill="${color}70" stroke="#002840" stroke-width="0.5"/>
+      <ellipse cx="50" cy="48" rx="5" ry="4" fill="${color}"/>
+      <circle cx="50" cy="49" r="2.5" fill="#003850"/>
+      <circle cx="48" cy="46.5" r="1.5" fill="white" opacity="0.9"/>
+      <ellipse cx="50" cy="48" rx="5.5" ry="4.5" fill="${color}" opacity="0.15"/>
+      <path d="M45,53 Q50,55 55,53" fill="none" stroke="#708090" stroke-width="0.5" opacity="0.4"/>
+      <path d="M38,57 Q40,59 42,57" fill="none" stroke="#9090a8" stroke-width="0.9" opacity="0.5"/>
+      <path d="M36,63 Q40,66 44,63" fill="none" stroke="#8080a0" stroke-width="1.1"/>
+      <path d="M37,63 Q40,64.5 43,63" fill="#9090b0" opacity="0.4"/>
+      <rect x="34" y="67" width="12" height="11" fill="#b8c8d8"/>
+      <path d="M18,82 L34,70 L40,74 L46,70 L62,82 L62,100 L18,100 Z" fill="#06101a"/>
+      <path d="M34,70 L40,74 L46,70" fill="none" stroke="${color}" stroke-width="1.4" opacity="0.65"/>
+      <circle cx="40" cy="74" r="3" fill="${color}" opacity="0.4"/>
+      <rect x="16" y="80" width="48" height="2" fill="${color}" opacity="0.3"/>
     </svg>`,
 
-    // KAELEN — heavy forge plate, wide shoulders, industrial visor, circuit chest, wrench
-    dev_automation: `<svg viewBox="0 0 60 80" xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" shape-rendering="crispEdges">
-      <rect x="14" y="4" width="32" height="26" rx="2" fill="#100a20"/>
-      <rect x="22" y="4" width="16" height="3" fill="${color}" opacity="0.45"/>
-      <rect x="15" y="18" width="30" height="8" rx="2" fill="#080514"/>
-      <rect x="17" y="19" width="12" height="6" rx="1" fill="#130a28"/>
-      <rect x="31" y="19" width="12" height="6" rx="1" fill="#130a28"/>
-      <rect x="18" y="20" width="10" height="1" fill="${color}" opacity="0.65"/>
-      <rect x="32" y="20" width="10" height="1" fill="${color}" opacity="0.65"/>
-      <rect x="19" y="27" width="22" height="3" fill="#0c0618"/>
-      <rect x="5" y="30" width="50" height="36" fill="#0c0618"/>
-      <rect x="4" y="30" width="16" height="14" rx="2" fill="#100a20"/>
-      <rect x="40" y="30" width="16" height="14" rx="2" fill="#100a20"/>
-      <rect x="4" y="30" width="16" height="2" fill="${color}" opacity="0.45"/>
-      <rect x="40" y="30" width="16" height="2" fill="${color}" opacity="0.45"/>
-      <rect x="20" y="36" width="8" height="1" fill="${color}" opacity="0.5"/>
-      <rect x="20" y="36" width="1" height="8" fill="${color}" opacity="0.5"/>
-      <rect x="32" y="36" width="8" height="1" fill="${color}" opacity="0.5"/>
-      <rect x="39" y="36" width="1" height="8" fill="${color}" opacity="0.5"/>
-      <polygon points="30,39 34,42 34,49 30,52 26,49 26,42" fill="#160c30" stroke="${color}" stroke-width="0.9"/>
-      <circle cx="30" cy="46" r="2" fill="${color}" opacity="0.55"/>
-      <rect x="42" y="50" width="5" height="18" rx="2" fill="#100a20" stroke="${color}" stroke-width="0.7"/>
-      <rect x="40" y="50" width="9" height="5" rx="1" fill="#100a20" stroke="${color}" stroke-width="0.7"/>
+    // KAELEN — Engineer knight, left mech-eye lens, right purple iris, stern brow
+    dev_automation: `<svg viewBox="0 0 80 100" xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">
+      <rect width="80" height="100" fill="#05030f"/>
+      <ellipse cx="40" cy="18" rx="28" ry="20" fill="${color}14"/>
+      <rect x="14" y="4" width="52" height="34" rx="3" fill="#0f0a1e"/>
+      <rect x="20" y="4" width="40" height="3" fill="${color}45"/>
+      <rect x="12" y="28" width="56" height="9" rx="2" fill="#07041a"/>
+      <rect x="14" y="29" width="22" height="7" rx="1" fill="#12093a"/>
+      <rect x="44" y="29" width="22" height="7" rx="1" fill="#12093a"/>
+      <circle cx="25" cy="32.5" r="7" fill="#080420" stroke="${color}" stroke-width="1.2"/>
+      <circle cx="25" cy="32.5" r="5" fill="#100840"/>
+      <circle cx="25" cy="32.5" r="3" fill="${color}" opacity="0.7"/>
+      <circle cx="25" cy="32.5" r="1.5" fill="#e8d8ff"/>
+      <circle cx="23.5" cy="31" r="1.2" fill="white" opacity="0.9"/>
+      <ellipse cx="55" cy="32.5" rx="5" ry="4" fill="${color}"/>
+      <circle cx="55" cy="33" r="2.5" fill="#180a38"/>
+      <circle cx="53.5" cy="31" r="1.3" fill="white" opacity="0.85"/>
+      <path d="M44,29 Q47,27 50,29" fill="none" stroke="#382060" stroke-width="1.3" stroke-linecap="round"/>
+      <path d="M14,28 Q18,24 22,26" fill="none" stroke="#382060" stroke-width="1.3" stroke-linecap="round"/>
+      <rect x="30" y="36" width="20" height="5" fill="#0f0a1e"/>
+      <path d="M34,41 Q40,44 46,41" fill="none" stroke="#4a3080" stroke-width="0.9" opacity="0.7"/>
+      <rect x="32" y="43" width="16" height="12" fill="#100828"/>
+      <rect x="4" y="38" width="20" height="18" rx="3" fill="#0f0a1e"/>
+      <rect x="56" y="38" width="20" height="18" rx="3" fill="#0f0a1e"/>
+      <rect x="4" y="38" width="20" height="2.5" fill="${color}" opacity="0.5"/>
+      <rect x="56" y="38" width="20" height="2.5" fill="${color}" opacity="0.5"/>
+      <rect x="14" y="55" width="52" height="32" fill="#0c0818"/>
+      <rect x="4" y="56" width="16" height="16" rx="2" fill="#0f0a1e"/>
+      <rect x="60" y="56" width="16" height="16" rx="2" fill="#0f0a1e"/>
+      <polygon points="40,62 44,65 44,73 40,76 36,73 36,65" fill="#1a0f30" stroke="${color}" stroke-width="1"/>
+      <circle cx="40" cy="69" r="3" fill="${color}" opacity="0.6"/>
+      <rect x="14" y="55" width="52" height="2" fill="${color}" opacity="0.4"/>
+      <rect x="14" y="86" width="52" height="2" fill="${color}" opacity="0.3"/>
     </svg>`,
 
-    // LYRIN — leaf-crown, warm robe, healing orb, soft eyes
-    personal: `<svg viewBox="0 0 60 80" xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" shape-rendering="crispEdges">
-      <path d="M22,10 Q24,4 30,8 Q36,4 38,10" fill="#04200f" stroke="${color}" stroke-width="0.8"/>
-      <path d="M25,8 Q27,2 30,6 Q33,2 35,8" fill="#065f3a" stroke="${color}" stroke-width="0.6"/>
-      <circle cx="30" cy="8" r="2" fill="${color}" opacity="0.65"/>
-      <rect x="18" y="10" width="24" height="18" rx="3" fill="#040f08"/>
-      <rect x="20" y="15" width="20" height="11" rx="2" fill="#c08050" opacity="0.6"/>
-      <path d="M23,19 Q25,17 27,19" fill="none" stroke="${color}" stroke-width="1.1"/>
-      <path d="M33,19 Q35,17 37,19" fill="none" stroke="${color}" stroke-width="1.1"/>
-      <circle cx="25" cy="19" r="1" fill="${color}" opacity="0.8"/>
-      <circle cx="35" cy="19" r="1" fill="${color}" opacity="0.8"/>
-      <path d="M15,28 Q9,50 11,76 Q30,81 49,76 Q51,50 45,28 Z" fill="#040f08"/>
-      <path d="M19,28 Q15,50 17,74 Q30,78 43,74 Q45,50 41,28 Z" fill="#081a10" opacity="0.6"/>
-      <line x1="30" y1="28" x2="30" y2="75" stroke="${color}" stroke-width="0.5" opacity="0.35"/>
-      <circle cx="30" cy="40" r="2" fill="${color}" opacity="0.25"/>
-      <circle cx="16" cy="54" r="7" fill="#040f08" stroke="${color}" stroke-width="1"/>
-      <circle cx="16" cy="54" r="4" fill="${color}" opacity="0.2"/>
-      <circle cx="16" cy="54" r="2" fill="#34d399" opacity="0.75"/>
-      <line x1="16" y1="47" x2="16" y2="49" stroke="#34d399" stroke-width="0.8" opacity="0.6"/>
-      <line x1="16" y1="59" x2="16" y2="61" stroke="#34d399" stroke-width="0.8" opacity="0.6"/>
-      <line x1="9" y1="54" x2="11" y2="54" stroke="#34d399" stroke-width="0.8" opacity="0.6"/>
-      <line x1="21" y1="54" x2="23" y2="54" stroke="#34d399" stroke-width="0.8" opacity="0.6"/>
+    // LYRIN — Healer cleric, leaf crown, warm face, gentle smile
+    personal: `<svg viewBox="0 0 80 100" xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">
+      <rect width="80" height="100" fill="#030905"/>
+      <ellipse cx="40" cy="18" rx="26" ry="20" fill="${color}14"/>
+      <path d="M26,16 Q24,8 32,12" fill="#065f3a" stroke="${color}" stroke-width="0.9"/>
+      <path d="M36,12 Q33,4 40,9" fill="#065f3a" stroke="${color}" stroke-width="0.9"/>
+      <path d="M54,16 Q56,8 48,12" fill="#065f3a" stroke="${color}" stroke-width="0.9"/>
+      <circle cx="40" cy="10" r="2.5" fill="${color}" opacity="0.7"/>
+      <ellipse cx="40" cy="34" rx="20" ry="22" fill="#7c4a1a"/>
+      <path d="M22,30 Q24,22 40,20 Q56,22 58,30 Q54,24 40,22 Q26,24 22,30" fill="#5a3410"/>
+      <ellipse cx="40" cy="48" rx="14" ry="18" fill="#dba47a"/>
+      <ellipse cx="40" cy="58" rx="11" ry="11" fill="#c88a60" opacity="0.3"/>
+      <path d="M27,39 Q30,37 33,39" fill="none" stroke="#6b3a10" stroke-width="1.4" stroke-linecap="round"/>
+      <path d="M47,39 Q50,37 53,39" fill="none" stroke="#6b3a10" stroke-width="1.4" stroke-linecap="round"/>
+      <path d="M26,45 Q31,42 35,45" fill="${color}50" stroke="#1a4020" stroke-width="0.5"/>
+      <ellipse cx="31" cy="47" rx="4.5" ry="4" fill="${color}"/>
+      <circle cx="31" cy="48" r="2.3" fill="#012814"/>
+      <circle cx="29.5" cy="45.5" r="1.3" fill="white" opacity="0.9"/>
+      <path d="M26,52 Q31,54 35,52" fill="none" stroke="#6b3a10" stroke-width="0.5" opacity="0.4"/>
+      <path d="M45,45 Q49,42 53,45" fill="${color}50" stroke="#1a4020" stroke-width="0.5"/>
+      <ellipse cx="49" cy="47" rx="4.5" ry="4" fill="${color}"/>
+      <circle cx="49" cy="48" r="2.3" fill="#012814"/>
+      <circle cx="47.5" cy="45.5" r="1.3" fill="white" opacity="0.9"/>
+      <path d="M45,52 Q49,54 53,52" fill="none" stroke="#6b3a10" stroke-width="0.5" opacity="0.4"/>
+      <path d="M38,56 Q40,58 42,56" fill="none" stroke="#a07848" stroke-width="0.9" opacity="0.55"/>
+      <path d="M36,63 Q40,67 44,63" fill="none" stroke="#b07840" stroke-width="1.3"/>
+      <path d="M37,63 Q40,65 43,63" fill="#c08850" opacity="0.45"/>
+      <rect x="34" y="66" width="12" height="12" fill="#c09060"/>
+      <path d="M16,84 L34,68 L40,73 L46,68 L64,84 L64,100 L16,100 Z" fill="#f0f4ee"/>
+      <path d="M34,68 L40,73 L46,68" fill="none" stroke="${color}" stroke-width="1.4" opacity="0.7"/>
+      <rect x="16" y="82" width="48" height="2" fill="${color}" opacity="0.5"/>
+      <rect x="14" y="80" width="14" height="6" rx="2" fill="#e8f0e8" stroke="${color}" stroke-width="0.5" opacity="0.5"/>
+      <rect x="52" y="80" width="14" height="6" rx="2" fill="#e8f0e8" stroke="${color}" stroke-width="0.5" opacity="0.5"/>
     </svg>`,
 
-    // ZETH — deep shadow cloak, no face, only red glowing eyes, blade hint
-    op_sec: `<svg viewBox="0 0 60 80" xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" shape-rendering="crispEdges">
-      <path d="M6,22 L30,4 L54,22 L58,76 Q30,83 2,76 Z" fill="#080000"/>
-      <path d="M10,24 L30,7 L50,24 L54,74 Q30,80 6,74 Z" fill="#100000" opacity="0.65"/>
-      <path d="M10,24 L30,7 L50,24" fill="none" stroke="${color}" stroke-width="0.5" opacity="0.2"/>
-      <ellipse cx="30" cy="30" rx="13" ry="15" fill="#040000"/>
-      <ellipse cx="24" cy="28" rx="4" ry="2.2" fill="${color}"/>
-      <ellipse cx="36" cy="28" rx="4" ry="2.2" fill="${color}"/>
-      <ellipse cx="24" cy="28" rx="2.2" ry="1.1" fill="#fca5a5" opacity="0.75"/>
-      <ellipse cx="36" cy="28" rx="2.2" ry="1.1" fill="#fca5a5" opacity="0.75"/>
-      <ellipse cx="24" cy="28" rx="5.5" ry="3" fill="${color}" opacity="0.12"/>
-      <ellipse cx="36" cy="28" rx="5.5" ry="3" fill="${color}" opacity="0.12"/>
-      <path d="M46,40 L51,73" stroke="${color}" stroke-width="1.2" opacity="0.38"/>
-      <line x1="46" y1="40" x2="43" y2="44" stroke="${color}" stroke-width="0.8" opacity="0.28"/>
-      <path d="M6,66 Q9,76 11,79" fill="none" stroke="#100000" stroke-width="2"/>
-      <path d="M54,66 Q51,76 49,79" fill="none" stroke="#100000" stroke-width="2"/>
+    // ZETH — Shadow assassin, face in darkness, only red eyes visible
+    op_sec: `<svg viewBox="0 0 80 100" xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">
+      <rect width="80" height="100" fill="#040000"/>
+      <ellipse cx="40" cy="20" rx="28" ry="22" fill="${color}12"/>
+      <path d="M2,15 L40,2 L78,15 L80,100 L0,100 Z" fill="#060000" opacity="0.8"/>
+      <path d="M5,18 L40,5 L75,18 L75,96 L5,96 Z" fill="#0c0101" opacity="0.55"/>
+      <path d="M2,18 L40,5 L78,18" fill="none" stroke="${color}" stroke-width="0.5" opacity="0.18"/>
+      <ellipse cx="40" cy="40" rx="22" ry="26" fill="#060000"/>
+      <ellipse cx="40" cy="35" rx="18" ry="20" fill="#080000"/>
+      <path d="M20,24 Q40,16 60,24" fill="#050000"/>
+      <path d="M0,28 Q20,18 40,20 Q60,18 80,28" fill="#040000" opacity="0.9"/>
+      <ellipse cx="31" cy="42" rx="7" ry="3.5" fill="${color}" opacity="0.2"/>
+      <ellipse cx="49" cy="42" rx="7" ry="3.5" fill="${color}" opacity="0.2"/>
+      <ellipse cx="31" cy="42" rx="5" ry="2.5" fill="${color}"/>
+      <ellipse cx="49" cy="42" rx="5" ry="2.5" fill="${color}"/>
+      <ellipse cx="31" cy="42" rx="3" ry="1.4" fill="#600000"/>
+      <ellipse cx="49" cy="42" rx="3" ry="1.4" fill="#600000"/>
+      <ellipse cx="29.5" cy="41" rx="1.2" ry="0.8" fill="#fca0a0" opacity="0.7"/>
+      <ellipse cx="47.5" cy="41" rx="1.2" ry="0.8" fill="#fca0a0" opacity="0.7"/>
+      <path d="M10,65 L28,72 L40,68 L52,72 L70,65 L70,100 L10,100 Z" fill="#060000"/>
+      <path d="M10,65 L28,72 L40,68 L52,72 L70,65" fill="none" stroke="${color}" stroke-width="0.7" opacity="0.3"/>
+      <line x1="16" y1="68" x2="12" y2="98" stroke="${color}" stroke-width="1.2" opacity="0.35"/>
+      <line x1="64" y1="68" x2="68" y2="98" stroke="${color}" stroke-width="1.2" opacity="0.35"/>
     </svg>`,
   };
-  // Fallback: large symbolic portrait
   const fallback = _COMMANDER_DEF[key];
   const fc = fallback?.color || color;
-  return portraits[key] || `<svg viewBox="0 0 60 80" xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}"><rect width="60" height="80" fill="#0a0a0a"/><circle cx="30" cy="40" r="22" fill="none" stroke="${fc}" stroke-width="2" opacity="0.5"/><circle cx="30" cy="40" r="8" fill="${fc}" opacity="0.3"/></svg>`;
+  return portraits[key] || `<svg viewBox="0 0 80 100" xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}"><rect width="80" height="100" fill="#0a0a0a"/><circle cx="40" cy="50" r="28" fill="none" stroke="${fc}" stroke-width="2" opacity="0.5"/><circle cx="40" cy="50" r="10" fill="${fc}" opacity="0.3"/></svg>`;
 }
 
 
@@ -2078,6 +2274,9 @@ async function loadStatsTab() {
     const PARTY = {
       opportunity: {
         name:'VAEL', order:'The Dawnhunt Order', color:'#f59e0b', glow:'#f59e0b40',
+        element:'🌬 Wind', element_desc:'Swift and penetrating — finds the gap before others see it',
+        strengths:['Rapid target acquisition','Pattern recognition under pressure','Never returns empty-handed'],
+        weaknesses:['Impatient with prolonged campaigns','May chase too many targets at once'],
         lore:"The realm's most relentless tracker. Vael ranges ahead of all others — marking targets, cutting false leads, and never returning to the field empty-handed. Where the Dawnhunt rides, the quarry has nowhere left to run.",
         classes:['Scout of the Dawnhunt','Vanguard Pathfinder','Grand Hunter','Sovereign Tracker','Spear of the Hunt'],
         abilities:[
@@ -2085,9 +2284,17 @@ async function loadStatsTab() {
           {name:"The Arbiter's Cut", desc:'Cuts weak leads from strong — only worthy targets survive the filter'},
           {name:'Strike the Vein',   desc:'Uncovers hidden funding potential in every opportunity'},
         ],
+        soldiers:[
+          {name:'The Tracker',    desc:'Maps new income streams and opportunity pipelines'},
+          {name:'The Arbitrator', desc:'Filters noise — separates worthy targets from dead ends'},
+          {name:'The Seeker',     desc:'Deep-mines data for hidden opportunity signals'},
+        ],
       },
       trading: {
         name:'SEREN', order:'The Auric Veil', color:'#06b6d4', glow:'#06b6d440',
+        element:'💧 Water', element_desc:'Adaptive and flowing — reads what is hidden beneath the surface',
+        strengths:['Reads hidden market patterns','Calm precision under volatility','Long-range signal memory'],
+        weaknesses:['Can stall under maximum ambiguity','Rare but absolute blind spots'],
         lore:"Still as deep water, sharp as a blade. Seren reads signals that others cannot see and speaks verdicts the market has no choice but to confirm. The Auric Veil has never missed a pattern that mattered.",
         classes:['Signal Initiate','Veil Adept','Pattern Seer','Voice of the Oracle','Grand Oracle of Markets'],
         abilities:[
@@ -2096,9 +2303,18 @@ async function loadStatsTab() {
           {name:'Shadow Run',         desc:'Tests strategy in the shadows without risking real capital'},
           {name:'Pattern Lock',       desc:'Backtests signal patterns against historical data to find true edge'},
         ],
+        soldiers:[
+          {name:'Signal Reader',  desc:'Monitors market conditions in real time across all channels'},
+          {name:'The Backtester', desc:'Runs strategy against historical data to find true edge'},
+          {name:'The Runner',     desc:'Executes shadow trades to validate signals risk-free'},
+          {name:'Pattern Warden', desc:'Guards the vault of confirmed patterns for recurring use'},
+        ],
       },
       dev_automation: {
         name:'KAELEN', order:'The Iron Codex', color:'#a78bfa', glow:'#a78bfa40',
+        element:'⚡ Lightning', element_desc:'High-energy and systematic — builds, strikes, and never leaves a job half-done',
+        strengths:['Systematic construction','Can forge anything from scratch','Never tolerates broken systems'],
+        weaknesses:['Prone to over-engineering','Dislikes rushing under deadlines'],
         lore:"The realm's master builder. Kaelen forges the architecture that keeps everything else standing — repairing what is broken, automating what is slow, and constructing what does not yet exist. The Iron Codex never rests.",
         classes:['Codex Initiate','Iron Smith','Forge Warden','Codex Architect','Master of the Iron Codex'],
         abilities:[
@@ -2108,9 +2324,18 @@ async function loadStatsTab() {
           {name:'Temper the Pipeline', desc:'Manages build artifacts, packages, and pipeline integrity'},
           {name:'Inscribe',            desc:'Updates documentation and code annotations across the realm'},
         ],
+        soldiers:[
+          {name:'The Warden',   desc:'Guards repositories and watches for code rot or pipeline drift'},
+          {name:'The Reforger', desc:'Strips and rebuilds broken or over-complex code segments'},
+          {name:'The Inscriber',desc:'Maintains documentation and code annotations across the realm'},
+          {name:'The Temperer', desc:'Manages artifacts, builds, and pipeline integrity end-to-end'},
+        ],
       },
       personal: {
         name:'LYRIN', order:'The Ember Covenant', color:'#10b981', glow:'#10b98140',
+        element:'🌿 Earth', element_desc:'Grounded and sustaining — slow to shift but impossible to extinguish',
+        strengths:['Sustains realm-wide morale','Catches burnout before it spreads','Unmatched recovery rate'],
+        weaknesses:['Slow to escalate urgent threats','Relies on honest self-reporting'],
         lore:"The heart of the realm. Without Lyrin's tending, the sovereign's flame grows cold and everything else follows. The Ember Covenant exists for one reason: to ensure the commander never burns out.",
         classes:['Covenant Initiate','Flame Tender','Guardian of Vitality','Covenant Warden','Eternal Keeper'],
         abilities:[
@@ -2119,9 +2344,18 @@ async function loadStatsTab() {
           {name:'Inner Sight',             desc:'Connects health patterns to performance and operational output'},
           {name:"The Covenant's Voice",    desc:'Delivers the weekly personal health and vitality digest'},
         ],
+        soldiers:[
+          {name:'Flame Keeper',  desc:'Logs daily health metrics — sleep, nutrition, movement'},
+          {name:'Ash Reader',    desc:'Detects early burnout signals before they compound'},
+          {name:'The Seer',      desc:'Maps health patterns to performance output over time'},
+          {name:'Voice Bearer',  desc:'Delivers weekly vitality and habit digest to the realm'},
+        ],
       },
       op_sec: {
         name:'ZETH', order:'The Nullward Circle', color:'#ef4444', glow:'#ef444440',
+        element:'🌑 Shadow', element_desc:'Unseen and absolute — reveals every threat before it becomes a crisis',
+        strengths:['Detects threats before they manifest','Operates completely unseen','Never forgets a breach pattern'],
+        weaknesses:['Difficult to coordinate openly','Cryptic communication style'],
         lore:"The Nullward Circle sees what others do not. Zeth moves through the spaces between systems — sealing breaches before they compound, watching the perimeter that everyone else forgets exists. Nothing passes the veil unseen.",
         classes:['Circle Watchman','Veil Scout','Shadow Warden','Grand Sentinel','Sovereign of the Null'],
         abilities:[
@@ -2131,6 +2365,13 @@ async function loadStatsTab() {
           {name:'Credential Sweep',  desc:'Audits credential hygiene across all realm systems'},
           {name:'Privacy Ward',      desc:'Scans for PII exposure and privacy risk across the perimeter'},
           {name:'Null Report',       desc:'Delivers the weekly threat assessment and security posture brief'},
+        ],
+        soldiers:[
+          {name:'The Veil Inspector',desc:'Checks device and account security posture from the shadows'},
+          {name:'The Mapper',        desc:'Surveys the full threat surface — every entry point catalogued'},
+          {name:'The Sweeper',       desc:'Audits credential hygiene across all realm access points'},
+          {name:'The Ward',          desc:'Scans for PII exposure and privacy risk across the perimeter'},
+          {name:'Null Reporter',     desc:'Delivers the weekly threat and breach intelligence brief'},
         ],
       },
     };
@@ -2294,7 +2535,7 @@ async function loadStatsTab() {
         style="--char-border:${char.color};--char-glow:${char.glow};"
         onclick="openCharSheet('${key}')">
         <div class="party-status-badge ${badgeClass}">${badgeText}</div>
-        <div class="party-portrait" style="filter:drop-shadow(0 0 7px ${char.color});">${commanderPortraitSVG(key, char.color)}</div>
+        <div class="party-portrait" style="filter:drop-shadow(0 0 10px ${char.color});">${commanderFullPortraitSVG(key, char.color, 56, 74)}</div>
         <div class="party-name" style="color:${char.color};">${char.name}</div>
         <div class="party-order" style="color:${char.color};opacity:0.65;">${char.order}</div>
         <div class="party-class">${escHtml(className)}</div>
@@ -4227,10 +4468,21 @@ function openCharSheet(key) {
   const el = document.getElementById('char-sheet');
   if (!el) return;
 
+  // Evolution chain
+  const evoChainHtml = char.classes.map((cls, i) => {
+    const isActive = i === classIdx;
+    const isPast   = i < classIdx;
+    const bg       = isActive ? char.color + '22' : 'transparent';
+    const border   = isActive ? char.color : (isPast ? char.color + '55' : 'var(--border)');
+    const textCol  = isActive ? char.color : (isPast ? char.color + '99' : 'var(--subtext)');
+    const arrow    = i < char.classes.length - 1 ? `<span class="cs-evo-arrow">→</span>` : '';
+    return `<span class="cs-evo-node" style="background:${bg};border-color:${border};color:${textCol};">${escHtml(cls)}</span>${arrow}`;
+  }).join('');
+
   el.innerHTML = `
     <div class="cs-handle"></div>
     <div class="cs-header">
-      <div class="cs-portrait" style="filter:drop-shadow(0 0 16px ${char.color});">${commanderFullPortraitSVG(key, char.color)}</div>
+      <div class="cs-portrait" style="filter:drop-shadow(0 0 18px ${char.color});">${commanderFullPortraitSVG(key, char.color)}</div>
       <div class="cs-meta">
         <div class="cs-name" style="color:${char.color};">${char.name}</div>
         <div style="font-size:8px;color:${char.color};opacity:0.7;letter-spacing:0.07em;margin-bottom:2px;text-transform:uppercase;">${escHtml(char.order||'')}</div>
@@ -4251,15 +4503,39 @@ function openCharSheet(key) {
         </div>
         <div class="cs-stat">
           <div class="cs-stat-val" style="color:var(--subtext);">${nextClass ? xpAway + ' XP' : '✦ MAX'}</div>
-          <div class="cs-stat-lbl">${nextClass ? 'TO ADVANCE' : 'CLASS TIER'}</div>
+          <div class="cs-stat-lbl">${nextClass ? 'TO EVOLVE' : 'FULL POWER'}</div>
         </div>
       </div>
-      ${nextClass ? `<div class="cs-next-class">Next class: <span style="color:${char.color};font-weight:700;">${escHtml(nextClass)}</span></div>` : ''}
-      <div class="cs-abilities-title">⚔ Abilities</div>
+      <div class="cs-element-row">
+        <div class="cs-element-badge" style="color:${char.color};">${char.element || ''}</div>
+        <div class="cs-element-desc">${escHtml(char.element_desc || '')}</div>
+      </div>
+      <div class="cs-sw-row">
+        <div class="cs-sw-box" style="border:1px solid ${char.color}33;">
+          <div class="cs-sw-title" style="color:${char.color};">⬆ Strengths</div>
+          ${(char.strengths || []).map(s => `<div class="cs-sw-item">${escHtml(s)}</div>`).join('')}
+        </div>
+        <div class="cs-sw-box" style="border:1px solid #ef444433;">
+          <div class="cs-sw-title" style="color:#ef4444;">⬇ Weaknesses</div>
+          ${(char.weaknesses || []).map(w => `<div class="cs-sw-item">${escHtml(w)}</div>`).join('')}
+        </div>
+      </div>
+      <div class="cs-evo-row">
+        <div class="cs-evo-title">✦ Evolution Path — ${char.classes.length - 1} Evolutions</div>
+        <div class="cs-evo-chain">${evoChainHtml}</div>
+      </div>
+      ${nextClass ? `<div class="cs-next-class">Next evolution: <span style="color:${char.color};font-weight:700;">${escHtml(nextClass)}</span> (${xpAway} XP away)</div>` : ''}
+      <div class="cs-abilities-title">⚔ Commander Abilities</div>
       ${char.abilities.map(a => `<div class="cs-ability">
         <div class="cs-ability-name">${escHtml(a.name)}</div>
         <div class="cs-ability-desc">${escHtml(a.desc)}</div>
       </div>`).join('')}
+      ${char.soldiers && char.soldiers.length ? `
+      <div class="cs-soldiers-title">⚑ Field Operatives (${char.soldiers.length})</div>
+      ${char.soldiers.map(sol => `<div class="cs-soldier">
+        <div class="cs-soldier-name" style="color:${char.color};">${escHtml(sol.name)}</div>
+        <div class="cs-soldier-desc">${escHtml(sol.desc)}</div>
+      </div>`).join('')}` : ''}
     </div>`;
 
   document.getElementById('char-sheet-overlay').classList.add('open');
