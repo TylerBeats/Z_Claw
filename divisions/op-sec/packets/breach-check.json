@@ -1,6 +1,6 @@
 {
   "division": "op-sec",
-  "generated_at": "2026-03-21T01:33:10.296207+00:00",
+  "generated_at": "2026-03-21T17:00:02.145733+00:00",
   "skill": "breach-check",
   "status": "skipped",
   "summary": "Breach check skipped — HIBP_API_KEY not configured",
