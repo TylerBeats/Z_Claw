@@ -124,32 +124,65 @@ const BASE_RANKS = [
   { minLevel: 50, maxLevel: 999, title: 'The Eternal Orchestrator' },
 ];
 
+// ── Realm world data (canonical — mirrors runtime/realm/config.py) ────────────
+// To change XP values or rank names, update runtime/realm/config.py first,
+// then keep this in sync. Python is the sole writer of jclaw-stats.json.
+
 const DIV_RANKS = {
-  trading:        ['Market Scout', 'Market Adept', 'Market Expert', 'Trading Master', 'Oracle of Markets'],
-  opportunity:    ['Hunter', 'Opportunity Adept', 'Grand Hunter', 'Grand Headhunter', 'Sovereign Headhunter'],
-  dev_automation: ['Code Ward', 'Code Adept', 'Code Expert', 'Code Architect', 'Architect of the Realm'],
-  personal:       ['Keeper', 'Wellness Adept', 'Wellness Expert', 'Guardian of the Flame', 'Eternal Guardian'],
-  op_sec:         ['Watchman', 'Security Adept', 'Security Expert', 'Grand Sentinel', 'Sovereign Sentinel'],
+  opportunity:    ['Scout of the Dawnhunt', 'Vanguard Pathfinder', 'Grand Hunter', 'Sovereign Tracker', 'Spear of the Hunt'],
+  trading:        ['Signal Initiate', 'Veil Adept', 'Pattern Seer', 'Voice of the Oracle', 'Grand Oracle of Markets'],
+  dev_automation: ['Codex Initiate', 'Iron Smith', 'Forge Warden', 'Codex Architect', 'Master of the Iron Codex'],
+  personal:       ['Covenant Initiate', 'Flame Tender', 'Guardian of Vitality', 'Covenant Warden', 'Eternal Keeper'],
+  op_sec:         ['Circle Watchman', 'Veil Scout', 'Shadow Warden', 'Grand Sentinel', 'Sovereign of the Null'],
+};
+
+const DIV_COMMANDERS = {
+  opportunity:    { name: 'VAEL',   order: 'The Dawnhunt Order' },
+  trading:        { name: 'SEREN',  order: 'The Auric Veil'     },
+  dev_automation: { name: 'KAELEN', order: 'The Iron Codex'     },
+  personal:       { name: 'LYRIN',  order: 'The Ember Covenant' },
+  op_sec:         { name: 'ZETH',   order: 'The Nullward Circle' },
 };
 
 const DIV_XP_THRESHOLDS = [0, 51, 151, 301, 500];
 
-// XP granted per skill completion (server-side, deterministic)
+// Base XP auto-granted when a division crosses a rank tier (mirrors config.py)
+const RANK_UP_BASE_XP = { 1: 15, 2: 25, 3: 40, 4: 60 };
+
+// XP per skill — canonical values match runtime/realm/config.py
 const SKILL_XP = {
-  'job-intake':       { division: 'opportunity',    amount: 10 },
-  'hard-filter':      { division: 'opportunity',    amount: 5  },
-  'virtual-trader':   { division: 'trading',        amount: 10 },
-  'trading-report':   { division: 'trading',        amount: 15 },
-  'repo-monitor':     { division: 'dev_automation', amount: 10 },
-  'security-scan':    { division: 'op_sec',         amount: 15 },
-  'device-posture':   { division: 'op_sec',         amount: 5  },
-  'breach-check':     { division: 'op_sec',         amount: 10 },
-  'threat-surface':   { division: 'op_sec',         amount: 10 },
-  'cred-audit':       { division: 'op_sec',         amount: 15 },
-  'privacy-scan':     { division: 'op_sec',         amount: 10 },
-  'health-logger':    { division: 'personal',       amount: 15 },
-  'perf-correlation': { division: 'personal',       amount: 10 },
-  'funding-finder':   { division: 'opportunity',    amount: 5  },
+  // Opportunity — The Dawnhunt Order
+  'job-intake':         { division: 'opportunity',    amount: 10 },
+  'hard-filter':        { division: 'opportunity',    amount:  5 },
+  'funding-finder':     { division: 'opportunity',    amount:  5 },
+  // Trading — The Auric Veil
+  'trading-report':     { division: 'trading',        amount: 15 },
+  'market-scan':        { division: 'trading',        amount:  5 },
+  'virtual-trader':     { division: 'trading',        amount:  8 },
+  'backtester':         { division: 'trading',        amount:  5 },
+  // Dev Automation — The Iron Codex
+  'repo-monitor':       { division: 'dev_automation', amount: 10 },
+  'refactor-scan':      { division: 'dev_automation', amount:  5 },
+  'doc-update':         { division: 'dev_automation', amount:  5 },
+  'debug-agent':        { division: 'dev_automation', amount:  8 },
+  'artifact-manager':   { division: 'dev_automation', amount:  3 },
+  'dev-digest':         { division: 'dev_automation', amount:  5 },
+  'dev-pipeline':       { division: 'dev_automation', amount: 10 },
+  // Personal — The Ember Covenant
+  'health-logger':      { division: 'personal',       amount: 15 },
+  'perf-correlation':   { division: 'personal',       amount: 10 },
+  'burnout-monitor':    { division: 'personal',       amount:  5 },
+  'personal-digest':    { division: 'personal',       amount:  5 },
+  // Op-Sec — The Nullward Circle
+  'device-posture':     { division: 'op_sec',         amount: 10 },
+  'breach-check':       { division: 'op_sec',         amount: 10 },
+  'threat-surface':     { division: 'op_sec',         amount:  8 },
+  'cred-audit':         { division: 'op_sec',         amount:  8 },
+  'privacy-scan':       { division: 'op_sec',         amount:  5 },
+  'opsec-digest':       { division: 'op_sec',         amount:  5 },
+  'mobile-audit-review':{ division: 'op_sec',         amount:  5 },
+  'sentinel-health':    { division: 'op_sec',         amount:  5 },
+  'security-scan':      { division: 'op_sec',         amount: 10 },
 };
 
 const PYTHON_EXE = 'C:/Users/Tyler/AppData/Local/Microsoft/WindowsApps/PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0/python.exe';
@@ -250,11 +283,24 @@ function grantDivisionXP(division, amount, skillName = null) {
     stats.divisions[division].rank = divRanks[Math.min(rankIdx, divRanks.length - 1)] || stats.divisions[division].rank;
     const newRank = stats.divisions[division].rank;
 
-    // Log and broadcast rank-up when division tier changes
+    // Rank-up: auto-grant base XP for each tier crossed, broadcast event
     const oldRankIdx = DIV_XP_THRESHOLDS.filter(t => oldDivXP >= t).length - 1;
     if (rankIdx > oldRankIdx) {
       logActivity('SYS', `⚔ ${division} rank up: ${newRank}`, 'purple');
       _broadcastGamifEvent({ event: 'rank_up', division, old_rank: oldRank, new_rank: newRank });
+      // Auto-grant base XP for each tier crossed (real activity → global level)
+      let baseBonus = 0;
+      for (let t = oldRankIdx + 1; t <= rankIdx; t++) {
+        baseBonus += (RANK_UP_BASE_XP[t] || 0);
+      }
+      if (baseBonus > 0) {
+        const { leveled, rankChanged } = applyXP(stats, baseBonus);
+        logActivity('SYS', `✦ Realm advancement: +${baseBonus} base XP (${DIV_COMMANDERS[division]?.order || division} tier ${rankIdx})`, 'blue');
+        if (leveled || rankChanged) {
+          _broadcastGamifEvent({ event: 'rank_up', division: 'base', new_rank: stats.rank, level: stats.level });
+        }
+        _appendXpHistory({ event: 'realm_advancement', div: division, tier: rankIdx, base_xp: baseBonus, reason: `${division} rank-up tier ${rankIdx}` });
+      }
     }
 
     stats.last_updated = new Date().toISOString();
@@ -275,9 +321,11 @@ function _getWeekKey(date) {
   return `${d.getFullYear()}-${String(week + 1).padStart(2, '0')}`;
 }
 
+const ALL_DIVISION_KEYS = ['opportunity', 'trading', 'dev_automation', 'personal', 'op_sec'];
+
 function _ensureStreaks(stats) {
   if (!stats.streaks) stats.streaks = {};
-  for (const d of ['opportunity', 'trading', 'dev_automation', 'personal', 'op_sec']) {
+  for (const d of ALL_DIVISION_KEYS) {
     if (!stats.streaks[d]) {
       stats.streaks[d] = { current: 0, longest: 0, last_date: null, shield_this_week: false, week: null };
     }
@@ -320,17 +368,21 @@ function _checkAchievements(stats) {
   const divIdx   = div => DIV_XP_THRESHOLDS.filter(t => divXP(div) >= t).length - 1;
 
   const checks = [
-    { id: 'first_hunt',      cond: () => divXP('opportunity') > 0 },
-    { id: 'market_watcher',  cond: () => divXP('trading') > 0 },
-    { id: 'code_warden',     cond: () => divXP('dev_automation') > 0 },
-    { id: 'healthy_habits',  cond: () => Object.values(stats.streaks || {}).some(s => (s.longest || 0) >= 7) },
-    { id: 'division_master', cond: () => Object.keys(stats.divisions || {}).some(d => divIdx(d) >= 3) },
-    { id: 'realm_commander', cond: () => (stats.level || 1) >= 10 },
-    { id: 'eternal',         cond: () => (stats.level || 1) >= 50 },
+    { id: 'first_hunt',       cond: () => divXP('opportunity') > 0 },
+    { id: 'market_watcher',   cond: () => divXP('trading') > 0 },
+    { id: 'code_warden',      cond: () => divXP('dev_automation') > 0 },
+    { id: 'covenant_keeper',  cond: () => divXP('personal') > 0 },
+    { id: 'veil_opened',      cond: () => divXP('op_sec') > 0 },
+    { id: 'loyal_flame',      cond: () => Object.values(stats.streaks || {}).some(s => (s.longest || 0) >= 7) },
+    { id: 'division_master',  cond: () => ALL_DIVISION_KEYS.some(d => divIdx(d) >= 3) },
+    { id: 'five_orders',      cond: () => ALL_DIVISION_KEYS.every(d => divXP(d) > 0) },
+    { id: 'realm_commander',  cond: () => (stats.level || 1) >= 10 },
+    { id: 'eternal',          cond: () => (stats.level || 1) >= 50 },
   ];
 
   for (const { id, cond } of checks) {
     if (!earned.has(id) && cond()) {
+      if (!stats.achievements) stats.achievements = [];
       stats.achievements.push(id);
       earned.add(id);
       unlocked.push(id);
@@ -443,7 +495,7 @@ function handleStatsSummary(res) {
       prestige_multiplier: stats.prestige_multiplier || 1.0,
       longest_streaks:     longestStreaks,
       achievements_earned: (stats.achievements || []).length,
-      achievements_total:  8,
+      achievements_total:  11,
       xp_per_day_7d:       xpPerDay7d,
     });
   } catch(e) { jsonError(res, 500, 'stats summary error'); }
@@ -2232,33 +2284,55 @@ function handleMobileBattlesToday(res) {
     const fs2 = require('fs');
     const histPath = path.join(STATE_DIR, 'xp-history.jsonl');
     const todayStr = new Date().toISOString().slice(0, 10);
+    // Soldier names + order-language labels. Mirrors runtime/realm/config.py skills.
     const SKILL_META = {
-      'trading-report':   { label: 'Trading Report',   icon: '⚡', anim: 'slash'   },
-      'market-scan':      { label: 'Market Scan',      icon: '📡', anim: 'scan'    },
-      'virtual-trader':   { label: 'Virtual Trader',   icon: '⚔', anim: 'slash'   },
-      'job-intake':       { label: 'Job Intake',       icon: '🗡', anim: 'arrow'   },
-      'refactor-scan':    { label: 'Refactor Scan',    icon: '⚙', anim: 'circuit' },
-      'repo-monitor':     { label: 'Repo Monitor',     icon: '⚙', anim: 'circuit' },
-      'dev-digest':       { label: 'Dev Digest',       icon: '⚙', anim: 'circuit' },
-      'doc-update':       { label: 'Doc Update',       icon: '⚙', anim: 'circuit' },
-      'artifact-manager': { label: 'Artifact Manager', icon: '⚙', anim: 'circuit' },
-      'security-scan':    { label: 'Security Scan',    icon: '🛡', anim: 'shield'  },
-      'device-posture':   { label: 'Device Posture',   icon: '🛡', anim: 'shield'  },
-      'breach-check':     { label: 'Breach Check',     icon: '🛡', anim: 'shield'  },
-      'cred-audit':       { label: 'Cred Audit',       icon: '🛡', anim: 'shield'  },
-      'threat-surface':   { label: 'Threat Surface',   icon: '🛡', anim: 'shield'  },
-      'privacy-scan':     { label: 'Privacy Scan',     icon: '🛡', anim: 'shield'  },
-      'opsec-digest':     { label: 'OpSec Digest',     icon: '🛡', anim: 'shield'  },
-      'health-logger':    { label: 'Health Logger',    icon: '💫', anim: 'sparkle' },
-      'perf-correlation': { label: 'Perf Correlation', icon: '💫', anim: 'sparkle' },
-      'burnout-monitor':  { label: 'Burnout Monitor',  icon: '💫', anim: 'sparkle' },
-      'personal-digest':  { label: 'Personal Digest',  icon: '💫', anim: 'sparkle' },
-      'provider-health':  { label: 'Provider Health',  icon: '👁', anim: 'scan'    },
-      'queue-monitor':    { label: 'Queue Monitor',    icon: '👁', anim: 'scan'    },
+      // Dawnhunt Order (opportunity)
+      'job-intake':          { label: 'Mark the Quarry',      soldier: 'The Tracker',           icon: '⟶', anim: 'arrow'   },
+      'hard-filter':         { label: "The Arbiter's Cut",    soldier: 'The Arbiter',           icon: '⟁', anim: 'slash'   },
+      'funding-finder':      { label: 'Strike the Vein',      soldier: 'The Prospector',        icon: '◈', anim: 'scan'    },
+      // Auric Veil (trading)
+      'trading-report':      { label: "The Oracle's Edict",   soldier: "The Seer's Voice",      icon: '◉', anim: 'slash'   },
+      'market-scan':         { label: 'Read the Runes',       soldier: 'The Signal Keeper',     icon: '◈', anim: 'scan'    },
+      'virtual-trader':      { label: 'Shadow Run',           soldier: 'The Shadow Runner',     icon: '⟁', anim: 'slash'   },
+      'backtester':          { label: 'Pattern Lock',         soldier: 'The Pattern Keeper',    icon: '◫', anim: 'circuit' },
+      // Iron Codex (dev_automation)
+      'repo-monitor':        { label: 'Watch the Forge',      soldier: 'The Warden',            icon: '⬡', anim: 'circuit' },
+      'refactor-scan':       { label: 'Reforge',              soldier: 'The Reforger',          icon: '⟁', anim: 'circuit' },
+      'doc-update':          { label: 'Inscribe',             soldier: 'The Scribe',            icon: '◫', anim: 'circuit' },
+      'debug-agent':         { label: 'Debug the Construct',  soldier: 'The Debugger',          icon: '◈', anim: 'circuit' },
+      'artifact-manager':    { label: 'Temper the Pipeline',  soldier: 'The Relic Keeper',      icon: '⬡', anim: 'circuit' },
+      'dev-digest':          { label: 'Codex Report',         soldier: 'The Chronicler',        icon: '◉', anim: 'circuit' },
+      'dev-pipeline':        { label: 'Lay the Foundation',   soldier: 'The Architect',         icon: '⬢', anim: 'circuit' },
+      // Nullward Circle (op_sec)
+      'device-posture':      { label: 'Inspect the Veil',     soldier: 'The Posture Guard',     icon: '⬡', anim: 'shield'  },
+      'breach-check':        { label: 'Breach Watch',         soldier: 'The Breach Scout',      icon: '⟁', anim: 'shield'  },
+      'threat-surface':      { label: 'Map the Dark',         soldier: 'The Surface Warden',    icon: '◈', anim: 'shield'  },
+      'cred-audit':          { label: 'Credential Sweep',     soldier: 'The Credential Keeper', icon: '◫', anim: 'shield'  },
+      'privacy-scan':        { label: 'Privacy Ward',         soldier: 'The Privacy Warden',    icon: '⬡', anim: 'shield'  },
+      'opsec-digest':        { label: 'Null Report',          soldier: 'The Brief',             icon: '◉', anim: 'shield'  },
+      'mobile-audit-review': { label: 'Audit the Mobile Veil',soldier: 'The Mobile Warden',     icon: '◈', anim: 'shield'  },
+      'sentinel-health':     { label: 'Sentinel Watch',       soldier: 'The Sentinel',          icon: '⬢', anim: 'shield'  },
+      'security-scan':       { label: 'Audit the Veil',       soldier: 'The Code Sentinel',     icon: '⬡', anim: 'shield'  },
+      // Ember Covenant (personal)
+      'health-logger':       { label: 'Tend the Flame',       soldier: 'The Tender',            icon: '◉', anim: 'sparkle' },
+      'perf-correlation':    { label: 'Inner Sight',          soldier: 'The Lens',              icon: '◈', anim: 'sparkle' },
+      'burnout-monitor':     { label: 'Read the Ashes',       soldier: 'The Watchfire',         icon: '⟁', anim: 'sparkle' },
+      'personal-digest':     { label: "The Covenant's Voice", soldier: 'The Voice',             icon: '◫', anim: 'sparkle' },
+      // Sentinel (non-division utility)
+      'provider-health':     { label: 'Provider Watch',       soldier: 'The Provider Scout',    icon: '◈', anim: 'scan'    },
+      'queue-monitor':       { label: 'Queue Watch',          soldier: 'The Queue Warden',      icon: '◈', anim: 'scan'    },
     };
     const DIV_NAMES = {
-      trading: 'Trading', dev_automation: 'Dev', op_sec: 'Op-Sec',
-      opportunity: 'Opportunity', personal: 'Personal', sentinel: 'Sentinel',
+      opportunity:    'Dawnhunt',
+      trading:        'Auric Veil',
+      dev_automation: 'Iron Codex',
+      personal:       'Ember Covenant',
+      op_sec:         'Nullward',
+      sentinel:       'Sentinel',
+    };
+    const DIV_COMMANDERS_META = {
+      opportunity: 'VAEL', trading: 'SEREN', dev_automation: 'KAELEN',
+      personal: 'LYRIN', op_sec: 'ZETH',
     };
     let battles = [];
     try {
@@ -2267,17 +2341,19 @@ function handleMobileBattlesToday(res) {
         .map(l => { try { return JSON.parse(l); } catch(e) { return null; } })
         .filter(e => e && e.event === 'skill_complete' && e.ts && e.ts.slice(0, 10) === todayStr)
         .map(e => {
-          const meta = SKILL_META[e.skill] || { label: e.skill, icon: '⚔', anim: 'slash' };
+          const meta = SKILL_META[e.skill] || { label: e.skill, soldier: '', icon: '⚔', anim: 'slash' };
           return {
-            skill:    e.skill,
-            label:    meta.label,
-            icon:     meta.icon,
-            anim:     meta.anim,
-            division: e.div,
-            div_name: DIV_NAMES[e.div] || e.div,
-            xp:       e.xp || 0,
+            skill:      e.skill,
+            label:      meta.label,
+            soldier:    meta.soldier || '',
+            icon:       meta.icon,
+            anim:       meta.anim,
+            division:   e.div,
+            div_name:   DIV_NAMES[e.div] || e.div,
+            commander:  DIV_COMMANDERS_META[e.div] || '',
+            xp:         e.xp || 0,
             multiplier: e.multiplier || 1,
-            streak:   e.streak || 0,
+            streak:     e.streak || 0,
             time:     e.ts,
           };
         })
@@ -2293,7 +2369,7 @@ function handleMobileBattlesWeek(res) {
   try {
     const fs2 = require('fs');
     const histPath = path.join(STATE_DIR, 'xp-history.jsonl');
-    const DIV_NAMES = { trading: 'Trading', dev_automation: 'Dev', op_sec: 'Op-Sec', opportunity: 'Opportunity', personal: 'Personal' };
+    const DIV_NAMES = { opportunity: 'Dawnhunt', trading: 'Auric Veil', dev_automation: 'Iron Codex', personal: 'Ember Covenant', op_sec: 'Nullward' };
     const cutoffDate = new Date(); cutoffDate.setDate(cutoffDate.getDate() - 6);
     const cutoffStr  = cutoffDate.toISOString().slice(0, 10);
 
@@ -2345,6 +2421,153 @@ function handleMobileTrading(res) {
   } catch(e) {
     return jsonError(res, 500, e.message);
   }
+}
+
+// ── Realm Layer endpoints ─────────────────────────────────────────────────────
+
+// GET /mobile/api/realm/config
+// Serves the full world config to the frontend. Replaces hardcoded PARTY object.
+function handleRealmConfig(res) {
+  try {
+    const divs     = {};
+    for (const [key, div] of Object.entries(DIV_COMMANDERS)) {
+      const ranks = DIV_RANKS[key] || [];
+      divs[key] = {
+        key,
+        commander: div.name,
+        order:     div.order,
+        ranks:     ranks.map((title, i) => ({ xp: DIV_XP_THRESHOLDS[i], title })),
+      };
+    }
+    jsonOk(res, {
+      divisions:    divs,
+      thresholds:   DIV_XP_THRESHOLDS,
+      rank_up_base_xp: RANK_UP_BASE_XP,
+    });
+  } catch(e) { jsonError(res, 500, 'realm config error'); }
+}
+
+// GET /mobile/api/realm/directive
+// Computes the highest-leverage next action for Matthew.
+// Priority: streak_at_risk > dormant_order > near_rank_up > lagging_order
+function handleRealmDirective(res) {
+  try {
+    const stats  = readState('jclaw-stats.json') || {};
+    const divs   = stats.divisions || {};
+    const streaks = stats.streaks  || {};
+    const today  = new Date().toISOString().slice(0, 10);
+    const directives = [];
+
+    for (const key of ALL_DIVISION_KEYS) {
+      const div      = divs[key]    || { xp: 0 };
+      const streak   = streaks[key] || {};
+      const cmdMeta  = DIV_COMMANDERS[key] || {};
+      const divRanks = DIV_RANKS[key]      || [];
+      const tierIdx  = DIV_XP_THRESHOLDS.filter(t => (div.xp || 0) >= t).length - 1;
+      const nextThr  = DIV_XP_THRESHOLDS[tierIdx + 1];
+      const xpAway   = nextThr ? nextThr - (div.xp || 0) : null;
+
+      // 1. Streak at risk (has streak, hasn't run today)
+      if (streak.current > 0 && streak.last_date && streak.last_date !== today) {
+        const mult = Math.min(1.5, 1.0 + Math.floor(streak.current / 7) * 0.1);
+        directives.push({
+          type:      'streak_at_risk',
+          urgency:   'critical',
+          division:  key,
+          commander: cmdMeta.name,
+          order:     cmdMeta.order,
+          title:     `${cmdMeta.name}'s streak is at risk`,
+          message:   `${cmdMeta.order} has a ${streak.current}-day streak — unconfirmed today. Break now and lose the ×${mult.toFixed(1)} multiplier.`,
+          action:    `Run a ${cmdMeta.order} skill to hold the streak.`,
+          xp_at_stake: Math.round(20 * mult), // rough daily XP potential
+          streak_days: streak.current,
+          score: 1000 + streak.current * 10,
+        });
+      }
+      // 2. Dormant order (never ran or no streak at all)
+      if ((div.xp || 0) === 0 || streak.current === 0) {
+        const isDormant = (div.xp || 0) === 0;
+        directives.push({
+          type:      isDormant ? 'dormant_order' : 'no_streak',
+          urgency:   isDormant ? 'high' : 'normal',
+          division:  key,
+          commander: cmdMeta.name,
+          order:     cmdMeta.order,
+          title:     isDormant ? `${cmdMeta.name} has not answered the call` : `${cmdMeta.order} has no active streak`,
+          message:   isDormant
+            ? `${cmdMeta.order} has not yet opened its ledger. No XP, no rank, no multiplier.`
+            : `${cmdMeta.order} is active but has no streak. A 7-day streak unlocks the ×1.1 multiplier.`,
+          action:    `Run any ${cmdMeta.order} skill.`,
+          xp_at_stake: 15,
+          score: isDormant ? 600 : 150,
+        });
+      }
+      // 3. Near rank-up (within 25 XP of next tier)
+      if (xpAway !== null && xpAway > 0 && xpAway <= 25) {
+        const nextRank = divRanks[tierIdx + 1] || 'next rank';
+        directives.push({
+          type:      'near_rank_up',
+          urgency:   'high',
+          division:  key,
+          commander: cmdMeta.name,
+          order:     cmdMeta.order,
+          title:     `${cmdMeta.order} is ${xpAway} XP from ascension`,
+          message:   `${cmdMeta.name} is ${xpAway} XP away from ${nextRank}. A single skill run may close the gap.`,
+          action:    `Run a ${cmdMeta.order} skill — ${xpAway} XP needed.`,
+          xp_at_stake: xpAway,
+          next_rank: nextRank,
+          score: 500 + (26 - xpAway) * 5,
+        });
+      }
+    }
+
+    // Sort by score descending
+    directives.sort((a, b) => b.score - a.score);
+
+    // No directives = realm is healthy
+    if (directives.length === 0) {
+      const topDiv = ALL_DIVISION_KEYS.reduce((best, k) => {
+        const s = (streaks[k] || {}).current || 0;
+        return s > ((streaks[best] || {}).current || 0) ? k : best;
+      }, ALL_DIVISION_KEYS[0]);
+      const topStreak = (streaks[topDiv] || {}).current || 0;
+      const topCmd = DIV_COMMANDERS[topDiv] || {};
+      directives.push({
+        type: 'realm_healthy', urgency: 'none',
+        division: topDiv, commander: topCmd.name, order: topCmd.order,
+        title: 'Realm is in good order',
+        message: topStreak > 0
+          ? `${topCmd.order} holds a ${topStreak}-day battle rhythm. All orders are active.`
+          : 'All orders are active. No urgent actions.',
+        action: 'Continue current pace.',
+        xp_at_stake: 0, score: 0,
+      });
+    }
+
+    jsonOk(res, {
+      primary:   directives[0]   || null,
+      secondary: directives.slice(1, 3),
+      generated_at: new Date().toISOString(),
+    });
+  } catch(e) { jsonError(res, 500, 'directive error: ' + e.message); }
+}
+
+// GET /mobile/api/realm/chronicle
+// Returns recent chronicle entries (newest first).
+function handleRealmChronicle(res) {
+  try {
+    const chroniclePath = path.join(STATE_DIR, 'realm-chronicle.jsonl');
+    const limitStr = '25';
+    const limit = parseInt(limitStr, 10) || 25;
+    if (!fs.existsSync(chroniclePath)) return jsonOk(res, { entries: [], total: 0 });
+    const lines = fs.readFileSync(chroniclePath, 'utf8').split('\n').filter(Boolean);
+    const entries = [];
+    for (const line of lines) {
+      try { entries.push(JSON.parse(line)); } catch(e) {}
+    }
+    entries.reverse();
+    jsonOk(res, { entries: entries.slice(0, limit), total: entries.length });
+  } catch(e) { jsonError(res, 500, 'chronicle error'); }
 }
 
 // ── Parse body ──
@@ -2652,6 +2875,9 @@ const server = http.createServer(async (req, res) => {
         return handleGamifStream(req, res);
       }
       if (method === 'GET' && reqPath === '/mobile/api/stats/summary') { return handleStatsSummary(res); }
+      if (method === 'GET' && reqPath === '/mobile/api/realm/config')    { return handleRealmConfig(res); }
+      if (method === 'GET' && reqPath === '/mobile/api/realm/directive') { return handleRealmDirective(res); }
+      if (method === 'GET' && reqPath === '/mobile/api/realm/chronicle') { return handleRealmChronicle(res); }
       if (method === 'GET' && reqPath === '/mobile/api/divisions') {
         return handleMobileDivisions(res);
       }
@@ -3187,6 +3413,71 @@ try {
     if (fixed > 0) { writeState('control.json', ctrl); console.log(`  [SYS] Reset ${fixed} stuck queue item(s) to queued`); }
   }
 } catch(e) {}
+
+// ── Realm chronicle retroactive migration (runs once on first boot) ───────────
+setImmediate(() => {
+  try {
+    const chroniclePath = path.join(STATE_DIR, 'realm-chronicle.jsonl');
+    if (!fs.existsSync(chroniclePath) || fs.statSync(chroniclePath).size === 0) {
+      const histPath  = path.join(STATE_DIR, 'xp-history.jsonl');
+      if (!fs.existsSync(histPath)) return;
+      const lines     = fs.readFileSync(histPath, 'utf8').split('\n').filter(Boolean);
+      const divXp     = {};
+      const divTier   = {};
+      let written     = 0;
+      const entries   = [];
+
+      for (const line of lines) {
+        try {
+          const e = JSON.parse(line);
+          if (e.event === 'skill_complete' && e.div && e.xp) {
+            const div    = e.div;
+            const oldXp  = divXp[div] || 0;
+            const newXp  = oldXp + e.xp;
+            const oldT   = divTier[div] || 0;
+            const newT   = DIV_XP_THRESHOLDS.filter(t => newXp >= t).length - 1;
+            if (newT > oldT) {
+              const ranks  = DIV_RANKS[div] || [];
+              const cmd    = DIV_COMMANDERS[div] || {};
+              const order  = cmd.order || div;
+              const rank   = ranks[newT] || 'unknown';
+              const bonus  = RANK_UP_BASE_XP[newT] || 0;
+              entries.push(JSON.stringify({
+                ts: e.ts || new Date().toISOString(),
+                event_class: newT === 4 ? 'major' : 'micro',
+                category:    'rank_up', division: div,
+                commander:   cmd.name || div, order,
+                tier:        newT, title: `${order} — ${rank}`,
+                lore:        `${cmd.name || div} and the ${order} crossed the ${DIV_XP_THRESHOLDS[newT]} XP threshold.`,
+                operational: `${order} advanced to ${rank}`,
+                impact:      bonus > 0 ? `+${bonus} base XP granted to J_Claw.` : '',
+                retroactive: true,
+              }));
+              written++;
+              divTier[div] = newT;
+            }
+            divXp[div] = newXp;
+          } else if (e.event === 'ruler_bestow' && e.amount) {
+            entries.push(JSON.stringify({
+              ts: e.ts || new Date().toISOString(),
+              event_class: 'micro', category: 'ruler_reward',
+              amount: e.amount, reason: e.reason || '',
+              title: `Sovereign's Decree — ${e.amount} XP`,
+              lore: `Matthew granted ${e.amount} base XP to J_Claw. ${e.reason || ''}`,
+              operational: `+${e.amount} base XP`, impact: '', retroactive: true,
+            }));
+            written++;
+          }
+        } catch(_) {}
+      }
+
+      if (entries.length > 0) {
+        fs.writeFileSync(chroniclePath, entries.join('\n') + '\n', 'utf8');
+        console.log(`  Realm Chronicle: ${written} retroactive events written.`);
+      }
+    }
+  } catch(e) { console.error('  Chronicle migration error:', e.message); }
+});
 
 server.listen(PORT, '0.0.0.0', () => {
   console.log('');
