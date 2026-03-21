@@ -444,14 +444,61 @@
     .jclaw-div-card.jclaw-div-inactive { opacity: 0.45; }
     .jclaw-div-icon { font-size: 20px; margin-bottom: 4px; }
     .jclaw-div-label { font-size: 9px; color: var(--subtext); letter-spacing: 0.06em; margin-bottom: 4px; }
-    .jclaw-div-rank { font-size: 11px; font-weight: 600; color: var(--purple); margin-bottom: 2px; }
-    .jclaw-div-xp { font-size: 10px; color: var(--subtext); }
+    .jclaw-div-rank { font-size: 11px; font-weight: 600; color: var(--purple); margin-bottom: 4px; }
+    .jclaw-div-xp { font-size: 10px; color: var(--subtext); margin-bottom: 5px; }
+    .jclaw-div-prog-wrap { background: var(--overlay); border-radius: 4px; height: 4px; overflow: hidden; margin-bottom: 4px; }
+    .jclaw-div-prog-fill { height: 100%; border-radius: 4px; transition: width 0.6s ease; background: var(--purple); }
+    .jclaw-div-next { font-size: 8px; color: var(--subtext); line-height: 1.3; }
+    .jclaw-div-atrisk { font-size: 8px; color: var(--yellow); margin-top: 3px; }
     .jclaw-ach-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
     .jclaw-ach-badge { background: var(--overlay); border: 1px solid var(--border); border-radius: 10px; padding: 10px 8px; text-align: center; opacity: 0.4; }
     .jclaw-ach-badge.jclaw-ach-earned { background: #1a0a2e; border-color: #7c3aed; opacity: 1; }
     .jclaw-ach-icon { font-size: 18px; margin-bottom: 4px; }
     .jclaw-ach-name { font-size: 10px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
     .jclaw-ach-desc { font-size: 9px; color: var(--subtext); line-height: 1.3; }
+
+    /* ── Party Member Cards (JRPG) ── */
+    .party-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+    .party-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 12px 10px 10px; text-align: center; position: relative; cursor: pointer; transition: transform 0.15s ease, box-shadow 0.2s ease; -webkit-tap-highlight-color: transparent; }
+    .party-card:active { transform: scale(0.95); }
+    .party-card.on-quest { border-color: var(--char-border, var(--border)); box-shadow: 0 0 16px var(--char-glow, transparent); }
+    .party-card.inactive { opacity: 0.42; }
+    .party-status-badge { position: absolute; top: 8px; right: 8px; font-size: 7px; font-weight: 700; letter-spacing: 0.06em; padding: 2px 6px; border-radius: 5px; text-transform: uppercase; }
+    .status-quest   { background: #14532d; color: #4ade80; }
+    .status-rest    { background: var(--overlay); color: var(--subtext); }
+    .status-standby { background: var(--overlay); color: var(--border); }
+    .party-portrait { font-size: 36px; margin: 6px 0 4px; display: block; }
+    .party-name { font-size: 15px; font-weight: 900; letter-spacing: 0.1em; margin-bottom: 2px; }
+    .party-class { font-size: 8px; color: var(--subtext); letter-spacing: 0.05em; margin-bottom: 8px; text-transform: uppercase; }
+    .party-xp-wrap { background: var(--overlay); border-radius: 3px; height: 3px; overflow: hidden; margin-bottom: 6px; }
+    .party-xp-fill { height: 100%; border-radius: 3px; transition: width 0.7s cubic-bezier(0.22,1,0.36,1); }
+    .party-morale { font-size: 8px; color: var(--subtext); margin-bottom: 5px; }
+    .party-view-hint { font-size: 7px; color: var(--border); letter-spacing: 0.06em; }
+
+    /* ── Character Sheet (bottom sheet) ── */
+    #char-sheet-overlay { position: fixed; inset: 0; z-index: 7990; background: rgba(0,0,0,0.55); opacity: 0; pointer-events: none; transition: opacity 0.25s ease; backdrop-filter: blur(4px); }
+    #char-sheet-overlay.open { opacity: 1; pointer-events: all; }
+    #char-sheet { position: fixed; bottom: 0; left: 0; right: 0; z-index: 7999; background: var(--surface); border-radius: 20px 20px 0 0; border-top: 1px solid var(--border); padding: 0 0 calc(var(--safe-bottom) + 12px); transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.32,0.72,0,1); max-height: 78dvh; overflow-y: auto; }
+    #char-sheet.open { transform: translateY(0); }
+    .cs-handle { width: 40px; height: 4px; background: var(--border); border-radius: 2px; margin: 12px auto 0; }
+    .cs-header { display: flex; align-items: center; gap: 14px; padding: 16px 20px 14px; border-bottom: 1px solid var(--border); }
+    .cs-portrait { font-size: 52px; line-height: 1; }
+    .cs-meta { text-align: left; flex: 1; }
+    .cs-name { font-size: 22px; font-weight: 900; letter-spacing: 0.12em; }
+    .cs-class-label { font-size: 10px; color: var(--subtext); letter-spacing: 0.06em; margin: 3px 0 5px; text-transform: uppercase; }
+    .cs-status-badge { font-size: 9px; font-weight: 700; padding: 3px 8px; border-radius: 6px; display: inline-block; }
+    .cs-body { padding: 14px 20px 4px; }
+    .cs-lore { font-size: 12px; color: var(--subtext); font-style: italic; line-height: 1.65; margin-bottom: 14px; border-left: 2px solid var(--border); padding-left: 10px; }
+    .cs-stats-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+    .cs-stat { background: var(--overlay); border-radius: 8px; padding: 8px 6px; text-align: center; }
+    .cs-stat-val { font-size: 15px; font-weight: 700; }
+    .cs-stat-lbl { font-size: 8px; color: var(--subtext); margin-top: 2px; letter-spacing: 0.05em; }
+    .cs-next-class { font-size: 10px; color: var(--subtext); margin-bottom: 14px; text-align: center; }
+    .cs-abilities-title { font-size: 9px; color: var(--subtext); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px; }
+    .cs-ability { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); align-items: flex-start; }
+    .cs-ability:last-child { border-bottom: none; }
+    .cs-ability-name { font-size: 12px; font-weight: 700; color: var(--text); min-width: 110px; flex-shrink: 0; }
+    .cs-ability-desc { font-size: 11px; color: var(--subtext); line-height: 1.4; }
 
     /* ── Rank-Up Overlay (cinematic) ── */
     #rankup-overlay {
@@ -1591,9 +1638,10 @@ async function loadStatsTab() {
   const el = document.getElementById('stats-content');
   if (!el) return;
   try {
-    const [s, d] = await Promise.all([
+    const [s, d, ov] = await Promise.all([
       api('/mobile/api/stats'),
-      api('/mobile/api/stats/summary')
+      api('/mobile/api/stats/summary'),
+      api('/mobile/api/overview').catch(() => ({}))
     ]);
 
     const ALL_ACHIEVEMENTS = [
@@ -1621,6 +1669,39 @@ async function loadStatsTab() {
     const pct      = Math.min(100, Math.round(baseXp / xpToNext * 100));
     const divs     = s.divisions || {};
     const streaks  = s.streaks   || {};
+    const todayStr = new Date().toISOString().slice(0, 10);
+
+    // Division rank progression tables
+    const DIV_RANK_NAMES = {
+      opportunity:    ['Hunter', 'Opportunity Adept', 'Grand Hunter', 'Grand Headhunter', 'Sovereign Headhunter'],
+      trading:        ['Market Scout', 'Market Adept', 'Market Expert', 'Trading Master', 'Oracle of Markets'],
+      dev_automation: ['Code Ward', 'Code Adept', 'Code Expert', 'Code Architect', 'Architect of the Realm'],
+      personal:       ['Keeper', 'Wellness Adept', 'Wellness Expert', 'Guardian of the Flame', 'Eternal Guardian'],
+      op_sec:         ['Watchman', 'Security Adept', 'Security Expert', 'Grand Sentinel', 'Sovereign Sentinel'],
+    };
+    const DIV_THRESHOLDS = [0, 51, 151, 301, 500];
+
+    // ── JRPG Party Character Model ──
+    const PARTY = {
+      opportunity:    { name:'VANCE',  portrait:'⚔',  color:'#f59e0b', glow:'#f59e0b40', lore:'Relentless scout of the realm. Tracks targets across the open field and never stops the hunt until the quarry is found.', classes:['Hunter','Pathfinder','Grand Hunter','Grand Headhunter','Sovereign Headhunter'], abilities:[{name:'Track Target',desc:'Scans the field for new quarry and marks them for pursuit'},{name:'Hard Filter',desc:'Cuts the weak leads from the strong — only worthy targets survive'},{name:'Uncover Gold',desc:'Finds hidden value and funding potential in every opportunity'}] },
+      trading:        { name:'ORACLE', portrait:'🔮', color:'#06b6d4', glow:'#06b6d440', lore:'Reads patterns others cannot see. Cold, calculating, and always right. The market has no secrets from ORACLE.', classes:['Market Scout','Market Sage','Market Expert','Trading Master','Oracle of Markets'], abilities:[{name:'Scan the Runes',desc:'Reads market signals and conditions with precision'},{name:'Read the Future',desc:'Delivers the daily market verdict — always one step ahead'},{name:'Shadow Trade',desc:'Tests strategy in the shadows without risking real capital'}] },
+      dev_automation: { name:'FORGE',  portrait:'⚙',  color:'#a78bfa', glow:'#a78bfa40', lore:'Builder, fixer, optimizer. FORGE automates what is slow and repairs what is broken. Never sleeps. Never rests.', classes:['Code Ward','Code Artificer','Code Expert','Code Architect','Architect of the Realm'], abilities:[{name:'Watch the Forge',desc:'Guards repos for drift, rot, and unmerged chaos'},{name:'Reforge',desc:'Hunts dead code and complexity — forges it clean'},{name:'Forge Report',desc:'Delivers the weekly build and automation digest'},{name:'Craft Artifacts',desc:'Manages build outputs, packages, and pipeline artifacts'}] },
+      personal:       { name:'EMBER',  portrait:'🔥', color:'#10b981', glow:'#10b98140', lore:'The heart of the party. When EMBER is neglected, everything suffers. The flame must be tended every single day.', classes:['Keeper','Wellness Guardian','Wellness Expert','Guardian of the Flame','Eternal Guardian'], abilities:[{name:'Tend the Flame',desc:'Logs daily health and habits — keeps the fire alive'},{name:'Read the Ashes',desc:'Watches for signs of burnout before they spread'},{name:'Inner Sight',desc:'Connects health patterns to performance and output'}] },
+      op_sec:         { name:'WRAITH', portrait:'👁', color:'#ef4444', glow:'#ef444440', lore:'Silent protector of the realm. WRAITH sees everything and says little. Nothing passes unseen. Nothing escapes.', classes:['Watchman','Sentinel','Security Expert','Grand Sentinel','Sovereign Sentinel'], abilities:[{name:'Inspect the Veil',desc:'Checks device security posture from the shadows'},{name:'Map the Dark',desc:'Surveys the full threat surface of the realm'},{name:'Breach Watch',desc:'Scans for known breaches before they compound'},{name:'Cred Sweep',desc:'Audits credential hygiene across all systems'},{name:'Shadow Report',desc:'Delivers the weekly opsec and threat brief'}] },
+    };
+    const divStatuses = ov.divisions || {};
+
+    function divProgressInfo(key, xp) {
+      const names = DIV_RANK_NAMES[key] || [];
+      for (let i = DIV_THRESHOLDS.length - 1; i >= 0; i--) {
+        if (xp >= DIV_THRESHOLDS[i]) {
+          if (i >= DIV_THRESHOLDS.length - 1) return { pct: 100, nextRank: null, away: 0 };
+          const prev = DIV_THRESHOLDS[i], next = DIV_THRESHOLDS[i + 1];
+          return { pct: Math.round((xp - prev) / (next - prev) * 100), nextRank: names[i + 1] || null, away: next - xp };
+        }
+      }
+      return { pct: 0, nextRank: names[1] || null, away: DIV_THRESHOLDS[1] };
+    }
 
     // ── Hero ──
     let html = `
@@ -1683,7 +1764,7 @@ async function loadStatsTab() {
         <div class="jclaw-rank">${escHtml(s.rank || 'Apprentice of the Realm')}</div>
         <div class="jclaw-level">LEVEL ${s.level || 1}</div>
         <div class="xp-bar-wrap" style="margin:8px 0 4px;">
-          <div class="xp-bar-fill" style="width:${pct}%;background:linear-gradient(90deg,#7c3aed,#a78bfa);"></div>
+          <div class="xp-bar-fill" id="hero-xp-fill" data-pct="${pct}" style="width:0%;background:linear-gradient(90deg,#7c3aed,#a78bfa);"></div>
         </div>
         <div class="jclaw-xp-label">${baseXp} / ${xpToNext} XP to next level · ${s.total_xp_earned || 0} total earned</div>
       </div>`;
@@ -1705,28 +1786,49 @@ async function loadStatsTab() {
         </div>
       </div>`;
 
-    // ── Division ranks ──
-    html += `<div class="jclaw-section-title">⚔ Division Ranks</div>`;
-    html += `<div class="jclaw-div-grid">`;
-    for (const { key, icon, label } of DIV_CONFIG) {
-      const div    = divs[key];
-      const streak = streaks[key];
-      const fire   = streak && streak.current > 0 ? ` 🔥${streak.current}d` : '';
-      if (div) {
-        html += `<div class="jclaw-div-card">
-          <div class="jclaw-div-icon">${icon}</div>
-          <div class="jclaw-div-label">${escHtml(label)}${fire}</div>
-          <div class="jclaw-div-rank">${escHtml(div.rank)}</div>
-          <div class="jclaw-div-xp">${div.xp} XP</div>
-        </div>`;
-      } else {
-        html += `<div class="jclaw-div-card jclaw-div-inactive">
-          <div class="jclaw-div-icon">${icon}</div>
-          <div class="jclaw-div-label">${escHtml(label)}</div>
-          <div class="jclaw-div-rank" style="color:var(--subtext);">Inactive</div>
-          <div class="jclaw-div-xp">0 XP</div>
-        </div>`;
+    // ── Party Members ──
+    html += `<div class="jclaw-section-title">⚔ THE PARTY</div>`;
+    html += `<div class="party-grid">`;
+    const PARTY_ORDER = ['opportunity', 'trading', 'dev_automation', 'op_sec', 'personal'];
+    for (const key of PARTY_ORDER) {
+      const char   = PARTY[key];
+      const div    = divs[key] || { xp: 0 };
+      const streak = streaks[key] || {};
+      const oDiv   = divStatuses[key] || {};
+      const status = (oDiv.status || 'standby').toLowerCase();
+      const isQuest = status === 'running';
+      const isRest  = status === 'idle';
+      // Class tier from XP
+      let classIdx = 0;
+      for (let i = DIV_THRESHOLDS.length - 1; i >= 0; i--) {
+        if ((div.xp || 0) >= DIV_THRESHOLDS[i]) { classIdx = i; break; }
       }
+      const className = char.classes[classIdx] || char.classes[0];
+      // XP bar progress
+      let xpPct = 0;
+      if (classIdx < DIV_THRESHOLDS.length - 1) {
+        const prev = DIV_THRESHOLDS[classIdx], next = DIV_THRESHOLDS[classIdx + 1];
+        xpPct = Math.min(100, Math.round(((div.xp || 0) - prev) / (next - prev) * 100));
+      } else { xpPct = 100; }
+      // Morale from streak
+      const sc = streak.current || 0;
+      const moraleFlames = sc >= 7 ? '🔥🔥🔥' : sc >= 3 ? '🔥🔥' : sc >= 1 ? '🔥' : '';
+      const moraleLabel  = sc >= 7 ? 'ELITE' : sc >= 3 ? 'HIGH' : sc >= 1 ? 'BUILDING' : 'DORMANT';
+      // Status badge
+      const badgeClass = isQuest ? 'status-quest' : isRest ? 'status-rest' : 'status-standby';
+      const badgeText  = isQuest ? 'ON QUEST' : isRest ? 'RESTING' : 'STANDBY';
+      const inactive   = !div.xp;
+      html += `<div class="party-card${isQuest ? ' on-quest' : ''}${inactive ? ' inactive' : ''}"
+        style="--char-border:${char.color};--char-glow:${char.glow};"
+        onclick="openCharSheet('${key}')">
+        <div class="party-status-badge ${badgeClass}">${badgeText}</div>
+        <span class="party-portrait" style="filter:drop-shadow(0 0 10px ${char.color});">${char.portrait}</span>
+        <div class="party-name" style="color:${char.color};">${char.name}</div>
+        <div class="party-class">${escHtml(className)}</div>
+        <div class="party-xp-wrap"><div class="party-xp-fill" data-pct="${xpPct}" style="width:0%;background:${char.color};"></div></div>
+        <div class="party-morale">${moraleFlames ? moraleFlames + ' ' + moraleLabel : moraleLabel}</div>
+        <div class="party-view-hint">TAP FOR MORE →</div>
+      </div>`;
     }
     html += `</div>`;
 
@@ -1761,20 +1863,21 @@ async function loadStatsTab() {
 
     el.innerHTML = html;
 
-    // ── Animate XP bar fill (start at 0, ease to actual value) ──
-    const xpBarFill = el.querySelector('.xp-bar-fill');
-    if (xpBarFill) {
-      xpBarFill.classList.add('xp-bar-instant');
-      xpBarFill.style.width = '0%';
-      void xpBarFill.offsetWidth;
-      xpBarFill.classList.remove('xp-bar-instant');
-      requestAnimationFrame(() => requestAnimationFrame(() => {
-        xpBarFill.style.width = pct + '%';
-      }));
-    }
+    // ── Store party data for character sheet ──
+    window._jclawPartyData = { PARTY, divs, streaks, divStatuses, DIV_THRESHOLDS };
 
-    // ── Today's Battles (async, appended after main render) ──
+    // ── Animate all XP / progress bars after render ──
+    requestAnimationFrame(() => setTimeout(() => {
+      const heroFill = document.getElementById('hero-xp-fill');
+      if (heroFill) heroFill.style.width = heroFill.dataset.pct + '%';
+      el.querySelectorAll('.party-xp-fill[data-pct]').forEach(bar => {
+        bar.style.width = bar.dataset.pct + '%';
+      });
+    }, 60));
+
+    // ── Today's Battles + Weekly summary (async, appended after main render) ──
     _loadBattles(el);
+    _loadWeeklySummary(el);
   } catch(e) {
     el.innerHTML = '<div class="card"><div class="card-body" style="color:var(--subtext)">Failed to load J_Claw</div></div>';
   }
@@ -1803,6 +1906,56 @@ async function _loadBattles(el) {
         <div class="battle-xp${b.xp <= 0 ? ' no-xp' : ''}">${xpLabel}</div>
       </div>`;
     }
+
+    const section = document.createElement('div');
+    section.innerHTML = html;
+    el.appendChild(section);
+  } catch(e) {}
+}
+
+async function _loadWeeklySummary(el) {
+  try {
+    const w = await api('/mobile/api/battles/week');
+    if (!w.total_battles) return;
+    const DIV_ICONS = { trading: '📈', dev_automation: '💻', op_sec: '🛡', opportunity: '🏹', personal: '🌿' };
+    const maxDayXp = Math.max(...(w.by_day || []).map(d => d.xp), 1);
+
+    // Bar chart by day
+    let chartHtml = '';
+    for (const day of (w.by_day || [])) {
+      const h = Math.max(4, Math.round(day.xp / maxDayXp * 32));
+      const isToday = day.date === new Date().toISOString().slice(0, 10);
+      chartHtml += `<div style="display:flex;flex-direction:column;align-items:center;flex:1;gap:3px;">
+        <div style="font-size:8px;color:var(--subtext);">${day.xp || ''}</div>
+        <div style="width:100%;height:36px;display:flex;align-items:flex-end;">
+          <div style="width:100%;height:${h}px;border-radius:3px 3px 0 0;background:${isToday ? 'var(--purple)' : 'var(--overlay)'};"></div>
+        </div>
+        <div style="font-size:7px;color:${isToday ? 'var(--purple)' : 'var(--subtext)'};">${new Date(day.date + 'T12:00:00').toLocaleDateString('en-CA',{weekday:'narrow'})}</div>
+      </div>`;
+    }
+
+    // Division chips
+    let divHtml = '';
+    const divEntries = Object.entries(w.by_division || {}).sort((a,b) => b[1].xp - a[1].xp);
+    for (const [key, info] of divEntries) {
+      divHtml += `<div style="background:var(--overlay);border-radius:8px;padding:5px 9px;display:flex;gap:6px;align-items:center;">
+        <span style="font-size:13px;">${DIV_ICONS[key] || '⚔'}</span>
+        <div>
+          <div style="font-size:10px;font-weight:600;color:var(--text);">+${info.xp} XP</div>
+          <div style="font-size:9px;color:var(--subtext);">${info.name} · ${info.count} runs</div>
+        </div>
+      </div>`;
+    }
+
+    let html = `<div class="jclaw-section-title" style="margin-top:12px;">📅 This Week</div>
+    <div class="card" style="margin-bottom:10px;"><div class="card-body" style="padding:10px 12px;">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;">
+        <span style="font-size:13px;font-weight:700;color:var(--purple);">+${w.total_xp} XP</span>
+        <span style="font-size:10px;color:var(--subtext);">${w.total_battles} battles</span>
+      </div>
+      <div style="display:flex;gap:3px;align-items:flex-end;height:56px;">${chartHtml}</div>
+    </div></div>
+    ${divHtml ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">${divHtml}</div>` : ''}`;
 
     const section = document.createElement('div');
     section.innerHTML = html;
@@ -2178,12 +2331,18 @@ async function loadOverview(silent = false) {
       if ((s.prestige || 0) > 0) {
         html += `<div style="font-size:9px;color:var(--yellow);margin-bottom:4px;">${'⭐'.repeat(s.prestige)} PRESTIGE ${s.prestige}  ×${s.prestige_multiplier || 1} XP</div>`;
       }
+      const homeToday = new Date().toISOString().slice(0, 10);
       const activeStreaks = Object.entries(streaks).filter(([,v]) => v.current > 0);
+      const atRiskStreaks = activeStreaks.filter(([k,v]) => v.last_date && v.last_date !== homeToday);
       if (activeStreaks.length) {
         const sl = {opportunity:'OPPS',trading:'TRADE',dev_automation:'DEV',personal:'PERS',op_sec:'OPSEC'};
-        html += '<div style="font-size:10px;color:var(--yellow);margin-bottom:6px;">';
+        html += '<div style="font-size:10px;color:var(--yellow);margin-bottom:4px;">';
         html += activeStreaks.map(([k,v]) => `${sl[k]||k} 🔥${v.current}d`).join('  ');
         html += '</div>';
+      }
+      if (atRiskStreaks.length) {
+        const sl = {opportunity:'Opps',trading:'Trade',dev_automation:'Dev',personal:'Pers',op_sec:'OpSec'};
+        html += `<div style="font-size:9px;color:var(--yellow);margin-bottom:6px;">⚠ ${atRiskStreaks.map(([k])=>sl[k]||k).join(', ')} streak${atRiskStreaks.length>1?'s':''} at risk today</div>`;
       }
       html += '<div class="xp-divs">';
       for (const [key, label] of divOrder) {
@@ -3507,6 +3666,85 @@ function _renderTradingDetail(d) {
   return html;
 }
 
+// ── Character Sheet ───────────────────────────────────────
+function openCharSheet(key) {
+  const pd = window._jclawPartyData;
+  if (!pd) return;
+  const { PARTY, divs, streaks, divStatuses, DIV_THRESHOLDS } = pd;
+  const char   = PARTY[key];
+  if (!char) return;
+  const div    = divs[key] || { xp: 0 };
+  const streak = streaks[key] || {};
+  const oDiv   = divStatuses[key] || {};
+  const status = (oDiv.status || 'standby').toLowerCase();
+  const isQuest = status === 'running';
+  const isRest  = status === 'idle';
+
+  // Class tier
+  let classIdx = 0;
+  for (let i = DIV_THRESHOLDS.length - 1; i >= 0; i--) {
+    if ((div.xp || 0) >= DIV_THRESHOLDS[i]) { classIdx = i; break; }
+  }
+  const className = char.classes[classIdx] || char.classes[0];
+  const nextClass = char.classes[classIdx + 1] || null;
+  const xpAway   = (classIdx < DIV_THRESHOLDS.length - 1) ? DIV_THRESHOLDS[classIdx + 1] - (div.xp || 0) : 0;
+
+  // Morale
+  const sc = streak.current || 0;
+  const moraleFlames = sc >= 7 ? '🔥🔥🔥' : sc >= 3 ? '🔥🔥' : sc >= 1 ? '🔥' : '—';
+  const moraleLabel  = sc >= 7 ? 'Elite' : sc >= 3 ? 'High' : sc >= 1 ? 'Building' : 'Dormant';
+
+  // Status badge
+  const badgeClass = isQuest ? 'status-quest' : isRest ? 'status-rest' : 'status-standby';
+  const badgeText  = isQuest ? 'ON QUEST' : isRest ? 'RESTING' : 'STANDBY';
+
+  const el = document.getElementById('char-sheet');
+  if (!el) return;
+
+  el.innerHTML = `
+    <div class="cs-handle"></div>
+    <div class="cs-header">
+      <div class="cs-portrait" style="filter:drop-shadow(0 0 16px ${char.color});">${char.portrait}</div>
+      <div class="cs-meta">
+        <div class="cs-name" style="color:${char.color};">${char.name}</div>
+        <div class="cs-class-label">${escHtml(className)}</div>
+        <span class="cs-status-badge ${badgeClass}">${badgeText}</span>
+      </div>
+    </div>
+    <div class="cs-body">
+      <div class="cs-lore">${escHtml(char.lore)}</div>
+      <div class="cs-stats-row">
+        <div class="cs-stat">
+          <div class="cs-stat-val" style="color:${char.color};">${div.xp || 0}</div>
+          <div class="cs-stat-lbl">CLASS XP</div>
+        </div>
+        <div class="cs-stat">
+          <div class="cs-stat-val">${moraleFlames}</div>
+          <div class="cs-stat-lbl">MORALE</div>
+        </div>
+        <div class="cs-stat">
+          <div class="cs-stat-val" style="color:var(--subtext);">${nextClass ? xpAway + ' XP' : '✦ MAX'}</div>
+          <div class="cs-stat-lbl">${nextClass ? 'TO ADVANCE' : 'CLASS TIER'}</div>
+        </div>
+      </div>
+      ${nextClass ? `<div class="cs-next-class">Next class: <span style="color:${char.color};font-weight:700;">${escHtml(nextClass)}</span></div>` : ''}
+      <div class="cs-abilities-title">⚔ Abilities</div>
+      ${char.abilities.map(a => `<div class="cs-ability">
+        <div class="cs-ability-name">${escHtml(a.name)}</div>
+        <div class="cs-ability-desc">${escHtml(a.desc)}</div>
+      </div>`).join('')}
+    </div>`;
+
+  document.getElementById('char-sheet-overlay').classList.add('open');
+  el.classList.add('open');
+  haptic('success');
+}
+
+function closeCharSheet() {
+  document.getElementById('char-sheet-overlay').classList.remove('open');
+  document.getElementById('char-sheet').classList.remove('open');
+}
+
 // ── Boot ─────────────────────────────────────────────────
 checkSetup();
 </script>
@@ -3525,6 +3763,10 @@ checkSetup();
   <div id="rankup-rank-text" class="rankup-rank-text"></div>
   <div class="rankup-tap-hint">TAP TO CONTINUE</div>
 </div>
+
+<!-- Character Sheet -->
+<div id="char-sheet-overlay" onclick="closeCharSheet()"></div>
+<div id="char-sheet"></div>
 
 <!-- Achievement Cinematic Overlay -->
 <div id="achievement-overlay" onclick="_dismissAchievementOverlay()">
