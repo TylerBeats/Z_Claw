@@ -2,14 +2,6 @@
   "messages": [
     {
       "role": "user",
-      "content": "Please explain what changes were made and why"
-    },
-    {
-      "role": "assistant",
-      "content": "Now I have the real picture. Here's the honest breakdown:\n\n---\n\n## Changes Made This Session\n\n### 1. Trading Division Context Fix (lines 764–784)\n**What changed:** The mobile chat system prompt now builds the `[ TRADING ]` section by reading from the actual division output packets:\n- `divisions/trading/packets/market-scan.json` → price data, signals\n- `divisions/trading/packets/trading-report.json` → strategy, cycle stats, win rate\n\n`trade-log.json` is now just a **fallback** if the packets don't exist, instead of the primary source.\n\n**Why:** `trade-log.json` was never being created, so every chat request hit the catch block. The AI in mobile chat was seeing blank/default trading data and couldn't actually discuss what the trading division had done.\n\n---\n\n### 2. Groq Fallback (lines 1115–1265)\n**What changed:** The `/mobile-chat` endpoint now has a two-stage AI strategy:\n1. **Primary:** Ollama (local, runs on Tyler's GPU)\n2. **Fallback:** If Ollama returns a 500/error → automatically switches to Groq's `llama-3.3-70b-versatile` via `GROQ_API_KEY`\n3. **Double failure:** Shows a clear error message instead of silently hanging\n\n**Why:** Ollama has been intermittently 500ing due to VRAM pressure (multiple models competing). Before this fix, those failures just broke mobile chat entirely with no explanation.\n\n---\n\n## What Was NOT Changed\n- Division logic, trading strategy, backtester, orchestrator -- all untouched\n- These were targeted fixes to the **mobile chat server layer only**"
-    },
-    {
-      "role": "user",
       "content": "Please explain the trading division updates and what should be done from here as well as why. Don’t make any more new changes yet."
     },
     {
@@ -399,7 +391,15 @@
     {
       "role": "assistant",
       "content": "Done. Both places fixed.\n\n---\n\n## What Was Wrong\n\n`active_strategy` in the agent-network state stores `max_drawdown: 0.029` (decimal, 0–1 scale). `max_drawdown_pct` only exists inside the nested `recent_window` object -- the server was reading the wrong field and always getting `undefined`.\n\n## The Fix (2 places in server.js)\n\nBoth the **division card endpoint** (line 1989) and the **trading detail endpoint** (line 627) now use:\n```js\ns.max_drawdown_pct != null ? s.max_drawdown_pct : (s.max_drawdown * 1000 / 10)\n```\ni.e. if `max_drawdown_pct` ever gets added to `active_strategy` directly it'll use that; otherwise it converts the decimal `0.029` → **2.9%**.\n\nThe trading card will now show `2.9%` in red instead of `—`. No server restart needed -- next overview poll (every 30s) will pick it up."
+    },
+    {
+      "role": "user",
+      "content": "Why 2.9%?"
+    },
+    {
+      "role": "assistant",
+      "content": "2.9% is the **actual current value** in the state file -- `max_drawdown: 0.029` on line 10, and `max_drawdown_pct: 2.9` confirmed on line 30 in `recent_window`.\n\nThe math is just `0.029 * 100 = 2.9`. Nothing made up -- that's the real drawdown for the active strategy right now."
     }
   ],
-  "last_updated": "2026-03-21T17:18:03.793Z"
+  "last_updated": "2026-03-21T17:24:57.773Z"
 }
