@@ -1491,7 +1491,8 @@ cron.schedule('0 15 * * *', async () => {
 }, { timezone: TZ });
 
 // Dev weekly scans — TEMP: daily until verified, then restore Sunday-only
-cron.schedule('0 10 * * *', async () => {
+// refactor-scan: TEMP hourly for verification
+cron.schedule('0 * * * *', async () => {
   await runSkillViaPython('refactor-scan', 'DEV');
 }, { timezone: TZ });
 
