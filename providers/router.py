@@ -46,7 +46,7 @@ ROUTING_TABLE: dict[str, list[str]] = {
     "debug-agent":           ["ollama:qwen2.5-coder:14b-instruct-q4_K_M",   "groq", "deepseek"],
     "refactor-scan":         ["ollama:qwen2.5-coder:7b-instruct-q4_K_M",    "groq", "deepseek"],
     "doc-update":            ["ollama:qwen2.5-coder:14b-instruct-q4_K_M",   "groq", "deepseek"],
-    "opsec-scan":            ["ollama:qwen2.5-coder:7b-instruct-q4_K_M",    "groq", "deepseek"],
+    "opsec-scan":            ["ollama:qwen2.5-coder:7b-instruct-q4_K_M"],    # LOCAL ONLY — security data
 
     # ── Dev Pipeline ─────────────────────────────────────────────────────────
     "dev-generate":          ["ollama:qwen2.5-coder:7b-instruct-q4_K_M",    "groq", "deepseek"],
@@ -59,13 +59,14 @@ ROUTING_TABLE: dict[str, list[str]] = {
     "architecture-review":   ["groq", "deepseek", "gemini"],
     "escalation-reason":     ["groq", "deepseek", "gemini"],
 
-    # ── OP-Sec ───────────────────────────────────────────────────────────────
-    "device-posture":        ["deterministic"],
-    "breach-check":          ["deterministic"],
-    "threat-surface":        ["ollama:qwen2.5-coder:7b-instruct-q4_K_M",    "groq", "deepseek"],
-    "cred-audit":            ["ollama:qwen2.5-coder:7b-instruct-q4_K_M",    "groq", "deepseek"],
-    "privacy-scan":          ["ollama:qwen2.5:7b-instruct-q4_K_M",          "groq", "deepseek"],
-    "security-scan":         ["ollama:qwen2.5-coder:7b-instruct-q4_K_M",    "groq", "deepseek"],
+    # ── OP-Sec (ALL LOCAL ONLY — security/network/credential data never leaves system) ──
+    "device-posture":        ["deterministic"],                              # LOCAL ONLY
+    "breach-check":          ["deterministic"],                              # LOCAL ONLY
+    "threat-surface":        ["ollama:qwen2.5-coder:7b-instruct-q4_K_M"],   # LOCAL ONLY
+    "cred-audit":            ["ollama:qwen2.5-coder:7b-instruct-q4_K_M"],   # LOCAL ONLY
+    "privacy-scan":          ["ollama:qwen2.5:7b-instruct-q4_K_M"],         # LOCAL ONLY
+    "security-scan":         ["ollama:qwen2.5-coder:7b-instruct-q4_K_M"],   # LOCAL ONLY
+    "opsec-digest":          ["ollama:qwen2.5:7b-instruct-q4_K_M"],         # LOCAL ONLY
 
     # ── Sentinel (health monitoring) ─────────────────────────────────────────
     "sentinel-health":       ["deterministic"],
@@ -78,7 +79,6 @@ ROUTING_TABLE: dict[str, list[str]] = {
     # ── Digest synthesis ─────────────────────────────────────────────────────
     "dev-digest":            ["ollama:qwen2.5:7b-instruct-q4_K_M",          "groq", "deepseek"],
     "personal-digest":       ["ollama:qwen2.5:7b-instruct-q4_K_M",          "groq", "deepseek"],
-    "opsec-digest":          ["ollama:qwen2.5:7b-instruct-q4_K_M",          "groq", "deepseek"],
 }
 
 
