@@ -36,6 +36,14 @@
       "enabled": true,
       "last_run": null,
       "status": "idle"
+    },
+    "archive-hot": {
+      "schedule": "daily 18:00",
+      "run_order": "last",
+      "skill": "archive-hot",
+      "enabled": true,
+      "last_run": null,
+      "status": "idle"
     }
   }
 }

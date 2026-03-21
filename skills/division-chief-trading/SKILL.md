@@ -47,10 +47,18 @@ happen at this layer. J_Claw receives only the compiled executive packet.
 
 ### Backtester (daily 18:00, after trading-report)
 1. Hydrate relevant strategy configs and historical data from cold
-2. Run backtester skill
-3. Save backtest output bundle to hot
-4. Compile executive packet with backtest summary
-5. Write to `divisions/trading/packets/backtester.json`
+2. Run backtester skill — reads `C:\Users\Tyler\agent-network\state\spx500_cycle_state.json`
+3. Backtester skill writes executive packet directly to `divisions/trading/packets/backtester.json`
+4. If `escalate: true` in packet: surface to J_Claw escalation queue
+
+### Archive Hot Cache (daily 18:00, after backtester — runs last)
+1. Run archive-hot skill
+2. Skill scans `divisions/trading/hot/` for market scan files older than 24 hours
+3. Groups stale files by date, zips into `divisions/trading/cold/market-scans-{date}.zip`
+4. Writes manifest to `divisions/trading/manifests/market-scans-{date}.manifest.json`
+5. Deletes archived files from hot/ only after archive integrity verified
+6. Enforces 256MB hot cache size limit — evicts oldest files if exceeded
+7. Log archive summary (files archived, hot size after)
 
 ## Executive Packet — Trading
 ```json
