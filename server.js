@@ -1778,6 +1778,15 @@ async function handleMobileChatCoding(body, res) {
   });
 }
 
+// ── CORS helper — allow localhost and Tailscale CGNAT range (100.64.0.0/10) only ──
+function corsOrigin(req) {
+  const origin = (req && req.headers && req.headers.origin) || '';
+  if (!origin) return 'http://localhost:3000';
+  if (/^https?:\/\/localhost(:\d+)?$/.test(origin)) return origin;
+  if (/^https?:\/\/100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.\d+\.\d+(:\d+)?$/.test(origin)) return origin;
+  return 'http://localhost:3000'; // unknown origin — browser will reject the mismatch
+}
+
 // ── Response helpers ──
 function jsonOk(res, data) {
   res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
@@ -2951,7 +2960,7 @@ const server = http.createServer(async (req, res) => {
   const method  = req.method.toUpperCase();
 
   if (method === 'OPTIONS') {
-    res.writeHead(204, { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET,POST', 'Access-Control-Allow-Headers': 'Content-Type,Authorization' });
+    res.writeHead(204, { 'Access-Control-Allow-Origin': corsOrigin(req), 'Access-Control-Allow-Methods': 'GET,POST', 'Access-Control-Allow-Headers': 'Content-Type,Authorization' });
     res.end(); return;
   }
 
@@ -3186,7 +3195,7 @@ const server = http.createServer(async (req, res) => {
       // ── OPTIONS preflight (mobile clients on HTTPS may send this) ─────────
       if (method === 'OPTIONS') {
         res.writeHead(204, {
-          'Access-Control-Allow-Origin':  '*',
+          'Access-Control-Allow-Origin':  corsOrigin(req),
           'Access-Control-Allow-Methods': 'GET,POST',
           'Access-Control-Allow-Headers': 'Content-Type,Authorization',
         });
@@ -3303,7 +3312,9 @@ const server = http.createServer(async (req, res) => {
         const hash = (body.hash || '').trim();
         const stored = readState('mobile-pin.json');
         if (!stored || !stored.hash) return jsonError(res, 400, 'No PIN configured — set one in Settings');
-        if (stored.hash === hash) return jsonOk(res, { ok: true });
+        const a = Buffer.from(stored.hash), b = Buffer.from(hash.padEnd(stored.hash.length, '\0').slice(0, stored.hash.length));
+        const match = a.length === b.length && crypto.timingSafeEqual(a, b) && stored.hash === hash;
+        if (match) return jsonOk(res, { ok: true });
         return jsonOk(res, { ok: false, reason: 'Incorrect PIN' });
       }
 
