@@ -2,14 +2,6 @@
   "messages": [
     {
       "role": "user",
-      "content": "Please make note that when I’m talking in this chat on mobile it’s to make updates/Changes to PC so PC is where we should reference updates. Also, how does Tyler approve the hit pull & push?"
-    },
-    {
-      "role": "assistant",
-      "content": "Noted and saved to memory. Now for your question:\n\n---\n\n## How Tyler Approves the Git Pull + Push\n\nBased on how op_sec is working in J_Claw:\n\n**Easiest way -- Tyler runs it directly in the terminal on the PC:**\n```\ncd C:\\Users\\Tyler\\Desktop\\J-Claw-Reborn\ngit pull origin master\ngit push origin master\n```\nThis doesn't go through op_sec hooks at all -- it's just a standard git sync. The op_sec approval flow is for **Claude Code coding sessions** (file edits/commits), not for pull/push operations Tyler runs manually.\n\n**If there's a merge conflict**, Tyler would see it in the terminal output and can resolve it there.\n\n---\n\nThe short answer: **Tyler just opens a terminal, navigates to the J-Claw-Reborn folder, and runs `git pull` then `git push`.** No approval UI needed for that -- it's a direct git operation, not a Claude Code session."
-    },
-    {
-      "role": "user",
       "content": "In administrator powershell?"
     },
     {
@@ -399,7 +391,15 @@
     {
       "role": "assistant",
       "content": "All 12 additions verified. Here's the full summary of everything done:\n\n---\n\n## Changes Made\n\n### 1. Division Cards → JRPG Character Identity\nHome tab division cards now show **VAEL / SEREN / KAELEN / LYRIN / ZETH / LYKE** as the primary name (large, in character color), with the order name as a small subtitle. Status pills are now:\n- **ON QUEST** (blue) — was \"running\"\n- **RESTING** (grey) — was \"idle\"  \n- **WOUNDED** (red) — was \"error\"\n\n### 2. Skill Cards → JRPG Ability Names + Descriptions\nThe skills panel in Command now shows ability names instead of raw hyphenated strings:\n- `job-intake` → **Track Target** *\"Hunt new targets from all sources\"*\n- `market-scan` → **Read the Runes** *\"Scan for high-priority signals\"*\n- `device-posture` → **Armor Check** *\"Verify device security posture\"*\n- `trading-report` → **Prophecy Report** *\"Full cycle performance analysis\"*\n- ...and 20+ more. Raw skill ID is shown in small grey text for reference.\n\n### 3. WS Handler → Live Skill Dot Updates\n`_handleWSMessage` now:\n- On `division_status_changed` — updates **every skill dot** for that division live (idle → running → done) without needing to reload the page\n- On `task_completed` — updates the **specific skill's dot** to done, updates the \"Last: just now\" text, shows ability name in toast (`\"Track Target complete ✓\"`) instead of raw skill name\n\n### 4. Strategy Lab (4th Trading Tab)\nIntel → Trading now has a **Strategy Lab** tab showing:\n- Active strategy name, Win Rate, Sharpe, Cycle count\n- **Read the Runes / Shadow Trade / Prophecy Report** quick-trigger buttons with loading state\n- SEREN's last cycle notes/summary\n\n### 5. Alert Sheet → Live Packet Enrichment\nWhen you tap an alert, the sheet now **fetches the actual division packet** async and populates:\n- Real escalation reason (from the packet) instead of hardcoded text\n- Real packet summary as the recommended action\n- Up to 3 live action items from the packet\n- Stale items are cleaned up when the sheet closes"
+    },
+    {
+      "role": "user",
+      "content": "The chats in the mobile dashboard should swipe up and down more cleanly."
+    },
+    {
+      "role": "assistant",
+      "content": "All clear. Here's exactly what was changed and why each one matters:\n\n---\n\n## What Was Fixed\n\n### 1. `overscroll-behavior: contain` on `#chat-messages`\n**Was:** hitting the top or bottom of the chat panel caused the entire page to bounce or pull-to-refresh to trigger mid-conversation.  \n**Now:** scroll is fully contained inside the chat panel. Reaching the top or bottom stops cleanly.\n\n### 2. `overflow: hidden` on the chat screen container\n**Was:** both `#screens` (the outer wrapper) and `#chat-messages` were scrollable at the same time -- two competing scroll areas that would fight each other.  \n**Now:** the outer wrapper is locked when in chat mode. Only the inner messages container scrolls.\n\n### 3. Removed `scroll-behavior: smooth` from `#screens`\n**Was:** the smooth setting on the outer container was fighting and overriding scroll behavior inside `#chat-messages`.  \n**Now:** each scrollable area controls its own behavior independently.\n\n### 4. Swipe gesture handler skips chat touches\n**Was:** swiping up through long messages could accidentally trigger left/right tab switching, or a downward scroll at the top could fire pull-to-refresh.  \n**Now:** any touch that starts inside `#chat-messages` or the input bar is ignored by the global gesture handler entirely.\n\n### 5. `_scrollChatToBottom(smooth)` helper replaces all raw `scrollTop` hacks\n**Was:** `scrollTop = 99999` was an instant jarring snap used during streaming. `scrollTop = msgs.scrollHeight` was also instant.  \n**Now:** new messages and streaming updates scroll smoothly (`behavior: 'smooth'`). Loading saved history still snaps instantly (`behavior: 'auto'`) -- correct, since you want to be at the bottom when the chat loads, not watch it scroll there.\n\nNo server restart needed -- page reload picks everything up."
     }
   ],
-  "last_updated": "2026-03-22T16:02:25.655Z"
+  "last_updated": "2026-03-22T16:06:40.465Z"
 }

@@ -3298,12 +3298,49 @@ const server = http.createServer(async (req, res) => {
         const skill = (body.skill || '').trim();
         if (!skill) return jsonError(res, 400, 'skill required');
         if (!SKILL_TASK_MAP[skill]) return jsonError(res, 400, `Unknown skill: ${skill}`);
-        logActivity('MOBILE', `Skill triggered via mobile: ${skill}`, 'blue');
+        // Support optional params (e.g. prompt for image-generate)
+        const extraArgs = body.params ? [JSON.stringify(body.params)] : [];
+        if (body.params?.prompt) {
+          logActivity('MOBILE', `Skill triggered via mobile: ${skill} (with prompt)`, 'blue');
+        } else {
+          logActivity('MOBILE', `Skill triggered via mobile: ${skill}`, 'blue');
+        }
         // Fire-and-forget — don't await
-        runSkillViaPython(skill, body.division || 'MOBILE').then(ok => {
+        runSkillViaPython(skill, body.division || 'MOBILE', extraArgs).then(ok => {
           broadcastWS('task_completed', { skill, ok });
         });
         return jsonOk(res, { ok: true, message: `${skill} queued` });
+      }
+
+      // ── Skills: run a combo (sequential multi-skill workflow) ─────────────────
+      if (method === 'POST' && reqPath === '/mobile/api/skills/combo') {
+        const body   = await parseBody(req);
+        const skills = (body.skills || []).filter(s => typeof s === 'string' && s.trim());
+        const name   = (body.name || 'Combo').trim();
+        const prompt = body.prompt || null;
+        if (!skills.length) return jsonError(res, 400, 'skills required');
+        for (const s of skills) {
+          if (!SKILL_TASK_MAP[s]) return jsonError(res, 400, `Unknown skill: ${s}`);
+        }
+        logActivity('MOBILE', `Combo triggered via mobile: ${name} (${skills.join(' → ')})`, 'blue');
+        // Run sequentially in background
+        (async () => {
+          for (const skill of skills) {
+            broadcastWS('task_started', { skill, combo: name });
+            const extraArgs = (prompt && ['image-generate','sprite-generate'].includes(skill))
+              ? [JSON.stringify({ prompt })] : [];
+            const ok = await runSkillViaPython(skill, 'MOBILE', extraArgs);
+            broadcastWS('task_completed', { skill, ok, combo: name });
+            if (!ok) {
+              logActivity('MOBILE', `Combo ${name} failed at ${skill}`, 'red');
+              broadcastWS('combo_completed', { name, skills, success: false, failed_at: skill });
+              return;
+            }
+          }
+          logActivity('MOBILE', `Combo ${name} complete`, 'green');
+          broadcastWS('combo_completed', { name, skills, success: true });
+        })();
+        return jsonOk(res, { ok: true, message: `${name} started` });
       }
 
       // ── Alerts: action (dismiss/snooze/escalate) ──────────────────────────────

@@ -834,5 +834,47 @@
     },
     "total_event": 40,
     "ts": "2026-03-22T16:02:40.510535+00:00"
+  },
+  {
+    "id": "0834c8de",
+    "type": "skill_complete",
+    "division": "opportunity",
+    "skill": "job-intake",
+    "commander": "VAEL",
+    "color": "#f59e0b",
+    "enemy": "false_lead",
+    "enemy_name": "False Lead",
+    "xp": 10,
+    "multiplier": 1.0,
+    "rank_up": false,
+    "rank_up_msg": "",
+    "new_rank": "Sovereign Tracker",
+    "chapter": {
+      "title": "Chapter IV \u2014 The Iron Pact",
+      "narration": "All five orders stand united. An ancient darkness gathers on the horizon. J_Claw must forge the pact before the veil breaks."
+    },
+    "total_event": 41,
+    "ts": "2026-03-22T16:08:36.024087+00:00"
+  },
+  {
+    "id": "bc485dc0",
+    "type": "skill_complete",
+    "division": "opportunity",
+    "skill": "hard-filter",
+    "commander": "VAEL",
+    "color": "#f59e0b",
+    "enemy": "false_lead",
+    "enemy_name": "False Lead",
+    "xp": 5,
+    "multiplier": 1.0,
+    "rank_up": false,
+    "rank_up_msg": "",
+    "new_rank": "Sovereign Tracker",
+    "chapter": {
+      "title": "Chapter IV \u2014 The Iron Pact",
+      "narration": "All five orders stand united. An ancient darkness gathers on the horizon. J_Claw must forge the pact before the veil breaks."
+    },
+    "total_event": 42,
+    "ts": "2026-03-22T16:08:36.043581+00:00"
   }
 ]

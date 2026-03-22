@@ -1,9 +1,9 @@
 {
   "division": "opportunity",
-  "generated_at": "2026-03-22T15:07:23.423341+00:00",
+  "generated_at": "2026-03-22T16:08:36.008969+00:00",
   "skill": "job-intake",
   "status": "success",
-  "summary": "All source health is \"ok,\" with no new opportunities fetched. Concerns include the partial data from Adzuna, which may affect the completeness of the job intake.",
+  "summary": "All source platforms (WeWorkRemotely, RemoteOK, Remotive) reported \"ok\" status, with Adzuna showing partial data. No new job listings were fetched, and there are currently no jobs scoring in the A, B, or C categories.",
   "action_items": [],
   "metrics": {
     "new_jobs_found": 0,
