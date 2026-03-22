@@ -7262,6 +7262,9 @@ function closeAlertSheet() {
   document.getElementById('alert-sheet').classList.remove('open');
   _activeAlertId = null;
   _activeAlertDiv = null;
+  // Clean up any live-fetched action items so they don't bleed into the next alert
+  const stale = document.querySelector('#alert-sheet .as-live-actions');
+  if (stale) stale.remove();
 }
 
 async function alertSheetAction(action) {
