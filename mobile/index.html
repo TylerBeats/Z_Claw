@@ -1730,6 +1730,7 @@
         <button class="pill-tab active" onclick="switchTradingPill('overview',this)">Overview</button>
         <button class="pill-tab" onclick="switchTradingPill('signals',this)">Signals</button>
         <button class="pill-tab" onclick="switchTradingPill('history',this)">History</button>
+        <button class="pill-tab" onclick="switchTradingPill('lab',this)">Strategy Lab</button>
       </div>
       <div id="trading-pill-overview">
         <div id="trading-content"><div class="loading">Loading...</div></div>
@@ -1739,6 +1740,9 @@
       </div>
       <div id="trading-pill-history" style="display:none;">
         <div id="trading-history-content"><div class="loading">Loading...</div></div>
+      </div>
+      <div id="trading-pill-lab" style="display:none;">
+        <div id="trading-lab-content"></div>
       </div>
     </div>
 
@@ -2908,8 +2912,76 @@ function switchTradingPill(pill, btnEl) {
   document.getElementById('trading-pill-overview').style.display = pill === 'overview' ? '' : 'none';
   document.getElementById('trading-pill-signals').style.display  = pill === 'signals'  ? '' : 'none';
   document.getElementById('trading-pill-history').style.display  = pill === 'history'  ? '' : 'none';
+  document.getElementById('trading-pill-lab').style.display      = pill === 'lab'      ? '' : 'none';
   if (pill === 'signals') loadTradingSignals();
   if (pill === 'history') loadTradingHistory();
+  if (pill === 'lab')     loadTradingLab();
+}
+
+let _labRunning = false;
+async function loadTradingLab() {
+  const el = document.getElementById('trading-lab-content');
+  if (!el) return;
+  try {
+    const d = await api('/mobile/api/trading');
+    const strat = d.strategy || {};
+    const stratName = strat.name || d.strategy_name || 'Unknown Strategy';
+    const winRate   = d.win_rate != null ? d.win_rate + '%' : '—';
+    const sharpe    = d.sharpe   != null ? d.sharpe.toFixed(3) : '—';
+    const cycles    = d.cycle_number ?? '—';
+    el.innerHTML = `
+      <div class="section-title" style="color:var(--cyan);">⚗ Strategy Lab</div>
+      <div class="card" style="margin-bottom:12px;">
+        <div style="font-size:11px;color:var(--subtext);margin-bottom:6px;">ACTIVE STRATEGY</div>
+        <div style="font-size:15px;font-weight:700;color:var(--cyan);margin-bottom:10px;">${escHtml(stratName)}</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <div class="tier-box" style="flex:1;min-width:60px;"><div class="tv">${winRate}</div><div class="tl">Win Rate</div></div>
+          <div class="tier-box" style="flex:1;min-width:60px;"><div class="tv">${sharpe}</div><div class="tl">Sharpe</div></div>
+          <div class="tier-box" style="flex:1;min-width:60px;"><div class="tv">${cycles}</div><div class="tl">Cycles</div></div>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:12px;">
+        <div style="font-size:11px;color:var(--subtext);margin-bottom:8px;">RUN SKILL</div>
+        <button class="btn-primary" style="width:100%;margin-bottom:8px;" id="lab-btn-scan" onclick="labRunSkill('market-scan','lab-btn-scan')">
+          📡 Read the Runes — Market Scan
+        </button>
+        <button class="btn-primary" style="width:100%;margin-bottom:8px;background:var(--overlay);color:var(--text);" id="lab-btn-trader" onclick="labRunSkill('virtual-trader','lab-btn-trader')">
+          ⚔ Shadow Trade — Run Virtual Trader
+        </button>
+        <button class="btn-primary" style="width:100%;background:var(--overlay);color:var(--text);" id="lab-btn-report" onclick="labRunSkill('trading-report','lab-btn-report')">
+          📜 Prophecy Report — Full Analysis
+        </button>
+      </div>
+      <div class="card">
+        <div style="font-size:11px;color:var(--subtext);margin-bottom:8px;">SEREN'S INSIGHT</div>
+        <div style="font-size:12px;color:var(--subtext);line-height:1.6;">
+          ${d.notes || d.summary || strat.description || 'No insight available from the last cycle. Run a Prophecy Report to generate SEREN\'s analysis.'}
+        </div>
+      </div>`;
+  } catch(e) {
+    el.innerHTML = `<div class="empty-state"><p style="color:var(--red);">${escHtml(e.message)}</p></div>`;
+  }
+}
+
+async function labRunSkill(skill, btnId) {
+  if (_labRunning) { showToast('A skill is already running…'); return; }
+  _labRunning = true;
+  haptic('medium');
+  const btn = document.getElementById(btnId);
+  const origText = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Running…'; }
+  try {
+    const res = await api('/mobile/api/skills/trigger', { method: 'POST', body: JSON.stringify({ skill }) });
+    showToast(res.message || skill + ' queued');
+    haptic('success');
+  } catch(e) {
+    showToast('Error: ' + e.message);
+    haptic('error');
+  }
+  setTimeout(() => {
+    _labRunning = false;
+    if (btn) { btn.disabled = false; btn.textContent = origText; }
+  }, 8000);
 }
 async function loadTradingSignals() {
   const el = document.getElementById('trading-signals-content');
@@ -6875,19 +6947,62 @@ function _connectWebSocket() {
   }
 }
 
+// Division key → skills list (for live dot updates)
+const _DIV_SKILLS = {
+  opportunity:    ['job-intake','hard-filter','funding-finder'],
+  trading:        ['market-scan','virtual-trader','trading-report'],
+  dev_automation: ['repo-monitor','refactor-scan','doc-update','debug-agent','artifact-manager','dev-digest'],
+  personal:       ['health-logger','burnout-monitor','perf-correlation','personal-digest'],
+  op_sec:         ['device-posture','breach-check','threat-surface','cred-audit','security-scan','privacy-scan','opsec-digest'],
+  production:     ['image-generate','sprite-generate','asset-catalog','production-digest'],
+};
+
+function _updateSkillDot(skill, state) {
+  // state: 'running' | 'done' | 'idle' | 'error'
+  const dot = document.getElementById('sdot-' + skill);
+  const card = document.getElementById('skill-card-' + skill);
+  if (!dot) return;
+  dot.className = 'skill-dot skill-dot-' + (state === 'running' ? 'running' : state === 'done' ? 'done' : state === 'error' ? 'idle' : 'idle');
+  if (card) {
+    card.classList.toggle('skill-running', state === 'running');
+  }
+}
+
 function _handleWSMessage(msg) {
   switch (msg.type) {
     case 'connected':
       break;
     case 'alert_fired':
-    case 'division_status_changed':
       if (_currentTab === 'home') loadOverview(true);
       updateBadge('alert-badge', (msg.alerts || []).length + _approvalCount);
       break;
-    case 'task_completed':
-      showToast((msg.skill || 'Skill') + (msg.ok ? ' complete' : ' failed'));
-      if (_currentTab === 'home') setTimeout(() => loadOverview(true), 500);
+    case 'division_status_changed': {
+      // Update home tab
+      if (_currentTab === 'home') loadOverview(true);
+      // Live-update all skill dots for this division
+      const divSkills = _DIV_SKILLS[msg.division] || [];
+      const dotState = (msg.status || '').toLowerCase() === 'running' ? 'running' : (msg.status || '').toLowerCase() === 'error' ? 'error' : 'idle';
+      divSkills.forEach(s => _updateSkillDot(s, dotState));
       break;
+    }
+    case 'task_completed': {
+      const skillName = _SKILL_ABILITY_NAMES?.[msg.skill] || msg.skill || 'Skill';
+      showToast(skillName + (msg.ok ? ' complete ✓' : ' failed ✗'));
+      if (msg.ok) haptic('success');
+      // Update that specific skill dot
+      if (msg.skill) {
+        _updateSkillDot(msg.skill, msg.ok ? 'done' : 'idle');
+        // Update last run display
+        const card = document.getElementById('skill-card-' + msg.skill);
+        if (card) {
+          const lastEl = card.querySelector('.skill-card-last');
+          if (lastEl) lastEl.textContent = 'Last: just now';
+        }
+      }
+      if (_currentTab === 'home') setTimeout(() => loadOverview(true), 500);
+      if (_currentTab === 'intel' && msg.division === 'trading') setTimeout(() => loadTrading(true), 500);
+      break;
+    }
     case 'xp_gained':
     case 'rank_up':
       if (_currentTab === 'jclaw') setTimeout(() => loadStatsTab(), 800);
@@ -7097,21 +7212,49 @@ const _ALERT_TRIGGERS = {
   'market-scan':    'Market scan generated an actionable signal that requires review.',
 };
 
-function openAlertSheet(alertId, division, message, severity, generatedAt, skill) {
+async function openAlertSheet(alertId, division, message, severity, generatedAt, skill) {
   _activeAlertId  = alertId;
   _activeAlertDiv = division;
   const sev = (severity || 'HIGH').toUpperCase();
-  const sevColor = sev === 'HIGH' ? 'var(--red)' : sev === 'MEDIUM' ? 'var(--yellow)' : 'var(--blue)';
   document.getElementById('as-title').textContent   = message || 'Alert';
   document.getElementById('as-trigger').textContent = _ALERT_TRIGGERS[skill] || `The ${division} division raised this alert during its last run.`;
   document.getElementById('as-recommendation').textContent = _ALERT_RECOMMENDATIONS[sev] || _ALERT_RECOMMENDATIONS.HIGH;
   const meta = document.getElementById('as-meta');
   const ts   = generatedAt ? relTime(generatedAt) : '';
+  const charName = ({opportunity:'VAEL',trading:'SEREN',dev_automation:'KAELEN',personal:'LYRIN',op_sec:'ZETH',production:'LYKE'})[division] || division;
   meta.innerHTML = `<span class="pill pill-${sev === 'HIGH' ? 'red' : sev === 'MEDIUM' ? 'yellow' : 'blue'}" style="font-size:10px;">${escHtml(sev)}</span>
-    <span>${escHtml(division || '')}</span>${ts ? `<span>${escHtml(ts)}</span>` : ''}${skill ? `<span>${escHtml(skill)}</span>` : ''}`;
+    <span style="font-weight:600;">${escHtml(charName)}</span>${ts ? `<span>${escHtml(ts)}</span>` : ''}${skill ? `<span style="color:var(--subtext);">${escHtml(skill)}</span>` : ''}`;
   document.getElementById('alert-sheet-backdrop').classList.add('open');
   document.getElementById('alert-sheet').classList.add('open');
   haptic('light');
+  // Async: try to enrich with live packet data
+  if (division && skill) {
+    try {
+      const report = await api('/mobile/api/division/' + encodeURIComponent(division) + '/report');
+      const pkt = (report.packets || {})[skill.replace(/-/g,'_')] || (report.packets || {})[skill] || {};
+      const trigEl = document.getElementById('as-trigger');
+      const recEl  = document.getElementById('as-recommendation');
+      if (pkt.escalation_reason && trigEl) {
+        trigEl.textContent = pkt.escalation_reason;
+      }
+      if (pkt.summary && recEl && pkt.summary.length > 20) {
+        recEl.textContent = pkt.summary;
+      }
+      // Show action items if any
+      const body = document.querySelector('#alert-sheet .as-body');
+      if (body && pkt.action_items && pkt.action_items.length) {
+        const existing = body.querySelector('.as-live-actions');
+        if (existing) existing.remove();
+        const div = document.createElement('div');
+        div.className = 'as-live-actions';
+        div.innerHTML = `<div class="as-section-lbl" style="margin-top:10px;">Action Items</div>` +
+          pkt.action_items.slice(0, 3).map(a =>
+            `<div class="as-section-val" style="font-size:11px;margin-bottom:4px;">• ${escHtml(typeof a === 'string' ? a : (a.description || a.action || JSON.stringify(a)))}</div>`
+          ).join('');
+        body.appendChild(div);
+      }
+    } catch(e) { /* silently fail — static text stays */ }
+  }
 }
 
 function closeAlertSheet() {
