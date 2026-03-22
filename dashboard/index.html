@@ -1251,16 +1251,6 @@
 
   </div>
 
-  <!-- ── Reports Panel ── -->
-  <div id="reports-panel">
-    <div class="section-header">// DIVISION REPORTS</div>
-    <div class="reports-div-tabs" id="reports-div-tabs"></div>
-    <div class="reports-agent-tabs" id="reports-agent-tabs"></div>
-    <div class="pixel-box" id="report-content">
-      <div style="padding:20px;text-align:center;color:var(--subtext);font-size:7px;">Loading reports...</div>
-    </div>
-  </div>
-
   <!-- ── Task Queue + Briefing ── -->
   <div class="grid-2">
     <div>
@@ -1950,9 +1940,121 @@ Hit ⚡ GENERATE NOW to compile immediately.
       } catch(e) {}
     }
 
+    // ── Tab navigation ──
+    let _activeTab = 'home';
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active-tab'));
+      const panel = document.getElementById('panel-' + tab);
+      const btn   = document.getElementById('navtab-' + tab);
+      if (panel) panel.classList.add('active');
+      if (btn)   btn.classList.add('active-tab');
+      _activeTab = tab;
+      if (tab === 'reports') { loadReports(); buildReportTabs(); }
+      if (tab === 'log') { const lf = document.getElementById('log-feed'); if (lf) lf.scrollTop = lf.scrollHeight; }
+      if (tab === 'jclaw') { loadJClawPanel(); }
+    }
+
+    // ── J_CLAW game panel ──
+    async function loadJClawPanel() {
+      const el = document.getElementById('jclaw-game-content');
+      if (!el) return;
+      try {
+        const s = await fetch('../state/jclaw-stats.json?t=' + Date.now()).then(r => r.json());
+        const divColors = { trading:'#06b6d4', opportunity:'#f59e0b', dev_automation:'#a78bfa', personal:'#10b981', op_sec:'#ef4444', production:'#f97316' };
+        const divNames  = { trading:'SEREN', opportunity:'VAEL', dev_automation:'KAELEN', personal:'LYRIN', op_sec:'ZETH', production:'LYKE' };
+        const divOrders = { trading:'Iron Codex', opportunity:'Dawnhunt', dev_automation:'Veilkeepers', personal:'Thornward', op_sec:'Null Breach', production:'Lykeon Forge' };
+
+        const xpInLevel   = s.base_xp || 0;
+        const xpNeeded    = s.xp_to_next_level || 100;
+        const pct         = Math.min(100, Math.round(xpInLevel / xpNeeded * 100));
+        const p           = s.prestige || 0;
+
+        let html = '';
+
+        // ── Rank summary ──
+        html += `<div class="pixel-box" style="margin-bottom:12px;border-color:var(--purple);">
+          <div style="font-size:11px;color:var(--purple);letter-spacing:1px;text-shadow:0 0 12px var(--purple);margin-bottom:6px;">${(s.rank || 'Apprentice of the Realm').toUpperCase()}</div>
+          <div style="font-size:8px;color:var(--subtext);margin-bottom:8px;">LVL ${s.level || 1} // J_CLAW · ${s.total_xp_earned || 0} total XP earned</div>
+          <div style="height:10px;background:var(--overlay);border:2px solid var(--border);margin-bottom:6px;overflow:hidden;">
+            <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,var(--green),var(--teal));transition:width 0.4s;"></div>
+          </div>
+          <div style="font-size:7px;color:var(--subtext);margin-bottom:8px;">${xpInLevel} / ${xpNeeded} XP</div>
+          ${p > 0 ? `<div style="font-size:8px;color:var(--yellow);margin-bottom:8px;">${'⭐'.repeat(p)} PRESTIGE ${p} · ×${s.prestige_multiplier || 1} XP BONUS</div>` : ''}
+          <div id="streak-display" style="font-size:9px;color:var(--yellow);margin-bottom:8px;min-height:12px;"></div>
+          <div id="achievements-row" style="margin-bottom:8px;"></div>
+          <button class="bestow-btn" onclick="openBestowModal()">⚔ BESTOW HONOR</button>
+        </div>`;
+
+        // ── Party grid ──
+        html += '<div class="section-header">// THE PARTY</div>';
+        html += '<div class="party-grid">';
+        const divs = s.divisions || {};
+        for (const [key, data] of Object.entries(divs)) {
+          const color  = divColors[key]  || '#7c3aed';
+          const cmd    = divNames[key]   || key;
+          const order  = divOrders[key]  || '';
+          const streak = (s.streaks || {})[key] || {};
+          html += `<div class="party-card" style="border-color:${color};box-shadow:4px 4px 0 ${color}44;">
+            <div class="party-card-name" style="color:${color};">${cmd}</div>
+            <div class="party-card-order">${order}</div>
+            <div class="party-card-rank">⚔ ${escHtml(data.rank || '—')}</div>
+            <div class="party-card-xp">${data.xp || 0} XP${streak.current > 0 ? ` · 🔥${streak.current}d` : ''}</div>
+          </div>`;
+        }
+        html += '</div>';
+
+        // ── Division ranks (badges) ──
+        html += '<div class="section-header">// DIVISION STATUS</div>';
+        html += '<div class="division-badges">';
+        const DIVS_LIST = [['trading','TRADING'],['opportunity','OPPORTUNITY'],['dev_automation','DEV TEAM'],['personal','PERSONAL'],['op_sec','OP-SEC'],['production','FORGE']];
+        DIVS_LIST.forEach(([key, label]) => {
+          const data  = divs[key] || {};
+          const color = divColors[key] || '#7c3aed';
+          html += `<div class="div-badge" style="border-color:${color}55;"><span style="color:${color};">${label}</span><span id="badge-${key}">${escHtml(data.rank || '—')}</span><span id="xp-${key}" class="div-xp">${data.xp || 0} XP</span></div>`;
+        });
+        html += '</div>';
+
+        // ── Stats ──
+        html += '<div class="section-header">// STATS</div>';
+        html += '<div id="stats-panel-content" style="width:100%;"><div style="font-size:8px;color:var(--subtext);">Loading...</div></div>';
+        loadStatsPanel();
+
+        el.innerHTML = html;
+
+        // Re-render achievements row since it's now inside jclaw panel
+        const earned = new Set((s.achievements || []).map(a => typeof a === 'string' ? a : a.id));
+        document.getElementById('achievements-row').innerHTML =
+          ALL_ACHIEVEMENTS.map(a =>
+            `<span class="achievement-badge${earned.has(a.id) ? ' earned' : ''}">${a.name}</span>`
+          ).join('');
+
+        // Streak in jclaw panel
+        const streakLabels = {opportunity:'OPPS',trading:'TRADE',dev_automation:'DEV',personal:'PERS',op_sec:'OPSEC',production:'FORGE'};
+        const streakParts  = Object.entries(s.streaks || {})
+          .filter(([,v]) => v.current > 0)
+          .map(([k,v]) => `${streakLabels[k]||k} 🔥${v.current}d`);
+        const sdEl = document.getElementById('streak-display');
+        if (sdEl) sdEl.textContent = streakParts.join('  ');
+
+        // Prestige badge
+        const prestigeBadge = document.getElementById('prestige-badge');
+        if (prestigeBadge) {
+          if (p > 0) { prestigeBadge.textContent = `${'⭐'.repeat(p)} PRESTIGE ${p}  ×${s.prestige_multiplier || 1}`; prestigeBadge.style.display = 'block'; }
+          else { prestigeBadge.style.display = 'none'; }
+        }
+
+      } catch(e) { el.innerHTML = `<div style="padding:20px;color:var(--red);font-size:8px;">Failed to load realm data: ${e.message}</div>`; }
+    }
+
+    // Helper needed in panel
+    function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
     // ── Manual refresh ──
     function manualRefresh() {
-      loadState(); loadActivityLog(); loadBriefing(); loadReports(); loadRankCard(); loadTradingCycle();
+      loadState(); loadActivityLog(); loadBriefing(); loadRankCard(); loadTradingCycle();
+      if (_activeTab === 'reports') loadReports();
+      if (_activeTab === 'jclaw')   loadJClawPanel();
       addLog('SYS', 'Manual refresh triggered', 'purple');
     }
 
