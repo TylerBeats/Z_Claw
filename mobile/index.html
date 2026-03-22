@@ -1790,6 +1790,7 @@
       <button class="intel-subnav-btn"        id="isnav-trading" onclick="switchIntelSub('trading')">Trading</button>
       <button class="intel-subnav-btn"        id="isnav-health"  onclick="switchIntelSub('health')">Health</button>
       <button class="intel-subnav-btn"        id="isnav-reports" onclick="switchIntelSub('reports')">Reports</button>
+      <button class="intel-subnav-btn"        id="isnav-gallery" onclick="switchIntelSub('gallery')">Gallery</button>
     </div>
 
     <!-- Jobs sub-tab -->
@@ -1848,6 +1849,17 @@
       <div id="reports-ops-wrap" style="padding:0 16px 24px;display:none;">
         <div id="ops-content"><div class="loading">Loading...</div></div>
       </div>
+    <!-- Gallery sub-tab -->
+    <div id="intel-sub-gallery" class="intel-sub-pane" style="padding:0 16px 24px;display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;margin-top:4px;">
+        <div style="font-size:11px;color:var(--subtext);" id="intel-gallery-count">Loading…</div>
+        <button onclick="loadIntelGallery()" style="background:none;border:none;color:var(--accent);font-size:11px;font-weight:700;cursor:pointer;padding:4px 0;">Refresh</button>
+      </div>
+      <div id="intel-gallery-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;">
+        <div class="skeleton" style="height:160px;border-radius:12px;"></div>
+        <div class="skeleton" style="height:160px;border-radius:12px;"></div>
+      </div>
+    </div>
     </div>
   </div>
 
@@ -2766,7 +2778,7 @@ function loadIntelTab(silent = false) {
 
 function switchIntelSub(sub, silent = false) {
   _intelSub = sub;
-  const subs = ['jobs', 'trading', 'health', 'reports'];
+  const subs = ['jobs', 'trading', 'health', 'reports', 'gallery'];
   subs.forEach(s => {
     const pane = document.getElementById('intel-sub-' + s);
     const btn  = document.getElementById('isnav-' + s);
@@ -2777,6 +2789,43 @@ function switchIntelSub(sub, silent = false) {
   if (sub === 'trading') { loadTrading(silent); }
   if (sub === 'health')  loadHealthHistory();
   if (sub === 'reports') loadReportsTab(silent);
+  if (sub === 'gallery') loadIntelGallery();
+}
+
+async function loadIntelGallery() {
+  const grid = document.getElementById('intel-gallery-grid');
+  const count = document.getElementById('intel-gallery-count');
+  if (!grid) return;
+  grid.innerHTML = `<div class="skeleton" style="height:160px;border-radius:12px;"></div><div class="skeleton" style="height:160px;border-radius:12px;"></div>`;
+  try {
+    const data = await api('/mobile/api/generated-images');
+    const images = (data.ok && data.images) ? data.images : [];
+    if (count) count.textContent = images.length ? `${images.length} image${images.length !== 1 ? 's' : ''}` : 'No images yet';
+    if (!images.length) {
+      grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:32px 20px;color:var(--subtext);">
+        <div style="font-size:32px;margin-bottom:8px;opacity:0.4;">🖼</div>
+        <div style="font-size:13px;">No images generated yet.</div>
+        <div style="font-size:11px;margin-top:4px;opacity:0.7;">Run Creative Sprint in Command → Skills → Combos.</div>
+      </div>`;
+      return;
+    }
+    grid.innerHTML = images.map(img => {
+      const parts = img.url.split('/');
+      const filename = parts[parts.length - 1];
+      const assetType = (img.assetType || '').replace(/_/g, ' ');
+      const commander = (img.commander || '').toUpperCase();
+      return `
+        <div class="img-gallery-card" onclick="openImageViewer('${img.url}', '${filename}')">
+          <img src="${img.url}" alt="${filename}" loading="lazy" onerror="this.parentElement.style.display='none'" style="width:100%;aspect-ratio:1/1;object-fit:cover;display:block;background:rgba(255,255,255,0.05);">
+          <div style="padding:8px 10px;">
+            <div style="font-size:9px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:var(--accent);">${commander} · ${assetType}</div>
+            <div style="font-size:11px;color:var(--subtext);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${filename}</div>
+          </div>
+        </div>`;
+    }).join('');
+  } catch(e) {
+    if (grid) grid.innerHTML = `<div style="grid-column:1/-1;padding:20px;color:var(--red);font-size:12px;">Failed to load gallery: ${e.message}</div>`;
+  }
 }
 
 // ── Morning Briefing ─────────────────────────────────────────────────────────
@@ -7199,6 +7248,11 @@ function _handleWSMessage(msg) {
           if (prog) { prog.textContent = 'Complete ✓'; setTimeout(() => { if (prog) prog.style.display = 'none'; }, 3000); }
           showToast(`${combo.name} complete! ✓`);
           haptic('success');
+          // Show gallery button for image-generation combos
+          if (combo.skills && combo.skills.some(s => ['image-generate','sprite-generate'].includes(s))) {
+            const btn = document.getElementById('gallery-btn-' + combo.id);
+            if (btn) btn.style.display = 'block';
+          }
         } else {
           if (prog) { prog.textContent = `Failed at ${_SKILL_ABILITY_NAMES[msg.failed_at] || msg.failed_at} ✗`; setTimeout(() => { if (prog) prog.style.display = 'none'; }, 4000); }
           showToast(`${combo.name} failed ✗`);
@@ -7261,8 +7315,7 @@ async function openGalleryFromServer() {
   grid.innerHTML = `<div class="skeleton" style="height:160px;border-radius:12px;"></div><div class="skeleton" style="height:160px;border-radius:12px;"></div>`;
   sub.textContent = 'Loading…';
   try {
-    const res = await apiFetch('/mobile/api/generated-images');
-    const data = await res.json();
+    const data = await api('/mobile/api/generated-images');
     if (data.ok && data.images) {
       showImageGallery(data.images.map(i => i.url));
     }
@@ -7551,6 +7604,9 @@ async function loadSkillsPanel() {
         <div class="combo-card-desc">${escHtml(combo.desc)}</div>
         <div class="combo-card-chain" style="margin-bottom:0;">${pillsHtml}</div>
         <div class="combo-progress" id="combo-prog-${escAttr(combo.id)}" style="display:none;">Starting…</div>
+        ${combo.skills.some(s => ['image-generate','sprite-generate'].includes(s))
+          ? `<button class="combo-gallery-btn" id="gallery-btn-${escAttr(combo.id)}" style="display:none;margin-top:8px;width:100%;padding:9px;border-radius:8px;background:rgba(168,85,247,0.15);border:1px solid rgba(168,85,247,0.3);color:#a855f7;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;cursor:pointer;" onclick="event.stopPropagation();openGalleryFromServer()">View Generated Images</button>`
+          : ''}
       </div>`;
   }
   html += '</div>';

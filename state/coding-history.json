@@ -2,14 +2,6 @@
   "messages": [
     {
       "role": "user",
-      "content": "Has the update gone through this time?"
-    },
-    {
-      "role": "assistant",
-      "content": "Not yet. The branches are still diverged -- local has 7 commits ahead, remote has 1 commit that hasn't been merged in.\n\nTyler still needs to run those 4 commands. Have Tyler paste this exactly:\n\n```powershell\ngit stash\ngit pull origin master\ngit stash pop\ngit push origin master\n```\n\nAnd paste back the output so I can confirm it went through cleanly."
-    },
-    {
-      "role": "user",
       "content": "Does the server reset button handle this?"
     },
     {
@@ -399,7 +391,15 @@
     {
       "role": "assistant",
       "content": "All changes are in. Here's what was fixed and added:\n\n---\n\n## What Was Wrong\n\nThe prompt was being wrapped as `JSON.stringify({ prompt })` -- e.g. `{\"prompt\":\"a knight\"}` -- and passed as `args[0]` to Python. But the image-generate skill expects **3 positional args**: `asset_type`, `commander`, `subject`. So the function was receiving a JSON string where the asset type should be, and nothing where the prompt/subject should be. The image was generating with defaults and ignoring your input entirely.\n\n---\n\n## What Was Fixed\n\n**`server.js` -- 2 fixes:**\n- `/mobile/api/skills/combo` -- now passes `[assetType, 'generic', prompt]` as positional args instead of `[JSON.stringify({prompt})]`\n- `/mobile/api/skills/trigger` -- same fix for single-skill triggers (e.g. tapping image-generate directly in All Skills view)\n\n**`mobile/index.html` -- asset type selector:**\n- Creative Sprint detail sheet now shows 4 asset type pills below the prompt box: **Portrait** (default), **Chibi Sprite**, **Battle Scene**, **UI Element**\n- Selected type is highlighted in the combo's color, defaults to Portrait on open\n- Selected type is passed through `runCombo()` -> POST body -> server -> Python\n\n---\n\n**Needs PM2 restart** to pick up the `server.js` fix. The HTML changes are live on page reload. After restart, entering a prompt and selecting an asset type will correctly call ComfyUI with your text as the `subject`."
+    },
+    {
+      "role": "user",
+      "content": "Please read last message"
+    },
+    {
+      "role": "assistant",
+      "content": "Here's the diagnosis -- **three separate problems** preventing images from working:\n\n---\n\n## Why Creative Sprint Isn't Generating Images\n\n### Problem 1 -- ComfyUI Is Not Running (Most Likely Root Cause)\n\nThe skill's very first action is `_comfyui_available()` -- it pings `http://127.0.0.1:8188`. If ComfyUI isn't open on Tyler's PC, the skill returns immediately with `status: \"partial\"` and the message *\"ComfyUI is offline.\"* No error shown on mobile, it just silently completes.\n\n**Fix:** Tyler needs to launch ComfyUI on the PC before triggering Creative Sprint. There should be a `run_amd_gpu.bat` in the ComfyUI folder -- that's what the skill's own action item says to run.\n\n---\n\n### Problem 2 -- Images Don't Get Copied to Mobile Assets\n\nEven when ComfyUI generates successfully, the skill only records the ComfyUI-internal filenames (e.g. `jclaw_generic_00001.png`). It creates the output directory at `mobile/assets/generated/generic/portrait_bust/` but **never actually copies or downloads the files** from ComfyUI's output folder into that directory.\n\nComfyUI saves to its own `ComfyUI/output/` folder -- the skill returns those filenames but doesn't move them anywhere. So even a successful run has no images accessible to the mobile dashboard.\n\n---\n\n### Problem 3 -- No Image Display in Mobile After Completion\n\nThe WebSocket `task_completed` event broadcasts the filenames from the packet, but the mobile dashboard has no UI to display them -- there's no image result sheet or gallery that appears after a Creative Sprint run completes.\n\n---\n\n## What Needs to Happen\n\n**Short term (for Tyler to do now):** Open ComfyUI on the PC (`run_amd_gpu.bat`), then retry Creative Sprint from mobile. Check the activity log -- it will say either `image-generate complete` (ComfyUI worked) or `ComfyUI is offline`.\n\n**Code fix needed (I can do this):** Two things need to be added to `image_generate.py`:\n1. After `_submit_and_wait` returns filenames, **fetch each image** from ComfyUI's `/view?filename=X` endpoint and save it to `mobile/assets/generated/`\n2. Add a result display to the mobile dashboard -- after Creative Sprint completes, show the generated images in a bottom sheet with full-screen tap-to-expand\n\nWant me to build both fixes now?"
     }
   ],
-  "last_updated": "2026-03-22T16:38:27.835Z"
+  "last_updated": "2026-03-22T16:48:08.411Z"
 }
