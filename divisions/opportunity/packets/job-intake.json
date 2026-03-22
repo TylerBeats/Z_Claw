@@ -1,16 +1,27 @@
 {
   "division": "opportunity",
-  "generated_at": "2026-03-21T18:09:17.907492+00:00",
+  "generated_at": "2026-03-21T21:16:25.209987+00:00",
   "skill": "job-intake",
   "status": "success",
-  "summary": "The job intake run from WeWorkRemotely, RemoteOK, and Remotive shows all sources as \"ok,\" while Adzuna has partial data. Notable finds include 221 total positions with 4 new opportunities in the D category. No specific concerns noted at this time.",
-  "action_items": [],
+  "summary": "All sourcing platforms are operational with no issues. Notable finds include 20 new remote job listings across various categories, but concerns remain with Adzuna providing only partial data.",
+  "action_items": [
+    {
+      "priority": "high",
+      "description": "[TIER B] Jobgether: Remote Senior DevOps Developer —  | Remote | Pay unspecified | Fit: 6.0/10 | Resume: Technical | https://weworkremotely.com/remote-jobs/jobgether-remote-senior-devops-developer",
+      "requires_matthew": true
+    },
+    {
+      "priority": "high",
+      "description": "[TIER B] Jobgether: DevOps/Infra Lead (Remote) —  | Remote | Pay unspecified | Fit: 6.3/10 | Resume: Technical | https://weworkremotely.com/remote-jobs/jobgether-devops-infra-lead-remote",
+      "requires_matthew": true
+    }
+  ],
   "metrics": {
-    "new_jobs_found": 4,
+    "new_jobs_found": 20,
     "tier_a": 0,
-    "tier_b": 0,
-    "tier_c": 0,
-    "tier_d": 4,
+    "tier_b": 2,
+    "tier_c": 1,
+    "tier_d": 17,
     "source_status": {
       "WeWorkRemotely": "ok",
       "RemoteOK": "ok",

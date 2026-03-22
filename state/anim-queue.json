@@ -1,0 +1,44 @@
+[
+  {
+    "id": "712a11fa",
+    "type": "skill_complete",
+    "division": "personal",
+    "skill": "burnout-monitor",
+    "commander": "LYRIN",
+    "color": "#10b981",
+    "enemy": "burnout_shade",
+    "enemy_name": "Burnout Shade",
+    "xp": 5,
+    "multiplier": 1.0,
+    "rank_up": true,
+    "rank_up_msg": "Wellness Adept \u2192 Flame Tender",
+    "new_rank": "Flame Tender",
+    "chapter": {
+      "title": "Chapter I \u2014 The Realm Awakens",
+      "narration": "A new commander rises. The orders stir, watching from the shadows. The first challenges step forward."
+    },
+    "total_event": 1,
+    "ts": "2026-03-22T00:00:13.603940+00:00"
+  },
+  {
+    "id": "a27b12c5",
+    "type": "skill_complete",
+    "division": "dev_automation",
+    "skill": "refactor-scan",
+    "commander": "KAELEN",
+    "color": "#a78bfa",
+    "enemy": "code_rot",
+    "enemy_name": "Code Rot",
+    "xp": 5,
+    "multiplier": 1.0,
+    "rank_up": false,
+    "rank_up_msg": "",
+    "new_rank": "Forge Warden",
+    "chapter": {
+      "title": "Chapter I \u2014 The Realm Awakens",
+      "narration": "A new commander rises. The orders stir, watching from the shadows. The first challenges step forward."
+    },
+    "total_event": 2,
+    "ts": "2026-03-22T00:02:49.911246+00:00"
+  }
+]

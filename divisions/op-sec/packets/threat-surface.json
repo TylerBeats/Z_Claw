@@ -1,28 +1,33 @@
 {
   "division": "op-sec",
-  "generated_at": "2026-03-21T01:38:59.311456+00:00",
+  "generated_at": "2026-03-21T22:05:06.310556+00:00",
   "skill": "threat-surface",
   "status": "success",
-  "summary": "The system has multiple unexpected listening ports and a scheduled task that appears to be running a potentially malicious executable.",
+  "summary": "The machine has several open ports and scheduled tasks that are not in the approved safe list. The high number of listening ports and the presence of potentially malicious or unnecessary services should be investigated.",
   "action_items": [
     {
-      "priority": "high",
-      "description": "[HIGH] PORT: Multiple high-numbered ports (17500, 27036, etc.) are in LISTENING state, which could indicate a potential backdoor or unauthorized service. — Investigate the purpose of these listening ports and consider blocking them if not needed.",
-      "requires_matthew": true
+      "priority": "normal",
+      "description": "[MEDIUM] PORT: Multiple dynamic RPC ports (49664-49669) are open, which could indicate potential network activity that is not part of a known safe list. — Review the processes using these ports and ensure they are legitimate. Consider implementing firewall rules to restrict access.",
+      "requires_matthew": false
     },
     {
       "priority": "high",
-      "description": "[HIGH] TASK: The task 'AMDRyzenMasterSDKTask' is running a potentially malicious executable located at 'C:\\Program Files\\AMD\\CNext\\CNext\\cpumetricsserver.exe'. The last result code (267009) suggests an error, but the executable's origin and purpose are unclear. — Review the task's source and purpose. If unsure, consider disabling or removing it.",
+      "description": "[HIGH] TASK: The task 'AMD Install Manager - Check For Updates' is scheduled daily but has not run since 3/21/2026. This could indicate that the task is either not functioning correctly or is being used for malicious purposes. — Check the task's last result and logs to ensure it is running as expected. If there are no issues, consider disabling the task if it is not necessary.",
       "requires_matthew": true
+    },
+    {
+      "priority": "normal",
+      "description": "[MEDIUM] TASK: The task 'AMDRyzenMasterSDKTask' is running but has a non-zero exit code (267009). This could indicate that the task is encountering an error. — Review the task's logs and ensure it is functioning correctly. If there are issues, consider updating or reinstalling the AMD software.",
+      "requires_matthew": false
     }
   ],
   "metrics": {
-    "anomaly_count": 2,
-    "high_severity": 2
+    "anomaly_count": 3,
+    "high_severity": 1
   },
   "artifact_refs": [],
   "escalate": true,
-  "escalation_reason": "2 HIGH severity anomalies detected",
+  "escalation_reason": "1 HIGH severity anomalies detected",
   "task_id": "",
   "confidence": null,
   "urgency": "normal",
