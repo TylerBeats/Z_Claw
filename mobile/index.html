@@ -949,6 +949,105 @@
       border-radius: 8px;
       height: 14px; margin-bottom: 8px;
     }
+    .skeleton-card {
+      background: linear-gradient(90deg, var(--surface) 0%, var(--overlay) 50%, var(--surface) 100%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s ease-in-out infinite;
+      border-radius: 12px; height: 80px; margin-bottom: 10px;
+    }
+    .skeleton-list { padding: 12px 16px; }
+
+    /* ── Tab fade-in ── */
+    .screen { opacity: 1; transition: opacity 0.15s ease; }
+    .screen.tab-fade-in { animation: tabFadeIn 0.15s ease forwards; }
+    @keyframes tabFadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    /* ── WS dot ── */
+    #ws-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--overlay); display: inline-block; flex-shrink: 0;
+      transition: background 0.3s;
+    }
+    #ws-dot.ws-connected { background: var(--green); }
+    #ws-dot.ws-error     { background: var(--red); }
+
+    /* ── Alert deep-dive sheet ── */
+    #alert-sheet-backdrop { position: fixed; inset: 0; z-index: 8090; background: rgba(0,0,0,0.55); opacity: 0; pointer-events: none; transition: opacity 0.25s ease; backdrop-filter: blur(4px); }
+    #alert-sheet-backdrop.open { opacity: 1; pointer-events: all; }
+    #alert-sheet { position: fixed; bottom: 0; left: 0; right: 0; z-index: 8099; background: var(--surface); border-radius: 20px 20px 0 0; border-top: 1px solid var(--border); padding: 0 0 calc(var(--safe-bottom) + 12px); transform: translateY(100%); transition: transform 0.35s cubic-bezier(0.32,0.72,0,1); max-height: 70dvh; overflow-y: auto; }
+    #alert-sheet.open { transform: translateY(0); }
+    .as-handle { width: 40px; height: 4px; background: var(--border); border-radius: 2px; margin: 12px auto 0; }
+    .as-header { padding: 14px 20px 12px; border-bottom: 1px solid var(--border); }
+    .as-title { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+    .as-meta { font-size: 11px; color: var(--subtext); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .as-body { padding: 14px 20px; }
+    .as-section-lbl { font-size: 9px; color: var(--subtext); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 4px; font-weight: 700; }
+    .as-section-val { font-size: 12px; color: var(--text); line-height: 1.5; margin-bottom: 14px; }
+    .as-actions { display: flex; gap: 8px; padding: 0 20px; flex-wrap: wrap; }
+    .as-btn { flex: 1; min-width: 90px; padding: 12px 8px; border-radius: 10px; border: 1px solid var(--border); background: var(--overlay); color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer; text-align: center; }
+    .as-btn-dismiss { border-color: var(--subtext); color: var(--subtext); }
+    .as-btn-snooze  { border-color: var(--yellow);  color: var(--yellow); }
+    .as-btn-escalate{ border-color: var(--red);     color: var(--red); }
+
+    /* ── Skill launcher (Command tab) ── */
+    .skills-section-lbl { font-size: 9px; color: var(--subtext); letter-spacing: 0.08em; text-transform: uppercase; margin: 12px 0 6px; font-weight: 700; }
+    .skills-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+    .skill-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; cursor: pointer; transition: opacity 0.2s; }
+    .skill-card:active { opacity: 0.7; }
+    .skill-card.skill-running { opacity: 0.5; pointer-events: none; }
+    .skill-card-name { font-size: 12px; font-weight: 700; margin-bottom: 2px; }
+    .skill-card-div  { font-size: 9px; color: var(--subtext); letter-spacing: 0.05em; margin-bottom: 4px; text-transform: uppercase; }
+    .skill-card-last { font-size: 9px; color: var(--subtext); }
+    .skill-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+    .skill-dot-idle    { background: var(--subtext); }
+    .skill-dot-running { background: var(--yellow); animation: pulse-live 1s infinite; }
+    .skill-dot-done    { background: var(--green); }
+
+    /* ── Priority cards (Home tab) ── */
+    .priority-section { margin-bottom: 4px; }
+    .priority-section-hdr { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+    .priority-section-lbl { font-size: 9px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; }
+    .priority-section-count { font-size: 9px; font-weight: 700; color: var(--subtext); }
+    .priority-card { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--surface); border-radius: 10px; border-left: 3px solid var(--border); margin-bottom: 6px; }
+    .priority-card-body { flex: 1; min-width: 0; }
+    .priority-card-type  { font-size: 9px; color: var(--subtext); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 2px; }
+    .priority-card-msg   { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .priority-card-meta  { font-size: 10px; color: var(--subtext); margin-top: 1px; }
+    .pc-alert    { border-left-color: var(--red); }
+    .pc-approval { border-left-color: var(--yellow); }
+    .pc-story    { border-left-color: var(--purple); }
+    .pc-error    { border-left-color: var(--red); }
+    .pc-job      { border-left-color: var(--peach); }
+
+    /* ── Job card swipe hints ── */
+    .job-card { position: relative; overflow: hidden; }
+    .job-swipe-hint-right { position: absolute; top: 50%; left: 10px; transform: translateY(-50%); font-size: 18px; opacity: 0.12; pointer-events: none; user-select: none; }
+    .job-swipe-hint-left  { position: absolute; top: 50%; right: 10px; transform: translateY(-50%); font-size: 18px; opacity: 0.12; pointer-events: none; user-select: none; }
+    .job-card.swipe-flash-apply  { animation: swipeApply  0.35s ease forwards; }
+    .job-card.swipe-flash-archive{ animation: swipeArchive 0.35s ease forwards; }
+    @keyframes swipeApply  { 0% { background: var(--surface); } 60% { background: #a6e3a120; } 100% { opacity: 0; transform: translateX(60px); } }
+    @keyframes swipeArchive{ 0% { background: var(--surface); } 60% { background: #f38ba820; } 100% { opacity: 0; transform: translateX(-60px); } }
+
+    /* ── Character sheet action buttons ── */
+    .cs-action-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+    .cs-action-btn { flex: 1; min-width: 90px; padding: 10px 8px; border-radius: 10px; border: 1px solid var(--border); background: var(--overlay); color: var(--text); font-size: 11px; font-weight: 700; cursor: pointer; text-align: center; letter-spacing: 0.05em; }
+    .cs-action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .cs-action-btn-shield  { border-color: var(--blue);   color: var(--blue); }
+    .cs-action-btn-skill   { border-color: var(--purple); color: var(--purple); }
+    .cs-action-btn-xp      { border-color: var(--yellow); color: var(--yellow); }
+
+    /* ── Bestow XP picker sheet ── */
+    #bestow-sheet-backdrop { position: fixed; inset: 0; z-index: 8190; background: rgba(0,0,0,0.55); opacity: 0; pointer-events: none; transition: opacity 0.25s ease; }
+    #bestow-sheet-backdrop.open { opacity: 1; pointer-events: all; }
+    #bestow-sheet { position: fixed; bottom: 0; left: 0; right: 0; z-index: 8199; background: var(--surface); border-radius: 20px 20px 0 0; border-top: 1px solid var(--border); padding: 0 20px calc(var(--safe-bottom) + 16px); transform: translateY(100%); transition: transform 0.35s cubic-bezier(0.32,0.72,0,1); }
+    #bestow-sheet.open { transform: translateY(0); }
+    .bestow-handle { width: 40px; height: 4px; background: var(--border); border-radius: 2px; margin: 12px auto 16px; }
+    .bestow-title { font-size: 16px; font-weight: 700; margin-bottom: 12px; color: var(--yellow); }
+    .bestow-amounts { display: flex; gap: 8px; margin-bottom: 12px; }
+    .bestow-amt-btn { flex: 1; padding: 10px 4px; border-radius: 8px; border: 1px solid var(--border); background: var(--overlay); color: var(--text); font-size: 14px; font-weight: 700; cursor: pointer; text-align: center; }
+    .bestow-amt-btn.active { border-color: var(--yellow); color: var(--yellow); background: #f9e2af15; }
+    .bestow-flavor { width: 100%; background: var(--overlay); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 13px; padding: 10px 12px; margin-bottom: 12px; resize: none; font-family: inherit; }
+    .bestow-confirm { width: 100%; padding: 14px; border-radius: 12px; background: var(--yellow); color: #1e1e2e; font-size: 14px; font-weight: 800; border: none; cursor: pointer; }
 
     /* ── Toast notification ── */
     #toast {
@@ -1585,6 +1684,7 @@
   </div>
   <div class="header-right">
     <span id="stale-label">STALE</span>
+    <span id="ws-dot" title="WebSocket"></span>
     <span id="header-time">—</span>
     <button class="refresh-btn" onclick="refreshCurrent()" title="Refresh">↻</button>
   </div>
@@ -1669,27 +1769,31 @@
     <div id="stats-content"><div class="loading">Loading...</div></div>
   </div>
 
-  <!-- ── COMMAND (Chat + mission log) ── -->
+  <!-- ── COMMAND (Skills + Chat + mission log) ── -->
   <div id="screen-command" class="screen" style="padding:0;height:100%;flex-direction:column;">
-    <!-- Header with mode + history controls -->
+    <!-- Mode tabs -->
     <div style="display:flex;gap:0;flex-shrink:0;border-bottom:1px solid var(--border);background:var(--surface);align-items:center;">
-      <button id="chat-mode-jclaw" class="mode-btn mode-active" onclick="setChatMode('jclaw')">
-        J_Claw
-      </button>
-      <button id="chat-mode-coding" class="mode-btn" onclick="setChatMode('coding')">
-        Coding
-      </button>
+      <button id="cmd-mode-skills" class="mode-btn" onclick="setCmdMode('skills')">Skills</button>
+      <button id="chat-mode-jclaw" class="mode-btn mode-active" onclick="setChatMode('jclaw')">J_Claw</button>
+      <button id="chat-mode-coding" class="mode-btn" onclick="setChatMode('coding')">Coding</button>
       <div style="flex:1;"></div>
       <button class="chat-history-btn" onclick="openCodingHistorySheet()" style="margin-right:6px;">History</button>
       <button class="new-chat-btn" onclick="newChat()" style="margin-right:10px;">New Chat</button>
     </div>
-    <div id="chat-messages" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 16px 8px;"></div>
-    <div id="chat-input-bar" style="flex-shrink:0;display:flex;align-items:flex-end;gap:8px;padding:10px 12px;border-top:1px solid var(--border);background:var(--surface);">
-      <textarea id="chat-input" placeholder="Message J_Claw…" rows="1"
-        style="flex:1;background:var(--overlay);border:1px solid var(--border);border-radius:12px;color:var(--text);font-size:15px;padding:10px 14px;resize:none;max-height:120px;-webkit-appearance:none;font-family:inherit;line-height:1.4;"
-        oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"
-        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat();}"></textarea>
-      <button onclick="sendChat()" style="width:40px;height:40px;border-radius:50%;background:var(--purple);border:none;color:#1e1e2e;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">↑</button>
+    <!-- Skills panel (hidden by default) -->
+    <div id="skills-panel" style="display:none;flex:1;overflow-y:auto;padding:12px 16px;">
+      <div id="skills-content"><div class="loading">Loading skills…</div></div>
+    </div>
+    <!-- Chat panel -->
+    <div id="chat-panel" style="display:flex;flex-direction:column;flex:1;min-height:0;">
+      <div id="chat-messages" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 16px 8px;"></div>
+      <div id="chat-input-bar" style="flex-shrink:0;display:flex;align-items:flex-end;gap:8px;padding:10px 12px;border-top:1px solid var(--border);background:var(--surface);">
+        <textarea id="chat-input" placeholder="Message J_Claw…" rows="1"
+          style="flex:1;background:var(--overlay);border:1px solid var(--border);border-radius:12px;color:var(--text);font-size:15px;padding:10px 14px;resize:none;max-height:120px;-webkit-appearance:none;font-family:inherit;line-height:1.4;"
+          oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat();}"></textarea>
+        <button onclick="sendChat()" style="width:40px;height:40px;border-radius:50%;background:var(--purple);border:none;color:#1e1e2e;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">↑</button>
+      </div>
     </div>
   </div>
 
@@ -1698,6 +1802,43 @@
     <div id="log-content"><div class="loading">Loading...</div></div>
   </div>
 
+</div>
+
+<!-- ── Alert Deep-Dive Bottom Sheet ── -->
+<div id="alert-sheet-backdrop" onclick="closeAlertSheet()"></div>
+<div id="alert-sheet">
+  <div class="as-handle"></div>
+  <div class="as-header">
+    <div class="as-title" id="as-title">Alert</div>
+    <div class="as-meta" id="as-meta"></div>
+  </div>
+  <div class="as-body">
+    <div class="as-section-lbl">What triggered this</div>
+    <div class="as-section-val" id="as-trigger">—</div>
+    <div class="as-section-lbl">Recommended action</div>
+    <div class="as-section-val" id="as-recommendation">—</div>
+  </div>
+  <div class="as-actions">
+    <button class="as-btn as-btn-dismiss"  onclick="alertSheetAction('dismiss')">Dismiss</button>
+    <button class="as-btn as-btn-snooze"   onclick="alertSheetAction('snooze')">Snooze 24h</button>
+    <button class="as-btn as-btn-escalate" onclick="alertSheetAction('escalate')">Escalate</button>
+  </div>
+</div>
+
+<!-- ── Bestow XP Sheet ── -->
+<div id="bestow-sheet-backdrop" onclick="closeBestowSheet()"></div>
+<div id="bestow-sheet">
+  <div class="bestow-handle"></div>
+  <div class="bestow-title">⚔ Bestow XP</div>
+  <div id="bestow-target-lbl" style="font-size:11px;color:var(--subtext);margin-bottom:10px;"></div>
+  <div class="bestow-amounts" id="bestow-amounts">
+    <button class="bestow-amt-btn" onclick="selectBestowAmt(5)">5</button>
+    <button class="bestow-amt-btn" onclick="selectBestowAmt(10)">10</button>
+    <button class="bestow-amt-btn" onclick="selectBestowAmt(25)">25</button>
+    <button class="bestow-amt-btn" onclick="selectBestowAmt(50)">50</button>
+  </div>
+  <textarea class="bestow-flavor" id="bestow-flavor" rows="2" placeholder="Flavor text (optional)…"></textarea>
+  <button class="bestow-confirm" onclick="submitBestowXP()">Bestow XP</button>
 </div>
 
 <!-- ── Health Check-in Bottom Sheet ── -->
@@ -2073,6 +2214,14 @@ function init() {
   // SSE: real-time alert + gamification push
   _connectAlertStream();
   _connectGamifStream();
+
+  // WebSocket live updates
+  _connectWebSocket();
+
+  // Service Worker registration
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/mobile/sw.js').catch(() => {});
+  }
 }
 
 let _alertSSE = null;
@@ -2357,7 +2506,13 @@ function switchTab(name) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   const screenId = 'screen-' + name;
   const screen = document.getElementById(screenId);
-  if (screen) screen.classList.add('active');
+  if (screen) {
+    screen.classList.add('active');
+    // 150ms ease fade-in on tab switch
+    screen.classList.remove('tab-fade-in');
+    void screen.offsetWidth; // force reflow
+    screen.classList.add('tab-fade-in');
+  }
   const tabBtn = document.getElementById('tab-' + name);
   if (tabBtn) tabBtn.classList.add('active');
   loadTab(name);
@@ -2383,11 +2538,51 @@ function loadTab(name, silent = false) {
 function loadReportsTab(silent = false) {
   // Load the active segment; pre-load the other in background
   if (_reportsSeg === 'intel') {
-    loadIntel(silent, 'intel-reports-content');
-    loadOps(true);
+    loadIntelReportsRendered(silent);
+    loadOpsReportsRendered(true);
   } else {
-    loadOps(silent);
-    loadIntel(true, 'intel-reports-content');
+    loadOpsReportsRendered(silent);
+    loadIntelReportsRendered(true);
+  }
+}
+
+async function loadIntelReportsRendered(silent = false) {
+  const el = document.getElementById('intel-reports-content');
+  if (!el) return;
+  if (!silent) {
+    el.innerHTML = '<div class="skeleton-list"><div class="skeleton-card"></div><div class="skeleton-card"></div></div>';
+  }
+  try {
+    const d = await api('/mobile/api/divisions');
+    let html = '<div class="section-title" style="color:var(--yellow);">Division Intel Packets</div>';
+    html += _renderDivisionPacket('opportunity', d.opportunity || {});
+    html += '<div class="divider"></div>';
+    html += _renderDivisionPacket('personal', d.personal || {});
+    html += '<div class="divider"></div>';
+    html += _renderDivisionPacket('trading', d.trading || {});
+    el.innerHTML = html;
+  } catch(e) {
+    renderError(el, e.message, () => loadIntelReportsRendered());
+  }
+}
+
+async function loadOpsReportsRendered(silent = false) {
+  const el = document.getElementById('ops-content');
+  if (!el) return;
+  if (!silent) {
+    el.innerHTML = '<div class="skeleton-list"><div class="skeleton-card"></div><div class="skeleton-card"></div></div>';
+  }
+  try {
+    const d = await api('/mobile/api/divisions');
+    let html = '<div class="section-title" style="color:var(--purple);">Operations Intel Packets</div>';
+    html += _renderDivisionPacket('dev_automation', d.dev_automation || {});
+    html += '<div class="divider"></div>';
+    html += _renderDivisionPacket('op_sec', d.op_sec || {});
+    html += '<div class="divider"></div>';
+    html += _renderDivisionPacket('production', d.production || {});
+    el.innerHTML = html;
+  } catch(e) {
+    renderError(el, e.message, () => loadOpsReportsRendered());
   }
 }
 
@@ -2470,7 +2665,7 @@ async function loadJobs(status = 'pending_review') {
       el.innerHTML = '<div class="empty-state"><div class="empty-icon">🏹</div><p>No ' + escHtml(status.replace(/_/g, ' ')) + ' jobs</p></div>';
       return;
     }
-    el.innerHTML = '<div class="jobs-list">' + jobs.map(j => {
+    const jobsHtml = '<div class="jobs-list">' + jobs.map(j => {
       const id = j.id || j.job_id || j.url || '';
       const tier = j.tier || j.match_tier || 'D';
       const co   = j.company || j.employer || '';
@@ -2481,7 +2676,11 @@ async function loadJobs(status = 'pending_review') {
            <button class="job-action-btn job-action-snooze" onclick="doJobAction('${escAttr(id)}','snooze')">Snooze</button>
            <button class="job-action-btn job-action-archive" onclick="doJobAction('${escAttr(id)}','archive')">Archive</button>`
         : `<button class="job-action-btn" onclick="doJobAction('${escAttr(id)}','archive')" style="border-color:var(--border);color:var(--subtext);">Archive</button>`;
-      return `<div class="job-card">
+      const swipeHints = status === 'pending_review'
+        ? `<span class="job-swipe-hint-right" style="color:var(--green);">✓</span>
+           <span class="job-swipe-hint-left"  style="color:var(--red);">✕</span>` : '';
+      return `<div class="job-card" data-job-id="${escAttr(id)}">
+        ${swipeHints}
         <div class="job-card-header">
           <div class="job-card-info">
             ${co ? `<div class="job-company">${escHtml(co)}</div>` : ''}
@@ -2493,6 +2692,13 @@ async function loadJobs(status = 'pending_review') {
         <div class="job-actions">${actionBtns}</div>
       </div>`;
     }).join('') + '</div>';
+    el.innerHTML = jobsHtml;
+    // Attach swipe handlers for pending_review cards
+    if (status === 'pending_review') {
+      el.querySelectorAll('.job-card[data-job-id]').forEach(card => {
+        _attachJobSwipe(card, card.dataset.jobId);
+      });
+    }
   } catch(e) {
     el.innerHTML = '<div class="empty-state"><p style="color:var(--red);">' + escHtml(e.message) + '</p></div>';
   }
@@ -2716,18 +2922,33 @@ async function loadTradingSignals() {
       el.innerHTML = '<div class="empty-state"><div class="empty-icon">📈</div><p>No signals available</p></div>';
       return;
     }
-    el.innerHTML = signals.map(sig => {
+    el.innerHTML = signals.map((sig, i) => {
       const dir = (sig.direction || sig.signal || '').toLowerCase();
       const isLong = dir === 'long' || dir === 'buy';
+      const canvasId = 'sig-sparkline-' + i;
       return `<div class="signal-card">
-        <div class="signal-header">
-          <span class="signal-symbol">${escHtml(sig.symbol || sig.ticker || '?')}</span>
-          <span class="signal-dir ${isLong ? 'signal-long' : 'signal-short'}">${escHtml((sig.direction || sig.signal || '—').toUpperCase())}</span>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <div style="flex:1;">
+            <div class="signal-header">
+              <span class="signal-symbol">${escHtml(sig.symbol || sig.ticker || '?')}</span>
+              <span class="signal-dir ${isLong ? 'signal-long' : 'signal-short'}">${escHtml((sig.direction || sig.signal || '—').toUpperCase())}</span>
+            </div>
+            <div class="signal-meta">${sig.timeframe ? escHtml(sig.timeframe) + ' · ' : ''}${sig.confidence ? 'Conf: ' + escHtml(String(sig.confidence)) + ' · ' : ''}${sig.generated_at ? relTime(sig.generated_at) : ''}</div>
+            ${sig.note ? `<div style="font-size:11px;color:var(--subtext);margin-top:4px;">${escHtml(sig.note)}</div>` : ''}
+          </div>
+          <canvas id="${canvasId}" width="80" height="32" style="flex-shrink:0;border-radius:4px;background:var(--overlay);"></canvas>
         </div>
-        <div class="signal-meta">${sig.timeframe ? escHtml(sig.timeframe) + ' · ' : ''}${sig.confidence ? 'Conf: ' + escHtml(String(sig.confidence)) + ' · ' : ''}${sig.generated_at ? relTime(sig.generated_at) : ''}</div>
-        ${sig.note ? `<div style="font-size:11px;color:var(--subtext);margin-top:4px;">${escHtml(sig.note)}</div>` : ''}
       </div>`;
     }).join('');
+    // Draw sparklines after render
+    requestAnimationFrame(() => {
+      signals.forEach((sig, i) => {
+        const canvas = document.getElementById('sig-sparkline-' + i);
+        const prices = sig.price_history || sig.prices || sig.ohlcv?.map(b => b[4]) || null;
+        const entryIdx = sig.entry_bar_index != null ? sig.entry_bar_index : (prices ? prices.length - 1 : null);
+        _drawSignalSparkline(canvas, prices, entryIdx);
+      });
+    });
   } catch(e) {
     el.innerHTML = '<div class="empty-state"><p style="color:var(--red);">' + escHtml(e.message) + '</p></div>';
   }
@@ -3355,12 +3576,16 @@ function commanderFullPortraitSVG(key, color, w, h) {
 async function loadStatsTab() {
   const el = document.getElementById('stats-content');
   if (!el) return;
+  // Show skeleton while loading
+  el.innerHTML = '<div class="skeleton-list"><div class="skeleton-card"></div><div class="skeleton-card"></div><div class="skeleton-card"></div></div>';
   try {
     const [s, d, ov] = await Promise.all([
       api('/mobile/api/stats'),
       api('/mobile/api/stats/summary'),
       api('/mobile/api/overview').catch(() => ({}))
     ]);
+    // Cache stats for character sheet shield button
+    window._jclawStatsCache = s;
 
     const ALL_ACHIEVEMENTS = [
       { id: 'rulers_blessing',  icon: '👑', name: "Ruler's Blessing",    desc: 'Recognized by Matthew, the sovereign of the realm' },
@@ -4199,7 +4424,9 @@ function renderWinRateRing(pct) {
 // ══════════════════════════════════════════════════════
 async function loadOverview(silent = false) {
   const el = document.getElementById('home-content');
-  if (!silent) el.innerHTML = '<div class="loading">Loading...</div>';
+  if (!silent) {
+    el.innerHTML = '<div class="skeleton-list"><div class="skeleton-card"></div><div class="skeleton-card"></div><div class="skeleton-card"></div></div>';
+  }
   // Load briefing card (non-blocking)
   loadBriefing().catch(() => {});
   try {
@@ -4211,6 +4438,9 @@ async function loadOverview(silent = false) {
     updateBadge('alert-badge', alertCount + approvalCount);
 
     let html = '';
+    // ── Priority Queue (NEEDS ATTENTION / ACTIVE / STANDING BY) ──
+    const priorityHtml = _buildPriorityHtml(d);
+    if (priorityHtml) html += priorityHtml + '<div class="divider"></div>';
 
     // ── Command Directive (always first — the purpose of opening the app) ──
     try {
@@ -4366,12 +4596,20 @@ async function loadOverview(silent = false) {
 
       const divLabel = key.replace(/_/g, '-');
       const divColor = {trading:'#06b6d4',opportunity:'#f59e0b',personal:'#10b981',dev_automation:'#a78bfa',op_sec:'#ef4444',production:'#f97316'}[key] || '';
-      html += `<div class="div-card ${cardClass}" onclick="openDivisionDetail('${key}')" style="${divColor ? `border-top:2px solid ${divColor}44;` : ''}">
+      const _charMap = {opportunity:{name:'VAEL',sub:'Dawnhunt'},trading:{name:'SEREN',sub:'Auric Veil'},dev_automation:{name:'KAELEN',sub:'Iron Codex'},personal:{name:'LYRIN',sub:'Ember Cov.'},op_sec:{name:'ZETH',sub:'Nullward'},production:{name:'LYKE',sub:'Lykeon Forge'}};
+      const char = _charMap[key] || {name: divLabel.toUpperCase(), sub: ''};
+      const statusRaw = (div.status || 'idle').toLowerCase();
+      const questLabel = statusRaw === 'running' ? 'ON QUEST' : statusRaw === 'error' ? 'WOUNDED' : 'RESTING';
+      const questPillClass = statusRaw === 'running' ? 'pill-blue' : statusRaw === 'error' ? 'pill-red' : 'pill-grey';
+      html += `<div class="div-card ${cardClass}" onclick="openDivisionDetail('${key}')" style="${divColor ? `border-top:2px solid ${divColor}66;` : ''}">
         <div class="div-card-header">
-          <span class="div-name" style="${divColor ? `color:${divColor};` : ''}">${escHtml(divLabel)}</span>
+          <div style="display:flex;flex-direction:column;gap:1px;">
+            <span class="div-name" style="${divColor ? `color:${divColor};` : ''}">${escHtml(char.name)}</span>
+            <span style="font-size:9px;color:var(--subtext);letter-spacing:0.5px;">${escHtml(char.sub)}</span>
+          </div>
           <div style="display:flex;gap:6px;align-items:center;">
             <button class="div-report-btn" onclick="event.stopPropagation();viewDivisionReport('${key}')">Report</button>
-            <span class="pill ${statusPillClass}">${escHtml(div.status || '?')}</span>
+            <span class="pill ${questPillClass}" style="font-size:9px;letter-spacing:0.5px;">${questLabel}</span>
           </div>
         </div>
         ${metricsHtml}
@@ -4658,7 +4896,12 @@ function renderAlertCard(a, showAck) {
   const sevClass = sev === 'HIGH' ? '' : sev === 'MEDIUM' ? 'severity-medium' : 'severity-low';
   const pillClass = sev === 'HIGH' ? 'pill-red' : sev === 'MEDIUM' ? 'pill-yellow' : 'pill-blue';
   const icon = sev === 'HIGH' ? '🔴' : sev === 'MEDIUM' ? '🟡' : '🔵';
-  return `<div class="alert-card severity-${sev.toLowerCase()} ${sevClass}">
+  const id  = escAttr(a.id || a.skill || '');
+  const div = escAttr(a.division || '');
+  const msg = escAttr(a.message || a.escalation_reason || '');
+  const skill = escAttr(a.skill || '');
+  const ts  = escAttr(a.generated_at || '');
+  return `<div class="alert-card severity-${sev.toLowerCase()} ${sevClass}" style="cursor:pointer;" onclick="openAlertSheet('${id}','${div}','${msg}','${sev}','${ts}','${skill}')">
     <div class="alert-header">
       <span style="font-size:13px;">${icon}</span>
       <span class="pill ${pillClass}" style="margin-right:auto;margin-left:4px;">${escHtml(sev)}</span>
@@ -4667,7 +4910,7 @@ function renderAlertCard(a, showAck) {
     <div class="alert-msg">${escHtml(a.message || a.escalation_reason || '')}</div>
     <div style="display:flex;justify-content:space-between;align-items:center;">
       <div class="alert-meta">${a.generated_at ? relTime(a.generated_at) : ''} ${a.skill ? '· ' + escHtml(a.skill) : ''}</div>
-      ${showAck ? `<button class="btn btn-ack btn-sm" onclick="ackAlert('${escHtml(a.id || a.skill || '')}', '${escHtml(a.division || '')}')">ACK</button>` : ''}
+      ${showAck ? `<button class="btn btn-ack btn-sm" onclick="event.stopPropagation();ackAlert('${escHtml(a.id || a.skill || '')}', '${escHtml(a.division || '')}')">ACK</button>` : ''}
     </div>
   </div>`;
 }
@@ -6021,6 +6264,23 @@ function openCharSheet(key) {
         <div class="cs-soldier-name" style="color:${char.color};">${escHtml(sol.name)}</div>
         <div class="cs-soldier-desc">${escHtml(sol.desc)}</div>
       </div>`).join('')}` : ''}
+      <div class="cs-action-row">
+        ${(() => {
+          const stats = window._jclawPartyData ? {} : {};
+          const shieldAvail = (window._jclawStatsCache?.streak_shield_available || 0) > 0;
+          const shieldUsed  = !!window._jclawStatsCache?.streak_shield_used;
+          const shieldDisabled = (!shieldAvail || shieldUsed) ? 'disabled' : '';
+          return `<button class="cs-action-btn cs-action-btn-shield" ${shieldDisabled} onclick="useStreakShield('${key}','${escAttr(char.name)}')" title="${shieldUsed ? 'Already used this week' : !shieldAvail ? 'No shields available' : 'Use streak shield'}">
+            ⛨ USE SHIELD
+          </button>
+          <button class="cs-action-btn cs-action-btn-skill" onclick="openTriggerSkillPicker('${key}')">
+            ⚔ TRIGGER SKILL
+          </button>
+          <button class="cs-action-btn cs-action-btn-xp" onclick="openBestowSheet('${key}','${escAttr(char.name)}')">
+            ✦ BESTOW XP
+          </button>`;
+        })()}
+      </div>
     </div>`;
 
   document.getElementById('char-sheet-overlay').classList.add('open');
@@ -6579,6 +6839,690 @@ async function _pollTheaterQueue() {
     const data = await resp.json();
     _updateTheaterBadge(data.count || 0);
   } catch {}
+}
+
+// ══════════════════════════════════════════════════════════
+// ITEM 1 — WebSocket live updates
+// ══════════════════════════════════════════════════════════
+let _ws = null, _wsRetryTimer = null;
+
+function _connectWebSocket() {
+  if (_wsRetryTimer) { clearTimeout(_wsRetryTimer); _wsRetryTimer = null; }
+  if (_ws) { try { _ws.close(); } catch(e) {} }
+  const wsBase = MC_SERVER.replace(/^http/, 'ws');
+  const wsUrl  = wsBase + '/mobile/ws?token=' + encodeURIComponent(MC_TOKEN);
+  try {
+    _ws = new WebSocket(wsUrl);
+    _ws.onopen  = () => {
+      const dot = document.getElementById('ws-dot');
+      if (dot) { dot.classList.add('ws-connected'); dot.classList.remove('ws-error'); }
+    };
+    _ws.onclose = () => {
+      const dot = document.getElementById('ws-dot');
+      if (dot) { dot.classList.remove('ws-connected'); dot.classList.add('ws-error'); }
+      _ws = null;
+      _wsRetryTimer = setTimeout(_connectWebSocket, 3000);
+    };
+    _ws.onerror = () => { try { _ws.close(); } catch(e) {} };
+    _ws.onmessage = (e) => {
+      try {
+        const msg = JSON.parse(e.data);
+        _handleWSMessage(msg);
+      } catch(err) {}
+    };
+  } catch(e) {
+    _wsRetryTimer = setTimeout(_connectWebSocket, 3000);
+  }
+}
+
+function _handleWSMessage(msg) {
+  switch (msg.type) {
+    case 'connected':
+      break;
+    case 'alert_fired':
+    case 'division_status_changed':
+      if (_currentTab === 'home') loadOverview(true);
+      updateBadge('alert-badge', (msg.alerts || []).length + _approvalCount);
+      break;
+    case 'task_completed':
+      showToast((msg.skill || 'Skill') + (msg.ok ? ' complete' : ' failed'));
+      if (_currentTab === 'home') setTimeout(() => loadOverview(true), 500);
+      break;
+    case 'xp_gained':
+    case 'rank_up':
+      if (_currentTab === 'jclaw') setTimeout(() => loadStatsTab(), 800);
+      break;
+    case 'story_choice_pending':
+      _checkStoryState();
+      break;
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// ITEM 3 — Command tab Skills launcher
+// ══════════════════════════════════════════════════════════
+let _cmdMode = 'chat'; // 'chat' | 'skills'
+
+function setCmdMode(mode) {
+  _cmdMode = mode;
+  const chatPanel   = document.getElementById('chat-panel');
+  const skillsPanel = document.getElementById('skills-panel');
+  const skillsBtn   = document.getElementById('cmd-mode-skills');
+  const jclawBtn    = document.getElementById('chat-mode-jclaw');
+  const codingBtn   = document.getElementById('chat-mode-coding');
+  if (mode === 'skills') {
+    if (chatPanel)   chatPanel.style.display   = 'none';
+    if (skillsPanel) skillsPanel.style.display = '';
+    if (skillsBtn) skillsBtn.classList.add('mode-active');
+    if (jclawBtn)  jclawBtn.classList.remove('mode-active');
+    if (codingBtn) codingBtn.classList.remove('mode-active');
+    loadSkillsPanel();
+  } else {
+    if (chatPanel)   chatPanel.style.display   = 'flex';
+    if (skillsPanel) skillsPanel.style.display = 'none';
+    if (skillsBtn) skillsBtn.classList.remove('mode-active');
+  }
+}
+
+// setChatMode extended — also switches from Skills back to Chat panel
+// The original setChatMode is at 5719; we patch it after page load via _patchChatMode()
+function _patchChatMode() {
+  const orig = window.setChatMode.bind(window);
+  window.setChatMode = function(m) {
+    if (_cmdMode === 'skills') {
+      const chatPanel   = document.getElementById('chat-panel');
+      const skillsPanel = document.getElementById('skills-panel');
+      if (chatPanel)   chatPanel.style.display   = 'flex';
+      if (skillsPanel) skillsPanel.style.display = 'none';
+      const skillsBtn = document.getElementById('cmd-mode-skills');
+      if (skillsBtn) skillsBtn.classList.remove('mode-active');
+      _cmdMode = 'chat';
+    }
+    orig(m);
+  };
+}
+// Patch on next tick so original function is already defined
+setTimeout(_patchChatMode, 0);
+
+const _SKILL_GROUPS = [
+  { label: 'VAEL — Opportunity', color: '#f59e0b', skills: ['job-intake','hard-filter','funding-finder'] },
+  { label: 'SEREN — Trading',    color: '#06b6d4', skills: ['market-scan','virtual-trader','trading-report'] },
+  { label: 'KAELEN — Dev',       color: '#a78bfa', skills: ['repo-monitor','refactor-scan','doc-update','debug-agent'] },
+  { label: 'LYRIN — Personal',   color: '#10b981', skills: ['health-logger','burnout-monitor','perf-correlation'] },
+  { label: 'ZETH — Op-Sec',      color: '#ef4444', skills: ['device-posture','breach-check','threat-surface','security-scan'] },
+  { label: 'LYKE — Forge',       color: '#f97316', skills: ['image-generate','sprite-generate','asset-catalog','production-digest'] },
+];
+
+let _skillLastRun = {}; // skill → ISO string
+
+const _SKILL_ABILITY_NAMES = {
+  'job-intake':         'Track Target',
+  'hard-filter':        'Hard Filter',
+  'funding-finder':     'Uncover Gold',
+  'market-scan':        'Read the Runes',
+  'virtual-trader':     'Shadow Trade',
+  'trading-report':     'Prophecy Report',
+  'repo-monitor':       'Watch the Forge',
+  'refactor-scan':      'Refactor Sweep',
+  'doc-update':         'Codex Update',
+  'debug-agent':        'Debug Strike',
+  'artifact-manager':   'Catalog Relic',
+  'dev-digest':         'Forge Digest',
+  'health-logger':      'Vital Log',
+  'burnout-monitor':    'Ember Watch',
+  'perf-correlation':   'Mind-Body Sync',
+  'personal-digest':    'Soul Report',
+  'device-posture':     'Armor Check',
+  'breach-check':       'Breach Scan',
+  'threat-surface':     'Shadow Hunt',
+  'cred-audit':         'Vault Audit',
+  'security-scan':      'Ward Sweep',
+  'privacy-scan':       'Veil Audit',
+  'opsec-digest':       'Sentinel Report',
+  'image-generate':     'Conjure Image',
+  'sprite-generate':    'Forge Sprite',
+  'asset-catalog':      'Catalog Assets',
+  'production-digest':  'Forge Report',
+};
+const _SKILL_ABILITY_DESC = {
+  'job-intake':         'Hunt new targets from all sources',
+  'hard-filter':        'Tier-rank all candidates in queue',
+  'funding-finder':     'Seek grants and funding leads',
+  'market-scan':        'Scan for high-priority signals',
+  'virtual-trader':     'Simulate next strategy cycle',
+  'trading-report':     'Full cycle performance analysis',
+  'repo-monitor':       'Scan repos for drift and issues',
+  'refactor-scan':      'Find technical debt hotspots',
+  'doc-update':         'Refresh documentation artifacts',
+  'debug-agent':        'Diagnose and triage active bugs',
+  'artifact-manager':   'Organize and prune asset cache',
+  'dev-digest':         'Dev division summary report',
+  'health-logger':      'Log today\'s health metrics',
+  'burnout-monitor':    'Check stress and recovery signals',
+  'perf-correlation':   'Correlate health vs. performance',
+  'personal-digest':    'Personal division summary',
+  'device-posture':     'Verify device security posture',
+  'breach-check':       'Check credentials in HIBP',
+  'threat-surface':     'Analyze exposed attack surface',
+  'cred-audit':         'Audit credentials in codebase',
+  'security-scan':      'Scan code for vulnerabilities',
+  'privacy-scan':       'Check data privacy exposure',
+  'opsec-digest':       'Op-Sec division summary',
+  'image-generate':     'Generate production images',
+  'sprite-generate':    'Generate character sprites',
+  'asset-catalog':      'Catalog all production assets',
+  'production-digest':  'Production division summary',
+};
+
+async function loadSkillsPanel() {
+  const el = document.getElementById('skills-content');
+  if (!el) return;
+  el.innerHTML = '<div class="loading">Loading…</div>';
+  // Try to get last run times from orchestrator state
+  try {
+    const os = await api('/mobile/api/overview');
+    const divs = os.divisions || {};
+    for (const [key, d] of Object.entries(divs)) {
+      if (d.last_run) _skillLastRun[key] = d.last_run;
+    }
+  } catch(e) {}
+
+  let html = '';
+  for (const group of _SKILL_GROUPS) {
+    html += `<div class="skills-section-lbl" style="color:${group.color};">${escHtml(group.label)}</div>`;
+    html += '<div class="skills-grid">';
+    for (const skill of group.skills) {
+      const lastKey = skill.replace(/-/g,'_');
+      const lastRun = _skillLastRun[skill] || _skillLastRun[lastKey];
+      const lastStr = lastRun ? relTime(lastRun) : 'Never';
+      const abilityName = _SKILL_ABILITY_NAMES[skill] || skill;
+      const abilityDesc = _SKILL_ABILITY_DESC[skill] || '';
+      html += `<div class="skill-card" id="skill-card-${escAttr(skill)}" onclick="triggerSkill('${escAttr(skill)}')">
+        <div class="skill-card-name"><span class="skill-dot skill-dot-idle" id="sdot-${escAttr(skill)}"></span><span style="font-weight:700;">${escHtml(abilityName)}</span></div>
+        ${abilityDesc ? `<div style="font-size:10px;color:var(--subtext);margin:2px 0 4px 16px;line-height:1.3;">${escHtml(abilityDesc)}</div>` : ''}
+        <div class="skill-card-div" style="color:${group.color};font-size:9px;">${escHtml(group.label.split(' — ')[0])} · <span style="color:var(--subtext)">${escHtml(skill)}</span></div>
+        <div class="skill-card-last">Last: ${lastStr}</div>
+      </div>`;
+    }
+    html += '</div>';
+  }
+  el.innerHTML = html;
+}
+
+async function triggerSkill(skill) {
+  haptic('medium');
+  const card = document.getElementById('skill-card-' + skill);
+  const dot  = document.getElementById('sdot-' + skill);
+  if (card) { card.classList.add('skill-running'); }
+  if (dot)  { dot.className = 'skill-dot skill-dot-running'; }
+  showToast('Triggering ' + skill + '…');
+  try {
+    const res = await api('/mobile/api/skills/trigger', {
+      method: 'POST',
+      body: JSON.stringify({ skill }),
+    });
+    showToast(res.message || skill + ' queued');
+    haptic('success');
+    // Re-enable after 5s
+    setTimeout(() => {
+      if (card) card.classList.remove('skill-running');
+      if (dot)  dot.className = 'skill-dot skill-dot-done';
+    }, 5000);
+  } catch(e) {
+    showToast('Error: ' + e.message);
+    haptic('error');
+    if (card) card.classList.remove('skill-running');
+    if (dot)  dot.className = 'skill-dot skill-dot-idle';
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// ITEM 4 — Alert deep-dive bottom sheet
+// ══════════════════════════════════════════════════════════
+let _activeAlertId = null, _activeAlertDiv = null;
+
+const _ALERT_RECOMMENDATIONS = {
+  HIGH:   'Review immediately. Escalate to Operator tier and take corrective action before next run.',
+  MEDIUM: 'Review within 24 hours. Monitor for escalation and verify root cause.',
+  LOW:    'Log and monitor. Address during next scheduled maintenance window.',
+};
+
+const _ALERT_TRIGGERS = {
+  'threat-surface': 'Threat surface scanner found exposed attack vectors above threshold.',
+  'device-posture': 'Device posture check detected security configuration drift.',
+  'breach-check':   'HaveIBeenPwned API returned new credential exposure hits.',
+  'refactor-scan':  'Code quality scan found high-severity refactor candidates.',
+  'repo-monitor':   'Repository monitor detected uncommitted critical changes.',
+  'burnout-monitor':'Burnout monitor detected elevated stress indicators this week.',
+  'market-scan':    'Market scan generated an actionable signal that requires review.',
+};
+
+function openAlertSheet(alertId, division, message, severity, generatedAt, skill) {
+  _activeAlertId  = alertId;
+  _activeAlertDiv = division;
+  const sev = (severity || 'HIGH').toUpperCase();
+  const sevColor = sev === 'HIGH' ? 'var(--red)' : sev === 'MEDIUM' ? 'var(--yellow)' : 'var(--blue)';
+  document.getElementById('as-title').textContent   = message || 'Alert';
+  document.getElementById('as-trigger').textContent = _ALERT_TRIGGERS[skill] || `The ${division} division raised this alert during its last run.`;
+  document.getElementById('as-recommendation').textContent = _ALERT_RECOMMENDATIONS[sev] || _ALERT_RECOMMENDATIONS.HIGH;
+  const meta = document.getElementById('as-meta');
+  const ts   = generatedAt ? relTime(generatedAt) : '';
+  meta.innerHTML = `<span class="pill pill-${sev === 'HIGH' ? 'red' : sev === 'MEDIUM' ? 'yellow' : 'blue'}" style="font-size:10px;">${escHtml(sev)}</span>
+    <span>${escHtml(division || '')}</span>${ts ? `<span>${escHtml(ts)}</span>` : ''}${skill ? `<span>${escHtml(skill)}</span>` : ''}`;
+  document.getElementById('alert-sheet-backdrop').classList.add('open');
+  document.getElementById('alert-sheet').classList.add('open');
+  haptic('light');
+}
+
+function closeAlertSheet() {
+  document.getElementById('alert-sheet-backdrop').classList.remove('open');
+  document.getElementById('alert-sheet').classList.remove('open');
+  _activeAlertId = null;
+  _activeAlertDiv = null;
+}
+
+async function alertSheetAction(action) {
+  if (!_activeAlertId) return;
+  haptic('medium');
+  try {
+    const res = await api('/mobile/api/alerts/' + encodeURIComponent(_activeAlertId) + '/action', {
+      method: 'POST',
+      body: JSON.stringify({ action }),
+    });
+    showToast(res.message || action + ' done');
+    haptic('success');
+    closeAlertSheet();
+    setTimeout(() => loadOverview(true), 400);
+  } catch(e) {
+    showToast('Error: ' + e.message);
+    haptic('error');
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// ITEM 6 — Character sheet interactive actions
+// ══════════════════════════════════════════════════════════
+let _bestowTarget = null, _bestowAmt = 10;
+
+function openBestowSheet(divKey, charName) {
+  _bestowTarget = divKey;
+  _bestowAmt = 10;
+  const lbl = document.getElementById('bestow-target-lbl');
+  if (lbl) lbl.textContent = 'Bestowing on ' + (charName || divKey);
+  // Reset amounts
+  document.querySelectorAll('.bestow-amt-btn').forEach(b => {
+    b.classList.toggle('active', parseInt(b.textContent) === 10);
+  });
+  const flav = document.getElementById('bestow-flavor');
+  if (flav) flav.value = '';
+  document.getElementById('bestow-sheet-backdrop').classList.add('open');
+  document.getElementById('bestow-sheet').classList.add('open');
+  haptic('light');
+}
+
+function closeBestowSheet() {
+  document.getElementById('bestow-sheet-backdrop').classList.remove('open');
+  document.getElementById('bestow-sheet').classList.remove('open');
+}
+
+function selectBestowAmt(amt) {
+  _bestowAmt = amt;
+  document.querySelectorAll('.bestow-amt-btn').forEach(b => {
+    b.classList.toggle('active', parseInt(b.textContent) === amt);
+  });
+  haptic('light');
+}
+
+async function submitBestowXP() {
+  if (!_bestowTarget) return;
+  haptic('medium');
+  const flavor = (document.getElementById('bestow-flavor')?.value || '').trim();
+  try {
+    const res = await api('/mobile/api/characters/' + encodeURIComponent(_bestowTarget) + '/bestow-xp', {
+      method: 'POST',
+      body: JSON.stringify({ amount: _bestowAmt, flavor }),
+    });
+    showToast(res.message || '+' + _bestowAmt + ' XP bestowed');
+    haptic('success');
+    showXpFloat('+' + _bestowAmt + ' XP', '#f9e2af');
+    closeBestowSheet();
+    closeCharSheet();
+    setTimeout(() => loadStatsTab(), 600);
+  } catch(e) {
+    showToast('Error: ' + e.message);
+    haptic('error');
+  }
+}
+
+async function useStreakShield(divKey, charName) {
+  haptic('medium');
+  try {
+    const res = await api('/mobile/api/characters/' + encodeURIComponent(divKey) + '/use-shield', {
+      method: 'POST',
+    });
+    showToast(res.message || 'Shield activated');
+    haptic('success');
+    closeCharSheet();
+    setTimeout(() => loadStatsTab(), 600);
+  } catch(e) {
+    showToast('Error: ' + e.message);
+    haptic('error');
+  }
+}
+
+function openTriggerSkillPicker(divKey) {
+  // Find skills for this division
+  const group = _SKILL_GROUPS.find(g => g.label.toLowerCase().includes(divKey.replace('_',' '))) || _SKILL_GROUPS[0];
+  const skill = group.skills[0];
+  // Switch to skills tab and highlight
+  closeCharSheet();
+  setTimeout(() => {
+    switchTab('command');
+    setTimeout(() => setCmdMode('skills'), 150);
+  }, 200);
+}
+
+// ══════════════════════════════════════════════════════════
+// ITEM 7 — Home tab priority queue
+// ══════════════════════════════════════════════════════════
+function _buildPriorityQueue(d) {
+  const items = [];
+  // HIGH alerts
+  (d.alerts || []).filter(a => (a.severity || 'HIGH').toUpperCase() === 'HIGH').forEach(a => {
+    items.push({ type: 'alert', cls: 'pc-alert', msg: a.message || a.skill, meta: a.division + ' · ' + (a.generated_at ? relTime(a.generated_at) : '') });
+  });
+  // Pending approvals
+  (d.approvals || []).forEach(ap => {
+    items.push({ type: 'approval', cls: 'pc-approval', msg: ap.type || ap.id || 'Coding approval', meta: ap.files_changed ? ap.files_changed + ' files' : '' });
+  });
+  // ERROR divisions
+  for (const [key, div] of Object.entries(d.divisions || {})) {
+    if ((div.status || '').toLowerCase() === 'error') {
+      items.push({ type: 'division-error', cls: 'pc-error', msg: key + ' is in ERROR state', meta: div.last_run ? relTime(div.last_run) : '' });
+    }
+  }
+  // Tier A jobs
+  const opp = d.divisions?.opportunity?.metrics || {};
+  if ((opp.tier_a || 0) > 0) {
+    items.push({ type: 'tier-a-jobs', cls: 'pc-job', msg: opp.tier_a + ' Tier A jobs ready for review', meta: 'VAEL · Opportunity' });
+  }
+  return items;
+}
+
+function _buildPriorityHtml(d) {
+  const needsAttention = _buildPriorityQueue(d);
+  const activeDivs    = Object.entries(d.divisions || {}).filter(([,v]) => (v.status||'').toLowerCase() === 'running');
+  const standbyDivs   = Object.entries(d.divisions || {}).filter(([,v]) => {
+    const s = (v.status||'').toLowerCase();
+    return s !== 'running' && s !== 'error';
+  });
+
+  let html = '';
+
+  if (needsAttention.length > 0) {
+    html += `<div class="priority-section">
+      <div class="priority-section-hdr">
+        <span class="priority-section-lbl" style="color:var(--red);">⚠ Needs Attention</span>
+        <span class="priority-section-count">[${needsAttention.length}]</span>
+      </div>`;
+    for (const item of needsAttention) {
+      html += `<div class="priority-card ${item.cls}">
+        <div class="priority-card-body">
+          <div class="priority-card-type">${escHtml(item.type.replace(/-/g,' '))}</div>
+          <div class="priority-card-msg">${escHtml(item.msg)}</div>
+          ${item.meta ? `<div class="priority-card-meta">${escHtml(item.meta)}</div>` : ''}
+        </div>
+      </div>`;
+    }
+    html += '</div>';
+  }
+
+  if (activeDivs.length > 0) {
+    html += `<div class="priority-section">
+      <div class="priority-section-hdr">
+        <span class="priority-section-lbl" style="color:var(--yellow);">⚔ Active</span>
+        <span class="priority-section-count">[${activeDivs.length}]</span>
+      </div>`;
+    for (const [key, div] of activeDivs) {
+      const def = { opportunity:'#f59e0b', trading:'#06b6d4', dev_automation:'#a78bfa', personal:'#10b981', op_sec:'#ef4444', production:'#f97316' };
+      const col = def[key] || 'var(--subtext)';
+      html += `<div class="priority-card" style="border-left-color:${col};">
+        <div class="priority-card-body">
+          <div class="priority-card-type">ON QUEST</div>
+          <div class="priority-card-msg" style="color:${col};">${escHtml(key.replace(/_/g,'-'))}</div>
+          ${div.last_run ? `<div class="priority-card-meta">Since ${relTime(div.last_run)}</div>` : ''}
+        </div>
+      </div>`;
+    }
+    html += '</div>';
+  }
+
+  if (standbyDivs.length > 0) {
+    html += `<div class="priority-section">
+      <div class="priority-section-hdr">
+        <span class="priority-section-lbl" style="color:var(--subtext);">◯ Standing By</span>
+        <span class="priority-section-count">[${standbyDivs.length}]</span>
+      </div>`;
+    for (const [key, div] of standbyDivs) {
+      const def = { opportunity:'#f59e0b', trading:'#06b6d4', dev_automation:'#a78bfa', personal:'#10b981', op_sec:'#ef4444', production:'#f97316' };
+      const col = def[key] || 'var(--subtext)';
+      html += `<div class="priority-card" style="border-left-color:${col}33;opacity:0.7;">
+        <div class="priority-card-body">
+          <div class="priority-card-msg" style="color:${col};">${escHtml(key.replace(/_/g,'-'))}</div>
+          ${div.last_run ? `<div class="priority-card-meta">${relTime(div.last_run)}</div>` : ''}
+        </div>
+      </div>`;
+    }
+    html += '</div>';
+  }
+
+  return html;
+}
+
+// ══════════════════════════════════════════════════════════
+// ITEM 8 — Swipe-to-action on job cards
+// ══════════════════════════════════════════════════════════
+function _attachJobSwipe(cardEl, jobId) {
+  let startX = 0, startY = 0, isDragging = false, moved = false;
+  cardEl.addEventListener('touchstart', e => {
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    isDragging = false; moved = false;
+  }, { passive: true });
+  cardEl.addEventListener('touchmove', e => {
+    const dx = e.touches[0].clientX - startX;
+    const dy = e.touches[0].clientY - startY;
+    if (!isDragging && Math.abs(dx) > Math.abs(dy) * 1.5 && Math.abs(dx) > 10) isDragging = true;
+    if (isDragging) moved = true;
+  }, { passive: true });
+  cardEl.addEventListener('touchend', e => {
+    if (!isDragging || !moved) return;
+    const dx = e.changedTouches[0].clientX - startX;
+    if (dx > 60) {
+      haptic('medium');
+      cardEl.classList.add('swipe-flash-apply');
+      setTimeout(() => { doJobAction(jobId, 'apply'); }, 200);
+    } else if (dx < -60) {
+      haptic('medium');
+      cardEl.classList.add('swipe-flash-archive');
+      setTimeout(() => { doJobAction(jobId, 'archive'); }, 200);
+    }
+  }, { passive: true });
+}
+
+// ══════════════════════════════════════════════════════════
+// ITEM 9 — Trading signal sparklines (Canvas 2D)
+// ══════════════════════════════════════════════════════════
+function _drawSignalSparkline(canvas, prices, entryIdx) {
+  if (!canvas || !prices || prices.length < 2) {
+    // Flat placeholder
+    if (canvas) {
+      const ctx = canvas.getContext('2d');
+      ctx.strokeStyle = 'rgba(166,173,200,0.3)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, canvas.height / 2);
+      ctx.lineTo(canvas.width, canvas.height / 2);
+      ctx.stroke();
+    }
+    return;
+  }
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const data = prices.slice(-20);
+  const min = Math.min(...data), max = Math.max(...data);
+  const range = max - min || 1;
+  const toY = v => H - ((v - min) / range) * (H - 4) - 2;
+  const toX = (i) => (i / (data.length - 1)) * W;
+
+  ctx.clearRect(0, 0, W, H);
+  ctx.strokeStyle = data[data.length - 1] >= data[0] ? '#a6e3a1' : '#f38ba8';
+  ctx.lineWidth = 1.5;
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  data.forEach((v, i) => {
+    const x = toX(i), y = toY(v);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // Entry point dot
+  if (entryIdx != null && entryIdx >= 0 && entryIdx < data.length) {
+    const ex = toX(entryIdx), ey = toY(data[entryIdx]);
+    ctx.beginPath();
+    ctx.arc(ex, ey, 3, 0, Math.PI * 2);
+    ctx.fillStyle = '#cba6f7';
+    ctx.fill();
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// ITEM 5 — Intel Reports tab rendered division packets
+// ══════════════════════════════════════════════════════════
+function _renderDivisionPacket(key, divData) {
+  if (!divData || !Object.keys(divData).length) {
+    return '<div class="card"><div class="card-body" style="color:var(--subtext);font-size:12px;">No report yet.</div></div>';
+  }
+
+  let html = '';
+
+  if (key === 'opportunity') {
+    const ji  = divData.job_intake || {};
+    const m   = ji.metrics || {};
+    const tiers = [
+      { lbl: 'Tier A', val: m.tier_a || 0, color: 'var(--yellow)', max: 10 },
+      { lbl: 'Tier B', val: m.tier_b || 0, color: 'var(--teal)',   max: 20 },
+      { lbl: 'Tier C', val: m.tier_c || 0, color: 'var(--blue)',   max: 40 },
+      { lbl: 'Tier D', val: m.tier_d || 0, color: 'var(--subtext)',max: 100 },
+    ];
+    html += '<div class="card"><div class="card-title" style="color:var(--yellow);">VAEL · Opportunity</div>';
+    for (const t of tiers) {
+      const pct = Math.min(100, (t.val / t.max) * 100);
+      html += `<div style="margin-bottom:8px;">
+        <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px;">
+          <span style="color:var(--subtext);">${t.lbl}</span>
+          <span style="color:${t.color};font-weight:700;">${t.val}</span>
+        </div>
+        <div style="height:6px;background:var(--overlay);border-radius:3px;">
+          <div style="height:100%;width:${pct.toFixed(0)}%;background:${t.color};border-radius:3px;transition:width 0.4s;"></div>
+        </div>
+      </div>`;
+    }
+    // Top job titles
+    const topJobs = m.top_jobs || m.top_titles || [];
+    if (topJobs.length) {
+      html += `<div class="card-meta" style="margin-top:8px;">Top roles: ${topJobs.slice(0,3).map(j => escHtml(typeof j === 'string' ? j : j.title || j)).join(', ')}</div>`;
+    }
+    html += '</div>';
+
+  } else if (key === 'trading') {
+    const cycle = divData.agent_network || divData.trading_report || divData.market_scan || {};
+    const m = cycle.metrics || {};
+    const winRate = m.win_rate != null ? Math.round(m.win_rate * 100) : m.win_rate_pct;
+    const sharpe  = m.sharpe;
+    const cycles  = m.cycle_count || m.cycle_number;
+    html += '<div class="card"><div class="card-title" style="color:var(--teal);">SEREN · Trading</div>';
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;">';
+    html += `<div class="cs-stat"><div class="cs-stat-val" style="color:${winRate != null ? (winRate >= 55 ? 'var(--green)' : winRate >= 40 ? 'var(--yellow)' : 'var(--red)') : 'var(--subtext)'};">${winRate != null ? winRate + '%' : '—'}</div><div class="cs-stat-lbl">WIN RATE</div></div>`;
+    html += `<div class="cs-stat"><div class="cs-stat-val">${sharpe != null ? sharpe.toFixed(2) : '—'}</div><div class="cs-stat-lbl">SHARPE</div></div>`;
+    html += `<div class="cs-stat"><div class="cs-stat-val">${cycles != null ? cycles : '—'}</div><div class="cs-stat-lbl">CYCLES</div></div>`;
+    html += '</div>';
+    if (cycle.summary) html += `<div style="font-size:11px;color:var(--subtext);line-height:1.5;">${escHtml(cycle.summary)}</div>`;
+    html += '</div>';
+
+  } else if (key === 'dev_automation') {
+    const rs = divData.refactor_scan || {};
+    const rm = divData.repo_monitor  || {};
+    const rsM = rs.metrics || {};
+    const rmM = rm.metrics || {};
+    const findings = [
+      { lbl: 'High',   val: rsM.high   || rmM.flags_high   || 0, color: 'var(--red)'    },
+      { lbl: 'Medium', val: rsM.medium || rmM.flags_medium || 0, color: 'var(--yellow)'  },
+      { lbl: 'Low',    val: rsM.low    || rmM.flags_low    || 0, color: 'var(--blue)'    },
+    ];
+    html += '<div class="card"><div class="card-title" style="color:var(--purple);">KAELEN · Dev Automation</div>';
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;">';
+    for (const f of findings) {
+      html += `<div class="cs-stat"><div class="cs-stat-val" style="color:${f.color};">${f.val}</div><div class="cs-stat-lbl">${f.lbl}</div></div>`;
+    }
+    html += '</div>';
+    const repos = rsM.repos_checked || rmM.repos_checked;
+    if (repos != null) html += `<div style="font-size:11px;color:var(--subtext);">Repos scanned: ${repos}</div>`;
+    if (rs.summary) html += `<div style="font-size:11px;color:var(--subtext);margin-top:6px;line-height:1.5;">${escHtml(rs.summary)}</div>`;
+    html += '</div>';
+
+  } else if (key === 'personal') {
+    const hl = divData.health_logger  || {};
+    const bm = divData.burnout_monitor || {};
+    const hlM = hl.metrics || {};
+    const bmM = bm.metrics || {};
+    const avgSleep = bmM.avg_sleep_hours || hlM.sleep_hours;
+    const mood = hlM.mood || bmM.mood_trend;
+    const streak = hlM.streak_days || bmM.streak_days;
+    const burnout = bmM.burnout_level || (bmM.negative_emotions > 2 ? 'check' : 'normal');
+    html += '<div class="card"><div class="card-title" style="color:var(--green);">LYRIN · Personal</div>';
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;">';
+    html += `<div class="cs-stat"><div class="cs-stat-val" style="color:${avgSleep != null ? (avgSleep >= 7 ? 'var(--green)' : 'var(--yellow)') : 'var(--subtext)'};">${avgSleep != null ? avgSleep + 'h' : '—'}</div><div class="cs-stat-lbl">AVG SLEEP</div></div>`;
+    html += `<div class="cs-stat"><div class="cs-stat-val">${mood ? escHtml(String(mood)) : '—'}</div><div class="cs-stat-lbl">MOOD</div></div>`;
+    html += `<div class="cs-stat"><div class="cs-stat-val" style="color:var(--yellow);">${streak != null ? streak + 'd' : '—'}</div><div class="cs-stat-lbl">STREAK</div></div>`;
+    html += '</div>';
+    const burnColor = burnout === 'elevated' ? 'var(--red)' : burnout === 'check' ? 'var(--yellow)' : 'var(--green)';
+    html += `<div style="font-size:11px;color:var(--subtext);">Burnout: <span style="color:${burnColor};font-weight:700;">${escHtml(burnout.toUpperCase())}</span></div>`;
+    html += '</div>';
+
+  } else if (key === 'op_sec') {
+    const ts  = divData.threat_surface || {};
+    const dp  = divData.device_posture || {};
+    const tsM = ts.metrics || {};
+    const dpM = dp.metrics || {};
+    const lastScan = ts.generated_at || dp.generated_at;
+    const high   = tsM.high_severity   || tsM.flags_high   || 0;
+    const medium = tsM.medium_severity || tsM.flags_medium || 0;
+    const low    = tsM.low_severity    || tsM.flags_low    || 0;
+    html += '<div class="card"><div class="card-title" style="color:var(--red);">ZETH · Op-Sec</div>';
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;">';
+    html += `<div class="cs-stat"><div class="cs-stat-val" style="color:var(--red);">${high}</div><div class="cs-stat-lbl">HIGH</div></div>`;
+    html += `<div class="cs-stat"><div class="cs-stat-val" style="color:var(--yellow);">${medium}</div><div class="cs-stat-lbl">MEDIUM</div></div>`;
+    html += `<div class="cs-stat"><div class="cs-stat-val" style="color:var(--blue);">${low}</div><div class="cs-stat-lbl">LOW</div></div>`;
+    html += '</div>';
+    if (lastScan) html += `<div style="font-size:11px;color:var(--subtext);">Last scan: ${relTime(lastScan)}</div>`;
+    if (dp.summary) html += `<div style="font-size:11px;color:var(--subtext);margin-top:6px;">${escHtml(dp.summary)}</div>`;
+    html += '</div>';
+
+  } else if (key === 'production') {
+    const ai = divData.asset_catalog || divData.image_review || {};
+    const m  = ai.metrics || {};
+    html += '<div class="card"><div class="card-title" style="color:var(--peach);">LYKE · Lykeon Forge</div>';
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;">';
+    html += `<div class="cs-stat"><div class="cs-stat-val" style="color:var(--peach);">${m.total_assets ?? '—'}</div><div class="cs-stat-lbl">ASSETS</div></div>`;
+    html += `<div class="cs-stat"><div class="cs-stat-val" style="color:var(--yellow);">${m.pending_review ?? '—'}</div><div class="cs-stat-lbl">PENDING</div></div>`;
+    html += `<div class="cs-stat"><div class="cs-stat-val" style="color:var(--green);">${m.delivered ?? '—'}</div><div class="cs-stat-lbl">DELIVERED</div></div>`;
+    html += '</div>';
+    if (ai.summary) html += `<div style="font-size:11px;color:var(--subtext);">${escHtml(ai.summary)}</div>`;
+    html += '</div>';
+  }
+
+  return html || '<div class="card"><div class="card-body" style="color:var(--subtext);font-size:12px;">No structured data available.</div></div>';
 }
 
 // ── Boot ─────────────────────────────────────────────────

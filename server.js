@@ -10,6 +10,12 @@ const crypto = require('crypto');
 const { spawn, spawnSync } = require('child_process');
 const cron   = require('node-cron');
 
+// ── Optional deps (ws, web-push) — loaded lazily so server starts without npm i ──
+let WebSocketServer = null;
+let webpush = null;
+try { WebSocketServer = require('ws').WebSocketServer; } catch(e) { console.warn('  [ws] not installed — WebSocket disabled. Run: npm install ws'); }
+try { webpush = require('web-push'); } catch(e) { console.warn('  [web-push] not installed — push disabled. Run: npm install web-push'); }
+
 const ROOT      = __dirname;
 const STATE_DIR = path.join(ROOT, 'state');
 const PORT      = 3000;
@@ -22,6 +28,53 @@ const _gamifSubscribers = new Set();
 
 // ── Pending coding approvals: sessionId → { preSessionHead, filesChanged, diffStat, timer } ──
 const _pendingCodingApprovals = new Map();
+
+// ── WebSocket clients ──
+const _wsClients = new Set();
+
+function broadcastWS(type, data) {
+  if (!_wsClients.size) return;
+  const msg = JSON.stringify({ type, ...data });
+  for (const ws of _wsClients) {
+    try { if (ws.readyState === 1) ws.send(msg); } catch(e) { _wsClients.delete(ws); }
+  }
+}
+
+// ── Push subscription store ──
+const _pushSubscriptions = new Set();
+const PUSH_SUBS_FILE = path.join(__dirname, 'state', 'push-subscriptions.json');
+function _loadPushSubs() {
+  try { return new Set(JSON.parse(fs.readFileSync(PUSH_SUBS_FILE, 'utf8'))); } catch { return new Set(); }
+}
+function _savePushSubs() {
+  try { fs.writeFileSync(PUSH_SUBS_FILE, JSON.stringify([..._pushSubscriptions], null, 2)); } catch(e) {}
+}
+// Load existing subs on startup
+try { for (const s of _loadPushSubs()) _pushSubscriptions.add(s); } catch(e) {}
+
+// VAPID keys — generate once and store; placeholder until npm i web-push
+const VAPID_FILE = path.join(__dirname, 'state', 'vapid-keys.json');
+let VAPID_KEYS = null;
+function _ensureVapid() {
+  if (!webpush) return;
+  try {
+    VAPID_KEYS = JSON.parse(fs.readFileSync(VAPID_FILE, 'utf8'));
+  } catch(e) {
+    VAPID_KEYS = webpush.generateVAPIDKeys();
+    try { fs.writeFileSync(VAPID_FILE, JSON.stringify(VAPID_KEYS, null, 2)); } catch(_) {}
+  }
+  webpush.setVapidDetails('mailto:openclaw@realm.local', VAPID_KEYS.publicKey, VAPID_KEYS.privateKey);
+}
+_ensureVapid();
+
+// ── Snooze store ──
+const SNOOZED_ALERTS_FILE = path.join(__dirname, 'state', 'snoozed-alerts.json');
+function _loadSnoozedAlerts() {
+  try { return JSON.parse(fs.readFileSync(SNOOZED_ALERTS_FILE, 'utf8')); } catch { return {}; }
+}
+function _saveSnoozedAlerts(obj) {
+  try { fs.writeFileSync(SNOOZED_ALERTS_FILE, JSON.stringify(obj, null, 2)); } catch(e) {}
+}
 
 // ── Load .env into process.env ──
 function loadEnv() {
@@ -424,11 +477,12 @@ function _checkAchievements(stats) {
 }
 
 function _broadcastGamifEvent(event) {
-  if (_gamifSubscribers.size === 0) return;
   const payload = JSON.stringify({ type: 'gamif', ...event });
   for (const res of _gamifSubscribers) {
     try { res.write(`data: ${payload}\n\n`); } catch(e) { _gamifSubscribers.delete(res); }
   }
+  // Also push over WebSocket
+  broadcastWS(event.event || 'xp_gained', event);
 }
 
 function _appendXpHistory(entry) {
@@ -2108,12 +2162,13 @@ function handleMobileAlerts(res) {
 }
 
 function _broadcastAlertUpdate() {
-  if (_mobileAlertSubscribers.size === 0) return;
   try {
-    const payload = JSON.stringify({ type: 'update', alerts: _collectMobileAlerts() });
+    const alerts = _collectMobileAlerts();
+    const payload = JSON.stringify({ type: 'update', alerts });
     for (const res of _mobileAlertSubscribers) {
       try { res.write(`data: ${payload}\n\n`); } catch(e) { _mobileAlertSubscribers.delete(res); }
     }
+    broadcastWS('alert_fired', { alerts });
   } catch(e) {}
 }
 
@@ -3055,6 +3110,9 @@ const server = http.createServer(async (req, res) => {
   if (reqPath === '/mobile/manifest.json') {
     return serveStatic('/mobile/manifest.json', res);
   }
+  if (reqPath === '/mobile/sw.js') {
+    return serveStatic('/mobile/sw.js', res);
+  }
   if (reqPath.startsWith('/mobile/icons/')) {
     return serveStatic(reqPath, res);
   }
@@ -3234,6 +3292,129 @@ const server = http.createServer(async (req, res) => {
         }
       }
 
+      // ── Skills: trigger a skill from mobile ──────────────────────────────────
+      if (method === 'POST' && reqPath === '/mobile/api/skills/trigger') {
+        const body = await parseBody(req);
+        const skill = (body.skill || '').trim();
+        if (!skill) return jsonError(res, 400, 'skill required');
+        if (!SKILL_TASK_MAP[skill]) return jsonError(res, 400, `Unknown skill: ${skill}`);
+        logActivity('MOBILE', `Skill triggered via mobile: ${skill}`, 'blue');
+        // Fire-and-forget — don't await
+        runSkillViaPython(skill, body.division || 'MOBILE').then(ok => {
+          broadcastWS('task_completed', { skill, ok });
+        });
+        return jsonOk(res, { ok: true, message: `${skill} queued` });
+      }
+
+      // ── Alerts: action (dismiss/snooze/escalate) ──────────────────────────────
+      {
+        let _m;
+        if (method === 'POST' && (_m = reqPath.match(/^\/mobile\/api\/alerts\/(.+)\/action$/))) {
+          const alertId = decodeURIComponent(_m[1]);
+          const body    = await parseBody(req);
+          const action  = (body.action || '').toLowerCase();
+
+          if (action === 'dismiss') {
+            const dismissed = _loadDismissedAlerts();
+            dismissed.add(alertId);
+            _saveDismissedAlerts(dismissed);
+            _broadcastAlertUpdate();
+            broadcastWS('division_status_changed', { alert_id: alertId, action: 'dismissed' });
+            return jsonOk(res, { ok: true, message: 'Alert dismissed' });
+          }
+
+          if (action === 'snooze') {
+            const snoozed = _loadSnoozedAlerts();
+            snoozed[alertId] = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+            _saveSnoozedAlerts(snoozed);
+            broadcastWS('division_status_changed', { alert_id: alertId, action: 'snoozed' });
+            return jsonOk(res, { ok: true, message: 'Alert snoozed 24h' });
+          }
+
+          if (action === 'escalate') {
+            // Write escalation note to state
+            const escalations = readState('escalated-alerts.json') || [];
+            escalations.push({ id: alertId, escalated_at: new Date().toISOString() });
+            writeState('escalated-alerts.json', escalations);
+            logActivity('MOBILE', `Alert escalated: ${alertId}`, 'red');
+            broadcastWS('division_status_changed', { alert_id: alertId, action: 'escalated', severity: 'HIGH' });
+            return jsonOk(res, { ok: true, message: 'Alert escalated to HIGH' });
+          }
+
+          return jsonError(res, 400, 'Invalid action — use dismiss, snooze, or escalate');
+        }
+      }
+
+      // ── Characters: use-shield ────────────────────────────────────────────────
+      {
+        let _m;
+        if (method === 'POST' && (_m = reqPath.match(/^\/mobile\/api\/characters\/(.+)\/use-shield$/))) {
+          const divKey = decodeURIComponent(_m[1]);
+          try {
+            const stats = readState('jclaw-stats.json');
+            if (!stats) return jsonError(res, 500, 'stats not loaded');
+            _ensureStreaks(stats);
+            const streak = stats.streaks[divKey];
+            if (!streak) return jsonError(res, 400, `Unknown division: ${divKey}`);
+            const sa = stats.streak_shield_available || 0;
+            if (sa <= 0) return jsonError(res, 400, 'No streak shields available');
+            if (stats.streak_shield_used) return jsonError(res, 400, 'Shield already used this week');
+            streak.shield_this_week = true;
+            streak.last_date = new Date().toISOString().slice(0, 10); // counts today
+            stats.streak_shield_available = Math.max(0, sa - 1);
+            stats.streak_shield_used = true;
+            writeState('jclaw-stats.json', stats);
+            logActivity(divKey, `Streak shield used for ${divKey}`, 'blue');
+            broadcastWS('xp_gained', { division: divKey, shield_used: true });
+            return jsonOk(res, { ok: true, message: `Streak shield activated for ${divKey}` });
+          } catch(e) { return jsonError(res, 500, e.message); }
+        }
+
+        // ── Characters: bestow-xp ──────────────────────────────────────────────
+        if (method === 'POST' && (_m = reqPath.match(/^\/mobile\/api\/characters\/(.+)\/bestow-xp$/))) {
+          const divKey = decodeURIComponent(_m[1]);
+          const body   = await parseBody(req);
+          const amount = parseInt(body.amount) || 0;
+          const flavor = (body.flavor || '').slice(0, 200);
+          if (amount <= 0 || amount > 200) return jsonError(res, 400, 'Amount must be 1–200');
+          const validDivs = new Set(['opportunity', 'trading', 'dev_automation', 'personal', 'op_sec', 'production']);
+          if (!validDivs.has(divKey)) return jsonError(res, 400, `Unknown division: ${divKey}`);
+          try {
+            grantDivisionXP(divKey, amount, 'mobile-bestow');
+            logActivity(divKey, `Mobile bestow: +${amount} XP ${flavor ? '— ' + flavor : ''}`, 'purple');
+            broadcastWS('xp_gained', { division: divKey, amount, flavor });
+            return jsonOk(res, { ok: true, message: `+${amount} XP bestowed on ${divKey}` });
+          } catch(e) { return jsonError(res, 500, e.message); }
+        }
+      }
+
+      // ── Push subscription ─────────────────────────────────────────────────────
+      if (method === 'GET' && reqPath === '/mobile/api/push/vapid-key') {
+        if (!VAPID_KEYS) return jsonError(res, 503, 'Push not configured — run: npm install web-push');
+        return jsonOk(res, { publicKey: VAPID_KEYS.publicKey });
+      }
+      if (method === 'POST' && reqPath === '/mobile/api/push-subscribe') {
+        if (!webpush || !VAPID_KEYS) return jsonError(res, 503, 'Push not configured');
+        const body = await parseBody(req);
+        const sub  = body.subscription;
+        if (!sub || !sub.endpoint) return jsonError(res, 400, 'Invalid subscription');
+        _pushSubscriptions.add(JSON.stringify(sub));
+        _savePushSubs();
+        return jsonOk(res, { ok: true, message: 'Push subscription registered' });
+      }
+      if (method === 'POST' && reqPath === '/mobile/api/push-test') {
+        if (!webpush || !VAPID_KEYS) return jsonError(res, 503, 'Push not configured');
+        const payload = JSON.stringify({ title: 'Mission Control', body: 'Push test successful — realm connection active' });
+        let sent = 0;
+        for (const subStr of _pushSubscriptions) {
+          try {
+            await webpush.sendNotification(JSON.parse(subStr), payload);
+            sent++;
+          } catch(e) { _pushSubscriptions.delete(subStr); _savePushSubs(); }
+        }
+        return jsonOk(res, { ok: true, sent });
+      }
+
       return jsonError(res, 404, 'Unknown mobile endpoint');
     } catch(e) {
       return jsonError(res, 500, e.message);
@@ -3274,11 +3455,14 @@ function runSkillViaPython(skillName, logDiv, extraArgs = []) {
       if (code === 0) {
         logActivity(logDiv || 'SYS', `${skillName} complete`, 'green');
         handleGamifCheck(skillName, mapping.divState);
+        broadcastWS('task_completed', { skill: skillName, division: mapping.divState, ok: true });
+        broadcastWS('division_status_changed', { division: mapping.divState, status: 'idle' });
         resolve(true);
       } else {
         const errLine = stderr.split('\n').filter(l => l.includes('ERROR') || l.includes('FAILED')).pop()
           || `exit ${code}`;
         logActivity(logDiv || 'SYS', `${skillName} failed — ${errLine.trim()}`, 'red');
+        broadcastWS('division_status_changed', { division: mapping.divState, status: 'error' });
         resolve(false);
       }
     });
@@ -3781,3 +3965,34 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log('    pm2 startup  &&  pm2 save');
   console.log('');
 });
+
+// ── WebSocket server (attaches to same HTTP server, same port) ──
+if (WebSocketServer) {
+  const wss = new WebSocketServer({ server, path: '/mobile/ws' });
+  wss.on('connection', (ws, req) => {
+    const mobileToken = process.env.MOBILE_TOKEN || '';
+    // Auth: check token param
+    try {
+      const params = new url.URL('http://x' + req.url).searchParams;
+      const provided = params.get('token') || '';
+      const clientIP = req.socket.remoteAddress || '';
+      const isLocalhost = clientIP === '::1' || clientIP === '127.0.0.1' || clientIP === '::ffff:127.0.0.1';
+      if (!isLocalhost && mobileToken && (!provided || !crypto.timingSafeEqual(
+        Buffer.from(provided.padEnd(64, '\0')),
+        Buffer.from(mobileToken.padEnd(64, '\0'))
+      ))) {
+        ws.close(4001, 'Unauthorized');
+        return;
+      }
+    } catch(e) { ws.close(4001, 'Bad request'); return; }
+
+    _wsClients.add(ws);
+    ws.on('close', () => _wsClients.delete(ws));
+    ws.on('error', () => _wsClients.delete(ws));
+    // Send hello
+    try { ws.send(JSON.stringify({ type: 'connected', ts: new Date().toISOString() })); } catch(e) {}
+  });
+  console.log('  WebSocket : ws://localhost:' + PORT + '/mobile/ws');
+} else {
+  console.log('  WebSocket : DISABLED (run npm install)');
+}

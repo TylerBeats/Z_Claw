@@ -8,6 +8,8 @@
     "pm2": "pm2 start server.js --name openclaw"
   },
   "dependencies": {
-    "node-cron": "^3.0.3"
+    "node-cron": "^3.0.3",
+    "ws": "^8.18.0",
+    "web-push": "^3.6.7"
   }
 }
