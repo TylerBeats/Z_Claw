@@ -298,6 +298,61 @@ DIVISIONS = {
         },
         "sprite_theme": "Deep shadow cloak, full hood, no visible face. Only two small red eyes glow in darkness. Barely-visible blade at side. Most minimal silhouette — designed to feel like a void.",
     },
+
+    "production": {
+        "key":       "production",
+        "commander": "LYKE",
+        "title":     "Lyke, Architect of the Lykeon Forge",
+        "order":     "The Lykeon Forge",
+        "color":     "#f97316",
+        "glow":      "#f9731640",
+        "lore": (
+            "An ancient craftwright who sees the blueprint beneath every chaos. "
+            "Where others imagine, LYKE builds. Every asset in the realm passes "
+            "through the Forge before it becomes real."
+        ),
+        "ranks": [
+            "Apprentice of the Forge",          # 0   XP
+            "Craftwright Adept",                 # 51  XP
+            "Lykeon Architect",                  # 151 XP
+            "Master of the Forge",               # 301 XP
+            "Lyke, Architect of the Lykeon Forge", # 500 XP
+        ],
+        "abilities": [
+            {"name": "Blueprint Vision",  "desc": "Sees the final form before a single stroke is made. Reduces prompt iterations."},
+            {"name": "Forge Fire",        "desc": "Generates assets at accelerated pace during active production sprints."},
+            {"name": "Continuity Lock",   "desc": "Ensures every asset in a set maintains visual coherence with its siblings."},
+            {"name": "Quality Seal",      "desc": "No asset leaves the Forge without passing QA. Zero defects policy."},
+            {"name": "Archive Mastery",   "desc": "The Forge catalog never forgets. Every asset is indexed and retrievable."},
+        ],
+        "skills": {
+            "image-generate":     {"xp": 15, "soldier": "The Illustrator",    "icon": "🎨", "anim": "paint",    "label": "Forge the Vision"},
+            "sprite-generate":    {"xp": 20, "soldier": "The Sprite Caster",  "icon": "⚔",  "anim": "flash",    "label": "Cast the Sprite"},
+            "video-generate":     {"xp": 20, "soldier": "The Cinematist",     "icon": "🎬", "anim": "reel",     "label": "Roll the Reel"},
+            "graphic-design":     {"xp": 15, "soldier": "The Draftsman",      "icon": "✏",  "anim": "draft",    "label": "Draft the Blueprint"},
+            "prompt-craft":       {"xp":  5, "soldier": "The Lexicographer",  "icon": "📜", "anim": "scroll",   "label": "Write the Rune"},
+            "style-check":        {"xp":  8, "soldier": "The Aesthete",       "icon": "👁",  "anim": "scan",     "label": "The Eye of the Forge"},
+            "image-review":       {"xp":  8, "soldier": "The Inspector",      "icon": "🔍", "anim": "inspect",  "label": "The Inspector's Eye"},
+            "audio-test":         {"xp":  8, "soldier": "The Resonant",       "icon": "🎵", "anim": "wave",     "label": "Tune the Resonance"},
+            "video-review":       {"xp": 10, "soldier": "The Critic",         "icon": "🎞",  "anim": "review",   "label": "The Critic's Cut"},
+            "asset-catalog":      {"xp":  5, "soldier": "The Archivist",      "icon": "📚", "anim": "catalog",  "label": "Seal the Archive"},
+            "storyboard-compose": {"xp": 10, "soldier": "The Composer",       "icon": "🗺",  "anim": "compose",  "label": "Compose the Vision"},
+            "continuity-check":   {"xp":  8, "soldier": "The Warden",         "icon": "⚖",  "anim": "balance",  "label": "Hold the Continuity"},
+            "asset-deliver":      {"xp":  5, "soldier": "The Herald",         "icon": "📦", "anim": "deliver",  "label": "Deliver the Artifact"},
+            "production-digest":  {"xp": 10, "soldier": "LYKE",               "icon": "⬡",  "anim": "forge",    "label": "The Forge Report"},
+        },
+        "vocabulary": {
+            "quest":       "in production",
+            "rest":        "forge cooling",
+            "standby":     "awaiting blueprint",
+            "wound":       "defective batch",
+            "hydrate":     "restocking materials",
+            "rank_up":     "LYKE expands the forge",
+            "streak_hold": "the forge burns unbroken",
+            "streak_lost": "the forge has gone cold",
+        },
+        "sprite_theme": "Armored architect in deep orange plate, glowing blueprint scrolls, forge-fire amber eyes, structural hexagonal motifs on armor. Confident builder stance.",
+    },
 }
 
 # ── Achievements — data-driven, evaluated against stats ───────────────────────
@@ -357,6 +412,14 @@ ACHIEVEMENTS = [
         "desc":  "Zeth raised the first ward — the Nullward Circle is watching",
         "condition": {"type": "division_xp_gt", "division": "op_sec", "value": 0},
         "chronicle_lore": "Zeth has raised the first ward. The Nullward Circle is watching the perimeter.",
+    },
+    {
+        "id":    "forge_lit",
+        "icon":  "⬡",
+        "name":  "The Forge Ignites",
+        "desc":  "LYKE struck the first spark — the Lykeon Forge is open",
+        "condition": {"type": "division_xp_gt", "division": "production", "value": 0},
+        "chronicle_lore": "LYKE has struck the first spark. The Lykeon Forge is open and the first asset has entered production.",
     },
     {
         "id":    "loyal_flame",

@@ -1,0 +1,120 @@
+{
+  "division": "production",
+  "description": "The Lykeon Forge — generates, reviews, catalogs, and delivers all creative media assets for the realm. Images, sprites, videos, audio, graphics. Commander: LYKE.",
+  "orchestrator_type": "python_runtime",
+  "model": {
+    "primary": "openai:gpt-4o",
+    "fallback": "ollama:qwen2.5:7b-instruct-q4_K_M",
+    "local_only": false
+  },
+  "comfyui_url": "http://127.0.0.1:8188",
+  "asset_policy": {
+    "hot_ttl_hours": 72,
+    "archive_after_hours": 72,
+    "max_hot_mb": 2048,
+    "auto_catalog": true
+  },
+  "packet_output_path": "divisions/production/packets",
+  "agents": {
+    "prompt-craft": {
+      "schedule": "on_demand",
+      "skill": "prompt-craft",
+      "enabled": true,
+      "last_run": null,
+      "status": "idle"
+    },
+    "image-generate": {
+      "schedule": "on_demand",
+      "skill": "image-generate",
+      "enabled": true,
+      "last_run": null,
+      "status": "idle"
+    },
+    "sprite-generate": {
+      "schedule": "on_demand",
+      "skill": "sprite-generate",
+      "enabled": true,
+      "last_run": null,
+      "status": "idle"
+    },
+    "video-generate": {
+      "schedule": "on_demand",
+      "skill": "video-generate",
+      "enabled": false,
+      "last_run": null,
+      "status": "idle",
+      "note": "Placeholder — awaiting video generation backend"
+    },
+    "graphic-design": {
+      "schedule": "on_demand",
+      "skill": "graphic-design",
+      "enabled": true,
+      "last_run": null,
+      "status": "idle"
+    },
+    "style-check": {
+      "schedule": "on_demand",
+      "skill": "style-check",
+      "enabled": true,
+      "last_run": null,
+      "status": "idle"
+    },
+    "image-review": {
+      "schedule": "on_demand",
+      "skill": "image-review",
+      "enabled": true,
+      "last_run": null,
+      "status": "idle"
+    },
+    "audio-test": {
+      "schedule": "on_demand",
+      "skill": "audio-test",
+      "enabled": true,
+      "last_run": null,
+      "status": "idle"
+    },
+    "video-review": {
+      "schedule": "on_demand",
+      "skill": "video-review",
+      "enabled": true,
+      "last_run": null,
+      "status": "idle"
+    },
+    "storyboard-compose": {
+      "schedule": "every 6 hours",
+      "skill": "storyboard-compose",
+      "enabled": true,
+      "last_run": null,
+      "status": "idle"
+    },
+    "continuity-check": {
+      "schedule": "on_demand",
+      "skill": "continuity-check",
+      "enabled": true,
+      "last_run": null,
+      "status": "idle"
+    },
+    "asset-catalog": {
+      "schedule": "every 12 hours",
+      "skill": "asset-catalog",
+      "enabled": true,
+      "last_run": null,
+      "status": "idle"
+    },
+    "asset-deliver": {
+      "schedule": "every 6 hours",
+      "skill": "asset-deliver",
+      "enabled": true,
+      "last_run": null,
+      "status": "idle"
+    },
+    "production-digest": {
+      "schedule": "daily",
+      "skill": "production-digest",
+      "telegram_send_at": "20:00",
+      "enabled": true,
+      "last_run": null,
+      "status": "idle"
+    }
+  }
+}

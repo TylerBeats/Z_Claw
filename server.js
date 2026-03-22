@@ -134,6 +134,7 @@ const DIV_RANKS = {
   dev_automation: ['Codex Initiate', 'Iron Smith', 'Forge Warden', 'Codex Architect', 'Master of the Iron Codex'],
   personal:       ['Covenant Initiate', 'Flame Tender', 'Guardian of Vitality', 'Covenant Warden', 'Eternal Keeper'],
   op_sec:         ['Circle Watchman', 'Veil Scout', 'Shadow Warden', 'Grand Sentinel', 'Sovereign of the Null'],
+  production:     ['Apprentice of the Forge', 'Craftwright Adept', 'Lykeon Architect', 'Master of the Forge', 'Lyke, Architect of the Lykeon Forge'],
 };
 
 const DIV_COMMANDERS = {
@@ -142,6 +143,7 @@ const DIV_COMMANDERS = {
   dev_automation: { name: 'KAELEN', order: 'The Iron Codex'     },
   personal:       { name: 'LYRIN',  order: 'The Ember Covenant' },
   op_sec:         { name: 'ZETH',   order: 'The Nullward Circle' },
+  production:     { name: 'LYKE',   order: 'The Lykeon Forge'   },
 };
 
 const DIV_XP_THRESHOLDS = [0, 51, 151, 301, 500];
@@ -183,6 +185,21 @@ const SKILL_XP = {
   'mobile-audit-review':{ division: 'op_sec',         amount:  5 },
   'sentinel-health':    { division: 'op_sec',         amount:  5 },
   'security-scan':      { division: 'op_sec',         amount: 10 },
+  // Production — The Lykeon Forge
+  'image-generate':     { division: 'production',     amount: 15 },
+  'sprite-generate':    { division: 'production',     amount: 20 },
+  'video-generate':     { division: 'production',     amount: 20 },
+  'graphic-design':     { division: 'production',     amount: 15 },
+  'prompt-craft':       { division: 'production',     amount:  5 },
+  'style-check':        { division: 'production',     amount:  8 },
+  'image-review':       { division: 'production',     amount:  8 },
+  'audio-test':         { division: 'production',     amount:  8 },
+  'video-review':       { division: 'production',     amount: 10 },
+  'asset-catalog':      { division: 'production',     amount:  5 },
+  'storyboard-compose': { division: 'production',     amount: 10 },
+  'continuity-check':   { division: 'production',     amount:  8 },
+  'asset-deliver':      { division: 'production',     amount:  5 },
+  'production-digest':  { division: 'production',     amount: 10 },
 };
 
 const PYTHON_EXE = 'C:/Users/Tyler/AppData/Local/Microsoft/WindowsApps/PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0/python.exe';
@@ -215,6 +232,21 @@ const SKILL_TASK_MAP = {
   'privacy-scan':     { divState: 'op_sec', division: 'op-sec', task: 'privacy-scan'    },
   'security-scan':    { divState: 'op_sec', division: 'op-sec', task: 'security-scan'   },
   'opsec-digest':     { divState: 'op_sec', division: 'op-sec', task: 'opsec-digest'    },
+  // Production Division — The Lykeon Forge
+  'image-generate':     { divState: 'production', division: 'production', task: 'image-generate'     },
+  'sprite-generate':    { divState: 'production', division: 'production', task: 'sprite-generate'    },
+  'video-generate':     { divState: 'production', division: 'production', task: 'video-generate'     },
+  'graphic-design':     { divState: 'production', division: 'production', task: 'graphic-design'     },
+  'prompt-craft':       { divState: 'production', division: 'production', task: 'prompt-craft'       },
+  'style-check':        { divState: 'production', division: 'production', task: 'style-check'        },
+  'image-review':       { divState: 'production', division: 'production', task: 'image-review'       },
+  'audio-test':         { divState: 'production', division: 'production', task: 'audio-test'         },
+  'video-review':       { divState: 'production', division: 'production', task: 'video-review'       },
+  'asset-catalog':      { divState: 'production', division: 'production', task: 'asset-catalog'      },
+  'storyboard-compose': { divState: 'production', division: 'production', task: 'storyboard-compose' },
+  'continuity-check':   { divState: 'production', division: 'production', task: 'continuity-check'   },
+  'asset-deliver':      { divState: 'production', division: 'production', task: 'asset-deliver'      },
+  'production-digest':  { divState: 'production', division: 'production', task: 'production-digest'  },
 };
 
 function rankForLevel(level) {
@@ -321,7 +353,7 @@ function _getWeekKey(date) {
   return `${d.getFullYear()}-${String(week + 1).padStart(2, '0')}`;
 }
 
-const ALL_DIVISION_KEYS = ['opportunity', 'trading', 'dev_automation', 'personal', 'op_sec'];
+const ALL_DIVISION_KEYS = ['opportunity', 'trading', 'dev_automation', 'personal', 'op_sec', 'production'];
 
 function _ensureStreaks(stats) {
   if (!stats.streaks) stats.streaks = {};
@@ -507,7 +539,7 @@ function handlePrestige(res) {
   const stats = readState('jclaw-stats.json');
   if (!stats) return jsonError(res, 500, 'stats not found');
 
-  const DIVISIONS = ['opportunity', 'trading', 'dev_automation', 'personal', 'op_sec'];
+  const DIVISIONS = ['opportunity', 'trading', 'dev_automation', 'personal', 'op_sec', 'production'];
   const notReady  = DIVISIONS.filter(d => ((stats.divisions || {})[d] || {}).xp < 500);
   if (notReady.length > 0) {
     return jsonError(res, 400, `Not eligible — divisions below 500 XP: ${notReady.join(', ')}`);
@@ -527,6 +559,21 @@ function handlePrestige(res) {
   logActivity('SYS', `⭐ PRESTIGE ${stats.prestige} — permanent XP multiplier: ×${stats.prestige_multiplier}`, 'purple');
   _broadcastGamifEvent({ event: 'prestige', prestige: stats.prestige, multiplier: stats.prestige_multiplier });
   _appendXpHistory({ event: 'prestige', prestige: stats.prestige, multiplier: stats.prestige_multiplier });
+
+  // Push prestige animation event to the theater queue
+  try {
+    const qp = path.join(STATE_DIR, 'anim-queue.json');
+    const queue = fs.existsSync(qp) ? JSON.parse(fs.readFileSync(qp, 'utf8') || '[]') : [];
+    queue.push({
+      id:         Math.random().toString(36).slice(2, 10),
+      type:       'prestige',
+      prestige:   stats.prestige,
+      multiplier: stats.prestige_multiplier,
+      color:      '#a855f7',
+      ts:         new Date().toISOString(),
+    });
+    fs.writeFileSync(qp, JSON.stringify(queue, null, 2));
+  } catch(_e) { /* non-fatal */ }
 
   jsonOk(res, {
     ok: true,
@@ -672,7 +719,7 @@ function handleGetGrants(res) {
 
 // GET /api/packets  — returns all division executive packets organised by division
 function handleGetPackets(res) {
-  const divisions = ['trading', 'opportunity', 'dev-automation', 'personal', 'op-sec', 'sentinel'];
+  const divisions = ['trading', 'opportunity', 'dev-automation', 'personal', 'op-sec', 'production', 'sentinel'];
   const result = {};
   for (const div of divisions) {
     const packetDir = path.join(ROOT, 'divisions', div, 'packets');
@@ -2137,7 +2184,7 @@ function handleMobileDivisions(res) {
 function _collectMobileAlerts() {
   const alerts = [];
   const dismissed = _loadDismissedAlerts();
-  const packetDirs = ['op-sec', 'trading', 'opportunity', 'dev-automation', 'personal', 'sentinel'];
+  const packetDirs = ['op-sec', 'trading', 'opportunity', 'dev-automation', 'personal', 'production', 'sentinel'];
   for (const div of packetDirs) {
     const pktDir = path.join(ROOT, 'divisions', div, 'packets');
     if (!fs.existsSync(pktDir)) continue;
@@ -2251,6 +2298,19 @@ function _readDivisionMetrics() {
     };
   } catch(e) {}
 
+  // Production — The Lykeon Forge
+  try {
+    const cat = JSON.parse(fs.readFileSync(path.join(ROOT, 'divisions', 'production', 'packets', 'asset-catalog.json'), 'utf8'));
+    m.production = {
+      total_assets:   cat.metrics?.total     || 0,
+      pending_review: cat.metrics?.pending   || 0,
+      approved:       cat.metrics?.approved  || 0,
+      delivered:      cat.metrics?.delivered || 0,
+    };
+  } catch(e) {
+    m.production = { total_assets: 0, pending_review: 0, approved: 0, delivered: 0 };
+  }
+
   return m;
 }
 
@@ -2328,11 +2388,12 @@ function handleMobileBattlesToday(res) {
       dev_automation: 'Iron Codex',
       personal:       'Ember Covenant',
       op_sec:         'Nullward',
+      production:     'Lykeon Forge',
       sentinel:       'Sentinel',
     };
     const DIV_COMMANDERS_META = {
       opportunity: 'VAEL', trading: 'SEREN', dev_automation: 'KAELEN',
-      personal: 'LYRIN', op_sec: 'ZETH',
+      personal: 'LYRIN', op_sec: 'ZETH', production: 'LYKE',
     };
     let battles = [];
     try {
@@ -2369,7 +2430,7 @@ function handleMobileBattlesWeek(res) {
   try {
     const fs2 = require('fs');
     const histPath = path.join(STATE_DIR, 'xp-history.jsonl');
-    const DIV_NAMES = { opportunity: 'Dawnhunt', trading: 'Auric Veil', dev_automation: 'Iron Codex', personal: 'Ember Covenant', op_sec: 'Nullward' };
+    const DIV_NAMES = { opportunity: 'Dawnhunt', trading: 'Auric Veil', dev_automation: 'Iron Codex', personal: 'Ember Covenant', op_sec: 'Nullward', production: 'Lykeon Forge' };
     const cutoffDate = new Date(); cutoffDate.setDate(cutoffDate.getDate() - 6);
     const cutoffStr  = cutoffDate.toISOString().slice(0, 10);
 
@@ -3256,7 +3317,7 @@ const TZ = 'America/Halifax';
 // ── Briefing compiler ──────────────────────────────────────────────────────
 function compileBriefing(type) {
   try {
-    const divs = ['opportunity', 'trading', 'personal', 'dev-automation', 'op-sec', 'sentinel'];
+    const divs = ['opportunity', 'trading', 'personal', 'dev-automation', 'op-sec', 'production', 'sentinel'];
     const sections = [];
     const escalations = [];
 

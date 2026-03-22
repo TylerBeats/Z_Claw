@@ -20,6 +20,18 @@ Usage:
   python run_division.py dev-automation dev-digest
   python run_division.py dev pipeline '<json_spec>'
   python run_division.py op-sec mobile-audit-review
+  python run_division.py production image-generate portrait_bust vael
+  python run_division.py production sprite-generate vael chibi_sprite
+  python run_division.py production prompt-craft portrait_bust seren
+  python run_division.py production style-check <image_path> vael
+  python run_division.py production image-review <image_path>
+  python run_division.py production audio-test <audio_path>
+  python run_division.py production video-review <video_path>
+  python run_division.py production asset-catalog
+  python run_division.py production storyboard-compose
+  python run_division.py production continuity-check vael
+  python run_division.py production asset-deliver
+  python run_division.py production production-digest
   python run_division.py sentinel provider-health
   python run_division.py sentinel queue-monitor
   python run_division.py sentinel sentinel-digest
@@ -168,6 +180,49 @@ def run(division: str, task: str, args: list) -> dict:
         if task == "sentinel-digest":
             return run_sentinel_digest()
         raise ValueError(f"Unknown task for sentinel: {task}")
+
+    # ── Production Division (LYKE — The Lykeon Forge) ────────────────────────
+    elif division == "production":
+        from runtime.orchestrators import production as prod_orch
+        task_map = {
+            "prompt-craft":       lambda: prod_orch.run_prompt_craft(
+                                      asset_type=args[0] if args else "portrait_bust",
+                                      commander=args[1] if len(args) > 1 else "generic",
+                                      subject=args[2] if len(args) > 2 else ""),
+            "image-generate":     lambda: prod_orch.run_image_generate(
+                                      asset_type=args[0] if args else "portrait_bust",
+                                      commander=args[1] if len(args) > 1 else "generic",
+                                      subject=args[2] if len(args) > 2 else ""),
+            "sprite-generate":    lambda: prod_orch.run_sprite_generate(
+                                      target=args[0] if args else "vael",
+                                      sprite_type=args[1] if len(args) > 1 else "chibi_sprite"),
+            "video-generate":     lambda: prod_orch.run_video_generate(
+                                      scene_type=args[0] if args else "battle",
+                                      commander=args[1] if len(args) > 1 else "generic",
+                                      description=args[2] if len(args) > 2 else ""),
+            "graphic-design":     lambda: prod_orch.run_graphic_design(
+                                      ui_type=args[0] if args else "card_border",
+                                      theme=args[1] if len(args) > 1 else "generic"),
+            "style-check":        lambda: prod_orch.run_style_check(
+                                      image_path=args[0] if args else "",
+                                      commander=args[1] if len(args) > 1 else "generic"),
+            "image-review":       lambda: prod_orch.run_image_review(
+                                      image_path=args[0] if args else ""),
+            "audio-test":         lambda: prod_orch.run_audio_test(
+                                      audio_path=args[0] if args else ""),
+            "video-review":       lambda: prod_orch.run_video_review(
+                                      video_path=args[0] if args else ""),
+            "asset-catalog":      lambda: prod_orch.run_asset_catalog(),
+            "storyboard-compose": lambda: prod_orch.run_storyboard_compose(),
+            "continuity-check":   lambda: prod_orch.run_continuity_check(
+                                      commander=args[0] if args else ""),
+            "asset-deliver":      lambda: prod_orch.run_asset_deliver(),
+            "production-digest":  lambda: prod_orch.run_production_digest(),
+        }
+        runner = task_map.get(task)
+        if not runner:
+            raise ValueError(f"Unknown task for production: {task}")
+        return runner()
 
     # ── Realm Keeper (cross-division, pure Python) ────────────────────────────
     elif division == "realm-keeper":

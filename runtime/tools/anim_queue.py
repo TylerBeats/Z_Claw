@@ -29,6 +29,7 @@ _DIV_META = {
     "dev_automation": {"commander": "KAELEN", "color": "#a78bfa", "enemy": "code_rot",      "enemy_name": "Code Rot"},
     "personal":       {"commander": "LYRIN",  "color": "#10b981", "enemy": "burnout_shade", "enemy_name": "Burnout Shade"},
     "op_sec":         {"commander": "ZETH",   "color": "#ef4444", "enemy": "null_breach",   "enemy_name": "Null Breach"},
+    "production":     {"commander": "LYKE",   "color": "#f97316", "enemy": "broken_render", "enemy_name": "Broken Render"},
 }
 
 # Chapter thresholds: (min_total_events, title, narration)
@@ -187,6 +188,27 @@ def push_achievement(achievement_id: str, achievement_name: str, division: str =
     queue.append(entry)
     _save_queue(queue)
     log.debug("anim_queue: queued achievement %s", achievement_id)
+
+
+def push_prestige(prestige: int, multiplier: float) -> None:
+    """Queue a prestige ascension cutscene."""
+    total   = _increment_history()
+    chapter = _chapter_for(total)
+
+    entry = {
+        "id":           str(uuid.uuid4())[:8],
+        "type":         "prestige",
+        "prestige":     prestige,
+        "multiplier":   multiplier,
+        "color":        "#a855f7",
+        "chapter":      chapter,
+        "total_event":  total,
+        "ts":           datetime.now(timezone.utc).isoformat(),
+    }
+    queue = _load_queue()
+    queue.append(entry)
+    _save_queue(queue)
+    log.debug("anim_queue: queued prestige %d (×%.2f)", prestige, multiplier)
 
 
 def get_queue() -> list:
