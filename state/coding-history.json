@@ -2,14 +2,6 @@
   "messages": [
     {
       "role": "user",
-      "content": "Does resetting the server before this do anything?"
-    },
-    {
-      "role": "assistant",
-      "content": "**No.** Server reset and git are completely independent. Resetting the server:\n- Restarts the J_Claw Python process\n- Reloads configs/skills in memory\n- Does **nothing** to git history, branches, or remote sync\n\nThe git conflict will still be there after a reset. The only fix is those 4 terminal commands. They're quick -- 30 seconds for Tyler to run."
-    },
-    {
-      "role": "user",
       "content": "I want a button to do this where I click to reset the server from mobile"
     },
     {
@@ -399,7 +391,15 @@
     {
       "role": "assistant",
       "content": "Clean. Here's the full summary of what was fixed and added:\n\n---\n\n## What Was Done\n\n### Root Cause\nImages **were** generating successfully -- ComfyUI was running, files were being saved to `mobile/assets/generated/{commander}/{asset_type}/`. The problem was entirely in the delivery layer: nothing read the packet results or showed them on screen.\n\n---\n\n### server.js -- 2 Changes\n\n**1. WS broadcast now includes image URLs**\nAfter `image-generate` or `sprite-generate` completes, `runSkillViaPython` now reads the division packet (`divisions/production/packets/image-generate.json`), extracts the filenames, and includes them in the `task_completed` WebSocket broadcast as `images: [\"/mobile/assets/generated/...\"]`. Every other skill still broadcasts `images: []`, unchanged.\n\n**2. New endpoint: `GET /mobile/api/generated-images`**\nWalks the `mobile/assets/generated/` directory, returns up to 50 images sorted newest-first with `url`, `filename`, `commander`, `assetType`, `size_kb`, and `created_at` for each.\n\n---\n\n### mobile/index.html -- 5 Changes\n\n**1. Image Gallery overlay**\nFull-screen overlay with a 2-column image grid. Opens automatically when generation finishes. Each card shows the image, commander, asset type, and filename. Tap any card to open fullscreen viewer.\n\n**2. Fullscreen image viewer**\nTap an image → full-screen black background with the image centered. Tap anywhere or ✕ to close.\n\n**3. `task_completed` WS handler**\nWhen `msg.images.length > 0`, `showImageGallery()` is called immediately and the overlay opens. You'll see your generated images appear on-screen the moment ComfyUI finishes.\n\n**4. Creative Sprint combo card**\nAfter the combo completes, a purple **\"View Generated Images\"** button appears on the card. Tap it to open the gallery loaded from the server (shows all previously generated images, not just the current session).\n\n**5. Intel tab -- Gallery sub-tab**\nNew \"Gallery\" tab in Intel (alongside Jobs / Trading / Health / Reports). Shows all generated images from the server in the same 2-column grid layout. Has a Refresh button. Tapping any image opens the fullscreen viewer.\n\n---\n\n**Needs PM2 restart** to pick up the server changes. The HTML is live on page reload."
+    },
+    {
+      "role": "user",
+      "content": "I want this to automatically open from a button on the mobile dashboard"
+    },
+    {
+      "role": "assistant",
+      "content": "Done. Here's the full summary of what was built:\n\n---\n\n## ComfyUI Launch Button — What Was Added\n\n### `divisions/production/config.json`\nAdded `comfyui_path` field:\n```json\n\"comfyui_path\": \"C:\\\\ComfyUI\\\\run_amd_gpu.bat\"\n```\n**Tyler needs to update this path** if ComfyUI is installed elsewhere. This is the only config change needed.\n\n---\n\n### `server.js` — 3 changes\n\n**`MOBILE_ALLOWED_ACTIONS`** — added `launch_comfyui`\n\n**`GET /mobile/api/comfyui/status`** — new endpoint:\n- Pings `127.0.0.1:8188` with a 2.5s timeout\n- Returns `{ online: true }` if ComfyUI is running\n- Returns `{ online: false, bat_exists: true/false, bat_path }` if not — tells the mobile client whether the launcher file actually exists at the configured path\n\n**`mobileLaunchComfyUI()`** — new function:\n- First checks if ComfyUI is already running (returns early if so)\n- Reads `comfyui_path` from production config\n- Returns a clear error if the bat file doesn't exist at that path\n- Spawns `cmd.exe /c start \"\" C:\\ComfyUI\\run_amd_gpu.bat` — opens in its own window on the desktop, detached from the server process\n\n---\n\n### `mobile/index.html` — 3 changes\n\n**CSS** — `cd-comfyui-banner`, dot, info, launch button styles\n\n**ComfyUI status banner in the Creative Sprint detail sheet:**\n- Appears automatically when you open any combo that contains `image-generate` or `sprite-generate`\n- Checks status immediately via `/mobile/api/comfyui/status`\n- **Online:** green dot + \"Ready to generate images\" — no button shown\n- **Offline, bat found:** red dot + \"Not running. Tap Launch to start it on the PC.\" + orange **Launch** button\n- **Offline, bat not found:** red dot + \"Launcher not found. Update comfyui_path in production config.\" — no button\n\n**`_launchComfyUI()` function:**\n1. Prompts for PIN auth (same security model as restart/git sync)\n2. Sends the launch command to server\n3. Polls `/mobile/api/comfyui/status` every 4 seconds for up to 60 seconds\n4. Banner goes green + \"Ready\" automatically when ComfyUI comes online\n5. Shows \"ComfyUI is ready ✓\" toast + haptic success\n\n---\n\n**Needs PM2 restart** to pick up the server changes. After restart, the bat file path needs to be confirmed with Tyler — update `divisions/production/config.json → comfyui_path` to wherever `run_amd_gpu.bat` lives on the PC."
     }
   ],
-  "last_updated": "2026-03-22T16:50:21.798Z"
+  "last_updated": "2026-03-22T16:54:24.594Z"
 }
