@@ -266,6 +266,7 @@ const SKILL_TASK_MAP = {
   'virtual-trader':   { divState: 'trading',        division: 'trading',        task: 'virtual-trader'   },
   'trading-report':   { divState: 'trading',        division: 'trading',        task: 'trading-report'   },
   'market-scan':      { divState: 'trading',        division: 'trading',        task: 'market-scan'      },
+  'backtester':       { divState: 'trading',        division: 'trading',        task: 'backtester'       },
   'health-logger':    { divState: 'personal',       division: 'personal',       task: 'health-logger'    },
   'perf-correlation': { divState: 'personal',       division: 'personal',       task: 'perf-correlation' },
   'burnout-monitor':  { divState: 'personal',       division: 'personal',       task: 'burnout-monitor'  },

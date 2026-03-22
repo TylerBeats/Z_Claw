@@ -157,7 +157,7 @@ def load_today_trades() -> tuple[list, str]:
             if t and t.get("timestamp", "").startswith(today)
         ]
         log.info("Loaded %d trades from virtual_account.json", len(trades))
-        return trades, "dry_run"
+        return trades, "virtual_account"
 
     # Last resort: read today's exit trades from cycle state trade_log
     cycle = load_cycle_state()

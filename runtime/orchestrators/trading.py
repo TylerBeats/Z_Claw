@@ -13,6 +13,7 @@ from runtime.skills import trading_report, market_scan, virtual_trader, backtest
 from runtime import packet
 from runtime.tools.xp import grant_skill_xp
 from runtime.tools.trading import load_cycle_state, load_active_strategy
+from runtime.tools.virtual_account import load_virtual_account
 
 log   = logging.getLogger(__name__)
 MODEL = SKILL_MODELS["trading-report"]
@@ -106,7 +107,17 @@ def run_trading_report() -> dict:
         summary = "Trading system not yet activated — no session data found."
         status  = "partial"
     elif stats.get("total_trades", 0) == 0:
-        summary = "No closed trades today."
+        # Load account state here so we can include balance/open positions in summary
+        _v = load_virtual_account()
+        _bal   = _v.get("account_balance", 10_000.0)
+        _init  = _v.get("initial_balance", 10_000.0)
+        _pnl   = round(_bal - _init, 2)
+        _open  = len(_v.get("open_positions", []))
+        _pos_label = f"{_open} open position{'s' if _open != 1 else ''}" if _open else "no open positions"
+        summary = (
+            f"No closed trades today. Balance: ${_bal:,.2f} "
+            f"(Total PnL: ${_pnl:+.2f}) — {_pos_label}."
+        )
         if market_pkt:
             summary += f" Market: {market_pkt.get('summary', '')}"
         status  = "success"
@@ -114,6 +125,13 @@ def run_trading_report() -> dict:
         # Orchestrator synthesizes session + market together
         summary = _synthesize_trading_session(result, market_pkt)
         status  = result["status"]
+
+    # Load virtual account state — always include balance/growth even with no closed trades
+    v_acct          = load_virtual_account()
+    acct_balance    = v_acct.get("account_balance", 10_000.0)
+    acct_initial    = v_acct.get("initial_balance", 10_000.0)
+    acct_pnl        = round(acct_balance - acct_initial, 2)
+    open_pos_count  = len(v_acct.get("open_positions", []))
 
     # Enrich with agent-network cycle state
     cycle = load_cycle_state()
@@ -147,6 +165,9 @@ def run_trading_report() -> dict:
             "total_pnl":      stats.get("total_pnl"),
             "source":         result.get("source", "none"),
             "market_context": bool(market_pkt),
+            "account_balance": acct_balance,
+            "account_pnl":     acct_pnl,
+            "open_positions":  open_pos_count,
             **cycle_metrics,
         },
         artifact_refs=[{"bundle_id": "trade-session-today", "location": "hot"}],
