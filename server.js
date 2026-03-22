@@ -3299,7 +3299,13 @@ const server = http.createServer(async (req, res) => {
         if (!skill) return jsonError(res, 400, 'skill required');
         if (!SKILL_TASK_MAP[skill]) return jsonError(res, 400, `Unknown skill: ${skill}`);
         // Support optional params (e.g. prompt for image-generate)
-        const extraArgs = body.params ? [JSON.stringify(body.params)] : [];
+        // image-generate / sprite-generate expect positional args: asset_type, commander, subject
+        let extraArgs = [];
+        if (body.params?.prompt && ['image-generate', 'sprite-generate'].includes(skill)) {
+          extraArgs = ['portrait_bust', 'generic', body.params.prompt];
+        } else if (body.params) {
+          extraArgs = [JSON.stringify(body.params)];
+        }
         if (body.params?.prompt) {
           logActivity('MOBILE', `Skill triggered via mobile: ${skill} (with prompt)`, 'blue');
         } else {
@@ -3315,9 +3321,10 @@ const server = http.createServer(async (req, res) => {
       // ── Skills: run a combo (sequential multi-skill workflow) ─────────────────
       if (method === 'POST' && reqPath === '/mobile/api/skills/combo') {
         const body   = await parseBody(req);
-        const skills = (body.skills || []).filter(s => typeof s === 'string' && s.trim());
-        const name   = (body.name || 'Combo').trim();
-        const prompt = body.prompt || null;
+        const skills     = (body.skills || []).filter(s => typeof s === 'string' && s.trim());
+        const name       = (body.name || 'Combo').trim();
+        const prompt     = body.prompt || null;
+        const assetType  = body.assetType || 'portrait_bust';
         if (!skills.length) return jsonError(res, 400, 'skills required');
         for (const s of skills) {
           if (!SKILL_TASK_MAP[s]) return jsonError(res, 400, `Unknown skill: ${s}`);
@@ -3328,7 +3335,7 @@ const server = http.createServer(async (req, res) => {
           for (const skill of skills) {
             broadcastWS('task_started', { skill, combo: name });
             const extraArgs = (prompt && ['image-generate','sprite-generate'].includes(skill))
-              ? [JSON.stringify({ prompt })] : [];
+              ? [assetType, 'generic', prompt] : [];
             const ok = await runSkillViaPython(skill, 'MOBILE', extraArgs);
             broadcastWS('task_completed', { skill, ok, combo: name });
             if (!ok) {

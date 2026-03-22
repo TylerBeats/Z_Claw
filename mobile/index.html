@@ -1038,6 +1038,8 @@
     .cd-prompt-label { font-size:10px; color:var(--subtext); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:8px; }
     .cd-prompt-textarea { width:100%; min-height:90px; padding:10px 12px; background:var(--surface); border:1px solid var(--border); border-radius:10px; color:var(--text); font-size:13px; line-height:1.5; resize:vertical; box-sizing:border-box; }
     .cd-prompt-textarea:focus { outline:none; border-color:var(--accent); }
+    .asset-type-pill { padding:6px 12px; border-radius:20px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; background:var(--surface); border:1px solid var(--border); color:var(--subtext); cursor:pointer; transition:all 0.15s; }
+    .asset-type-pill.selected { background:var(--accent); border-color:var(--accent); color:#fff; }
     .cd-run-btn { width:100%; padding:14px; border-radius:12px; font-size:13px; font-weight:800; letter-spacing:0.06em; text-transform:uppercase; color:#fff; border:none; cursor:pointer; margin-top:4px; transition:opacity 0.15s; }
     .cd-run-btn:active { opacity:0.75; }
     /* Combo cards — now tappable, no run button */
@@ -2022,6 +2024,15 @@
     <div class="cd-prompt-section" id="cd-prompt-section" style="display:none;">
       <div class="cd-prompt-label" id="cd-prompt-label">Prompt</div>
       <textarea class="cd-prompt-textarea" id="cd-prompt-input" rows="4"></textarea>
+      <div id="cd-asset-type-section" style="display:none; margin-top:12px;">
+        <div class="cd-prompt-label">Asset Type</div>
+        <div id="cd-asset-type-pills" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:4px;">
+          <button class="asset-type-pill selected" data-type="portrait_bust" onclick="_selectAssetType(this)">Portrait</button>
+          <button class="asset-type-pill" data-type="chibi_sprite" onclick="_selectAssetType(this)">Chibi Sprite</button>
+          <button class="asset-type-pill" data-type="battle_scene" onclick="_selectAssetType(this)">Battle Scene</button>
+          <button class="asset-type-pill" data-type="ui_element" onclick="_selectAssetType(this)">UI Element</button>
+        </div>
+      </div>
     </div>
     <button class="cd-run-btn" id="cd-run-btn" onclick="runComboFromDetail()">Run</button>
   </div>
@@ -7533,17 +7544,27 @@ function openComboDetail(comboId) {
   }).join('');
 
   // Prompt input (only for combos that need it)
-  const promptSection = document.getElementById('cd-prompt-section');
-  const promptInput   = document.getElementById('cd-prompt-input');
-  const promptLabel   = document.getElementById('cd-prompt-label');
+  const promptSection    = document.getElementById('cd-prompt-section');
+  const promptInput      = document.getElementById('cd-prompt-input');
+  const promptLabel      = document.getElementById('cd-prompt-label');
+  const assetTypeSection = document.getElementById('cd-asset-type-section');
+  const isImageCombo     = combo.skills && combo.skills.some(s => ['image-generate','sprite-generate'].includes(s));
   if (combo.hasPrompt) {
     promptLabel.textContent = combo.promptLabel || 'Prompt';
     promptInput.placeholder = combo.promptPlaceholder || 'Enter a prompt…';
     promptInput.value = '';
     promptInput.style.borderColor = '';
     promptSection.style.display = '';
+    // Show asset type picker for image combos, reset to default
+    assetTypeSection.style.display = isImageCombo ? '' : 'none';
+    if (isImageCombo) {
+      document.querySelectorAll('#cd-asset-type-pills .asset-type-pill').forEach(p => {
+        p.classList.toggle('selected', p.dataset.type === 'portrait_bust');
+      });
+    }
   } else {
     promptSection.style.display = 'none';
+    assetTypeSection.style.display = 'none';
   }
 
   // Run button
@@ -7561,10 +7582,15 @@ function closeComboDetail() {
   _detailComboId = null;
 }
 
+function _selectAssetType(btn) {
+  document.querySelectorAll('#cd-asset-type-pills .asset-type-pill').forEach(p => p.classList.remove('selected'));
+  btn.classList.add('selected');
+}
+
 async function runComboFromDetail() {
   const combo = _SKILL_COMBOS.find(c => c.id === _detailComboId);
   if (!combo) return;
-  let prompt;
+  let prompt, assetType;
   if (combo.hasPrompt) {
     prompt = document.getElementById('cd-prompt-input').value.trim();
     if (!prompt) {
@@ -7574,13 +7600,15 @@ async function runComboFromDetail() {
       setTimeout(() => ta.style.borderColor = '', 1200);
       return;
     }
+    const selectedPill = document.querySelector('#cd-asset-type-pills .asset-type-pill.selected');
+    assetType = selectedPill ? selectedPill.dataset.type : 'portrait_bust';
   }
   closeComboDetail();
-  await runCombo(_detailComboId, prompt);
+  await runCombo(_detailComboId, prompt, assetType);
 }
 
 // ── Combo Runner ──────────────────────────────────────────────────────────
-async function runCombo(comboId, prompt) {
+async function runCombo(comboId, prompt, assetType) {
   const combo = _SKILL_COMBOS.find(c => c.id === comboId);
   if (!combo) return;
   // If combo needs a prompt and none provided, open the detail sheet
@@ -7598,6 +7626,7 @@ async function runCombo(comboId, prompt) {
   try {
     const body = { name: combo.name, skills: combo.skills };
     if (prompt) body.prompt = prompt;
+    if (assetType) body.assetType = assetType;
     const res = await api('/mobile/api/skills/combo', { method: 'POST', body: JSON.stringify(body) });
     showToast(`${combo.name} started ⚡`);
     if (prog) prog.textContent = `Running ${_SKILL_ABILITY_NAMES[combo.skills[0]] || combo.skills[0]}…`;
