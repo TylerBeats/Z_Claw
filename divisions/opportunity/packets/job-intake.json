@@ -1,27 +1,22 @@
 {
   "division": "opportunity",
-  "generated_at": "2026-03-21T21:16:25.209987+00:00",
+  "generated_at": "2026-03-22T00:08:10.528277+00:00",
   "skill": "job-intake",
   "status": "success",
-  "summary": "All sourcing platforms are operational with no issues. Notable finds include 20 new remote job listings across various categories, but concerns remain with Adzuna providing only partial data.",
+  "summary": "The job intake run for J_Claw shows all sources (WeWorkRemotely, RemoteOK, Remotive) are operational with ok status, while Adzuna has partial data. Notable is the addition of 1 new opportunity, but scoring indicates a single B-level position was found, with no A, C, or D level positions identified.",
   "action_items": [
     {
       "priority": "high",
-      "description": "[TIER B] Jobgether: Remote Senior DevOps Developer —  | Remote | Pay unspecified | Fit: 6.0/10 | Resume: Technical | https://weworkremotely.com/remote-jobs/jobgether-remote-senior-devops-developer",
-      "requires_matthew": true
-    },
-    {
-      "priority": "high",
-      "description": "[TIER B] Jobgether: DevOps/Infra Lead (Remote) —  | Remote | Pay unspecified | Fit: 6.3/10 | Resume: Technical | https://weworkremotely.com/remote-jobs/jobgether-devops-infra-lead-remote",
+      "description": "[TIER B] Crypto Trader (Full Training Provided) — Elemental Terra Capital Ltd | Worldwide | $48k - $60k | Fit: 7.0/10 | Resume: Technical | https://remotive.com/remote-jobs/finance/crypto-trader-full-training-provided-2088659",
       "requires_matthew": true
     }
   ],
   "metrics": {
-    "new_jobs_found": 20,
+    "new_jobs_found": 1,
     "tier_a": 0,
-    "tier_b": 2,
-    "tier_c": 1,
-    "tier_d": 17,
+    "tier_b": 1,
+    "tier_c": 0,
+    "tier_d": 0,
     "source_status": {
       "WeWorkRemotely": "ok",
       "RemoteOK": "ok",

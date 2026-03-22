@@ -40,5 +40,131 @@
     },
     "total_event": 2,
     "ts": "2026-03-22T00:02:49.911246+00:00"
+  },
+  {
+    "id": "b976630f",
+    "type": "skill_complete",
+    "division": "opportunity",
+    "skill": "job-intake",
+    "commander": "VAEL",
+    "color": "#f59e0b",
+    "enemy": "false_lead",
+    "enemy_name": "False Lead",
+    "xp": 10,
+    "multiplier": 1.0,
+    "rank_up": true,
+    "rank_up_msg": "Grand Headhunter \u2192 Sovereign Tracker",
+    "new_rank": "Sovereign Tracker",
+    "chapter": {
+      "title": "Chapter I \u2014 The Realm Awakens",
+      "narration": "A new commander rises. The orders stir, watching from the shadows. The first challenges step forward."
+    },
+    "total_event": 3,
+    "ts": "2026-03-22T00:08:10.543326+00:00"
+  },
+  {
+    "id": "5254a936",
+    "type": "skill_complete",
+    "division": "opportunity",
+    "skill": "hard-filter",
+    "commander": "VAEL",
+    "color": "#f59e0b",
+    "enemy": "false_lead",
+    "enemy_name": "False Lead",
+    "xp": 5,
+    "multiplier": 1.0,
+    "rank_up": false,
+    "rank_up_msg": "",
+    "new_rank": "Sovereign Tracker",
+    "chapter": {
+      "title": "Chapter I \u2014 The Realm Awakens",
+      "narration": "A new commander rises. The orders stir, watching from the shadows. The first challenges step forward."
+    },
+    "total_event": 4,
+    "ts": "2026-03-22T00:08:10.561680+00:00"
+  },
+  {
+    "id": "365d3e24",
+    "type": "skill_complete",
+    "division": "personal",
+    "skill": "personal-digest",
+    "commander": "LYRIN",
+    "color": "#10b981",
+    "enemy": "burnout_shade",
+    "enemy_name": "Burnout Shade",
+    "xp": 5,
+    "multiplier": 1.0,
+    "rank_up": false,
+    "rank_up_msg": "",
+    "new_rank": "Flame Tender",
+    "chapter": {
+      "title": "Chapter II \u2014 The Orders Convene",
+      "narration": "Word spreads between the Dawnhunt and the Iron Codex. Something is different about this one. The five orders begin to form ranks."
+    },
+    "total_event": 5,
+    "ts": "2026-03-22T00:30:19.181631+00:00"
+  },
+  {
+    "id": "03d5563c",
+    "type": "skill_complete",
+    "division": "dev_automation",
+    "skill": "refactor-scan",
+    "commander": "KAELEN",
+    "color": "#a78bfa",
+    "enemy": "code_rot",
+    "enemy_name": "Code Rot",
+    "xp": 5,
+    "multiplier": 1.0,
+    "rank_up": false,
+    "rank_up_msg": "",
+    "new_rank": "Forge Warden",
+    "chapter": {
+      "title": "Chapter II \u2014 The Orders Convene",
+      "narration": "Word spreads between the Dawnhunt and the Iron Codex. Something is different about this one. The five orders begin to form ranks."
+    },
+    "total_event": 6,
+    "ts": "2026-03-22T01:02:58.564447+00:00"
+  },
+  {
+    "id": "7d670a27",
+    "type": "skill_complete",
+    "division": "trading",
+    "skill": "market-scan",
+    "commander": "SEREN",
+    "color": "#06b6d4",
+    "enemy": "market_noise",
+    "enemy_name": "Market Noise",
+    "xp": 5,
+    "multiplier": 1.0,
+    "rank_up": false,
+    "rank_up_msg": "",
+    "new_rank": "Pattern Seer",
+    "chapter": {
+      "title": "Chapter II \u2014 The Orders Convene",
+      "narration": "Word spreads between the Dawnhunt and the Iron Codex. Something is different about this one. The five orders begin to form ranks."
+    },
+    "total_event": 7,
+    "ts": "2026-03-22T01:03:19.195759+00:00"
+  },
+  {
+    "id": "8d442cf3",
+    "type": "skill_complete",
+    "division": "dev_automation",
+    "skill": "refactor-scan",
+    "commander": "KAELEN",
+    "color": "#a78bfa",
+    "enemy": "code_rot",
+    "enemy_name": "Code Rot",
+    "xp": 5,
+    "multiplier": 1.0,
+    "rank_up": false,
+    "rank_up_msg": "",
+    "new_rank": "Forge Warden",
+    "chapter": {
+      "title": "Chapter II \u2014 The Orders Convene",
+      "narration": "Word spreads between the Dawnhunt and the Iron Codex. Something is different about this one. The five orders begin to form ranks."
+    },
+    "total_event": 8,
+    "ts": "2026-03-22T02:02:55.262349+00:00"
   }
 ]

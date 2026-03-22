@@ -27,3 +27,9 @@
 {"ts":"2026-03-21T23:03:15.004Z","event":"skill_complete","skill":"market-scan","div":"trading","xp":5,"multiplier":1,"streak":1}
 {"ts":"2026-03-22T00:00:13.685Z","event":"skill_complete","skill":"burnout-monitor","div":"personal","xp":5,"multiplier":1,"streak":1}
 {"ts":"2026-03-22T00:02:50.000Z","event":"skill_complete","skill":"refactor-scan","div":"dev_automation","xp":5,"multiplier":1,"streak":2}
+{"ts":"2026-03-22T00:08:10.647Z","event":"skill_complete","skill":"job-intake","div":"opportunity","xp":10,"multiplier":1,"streak":2}
+{"ts":"2026-03-22T00:30:19.263Z","event":"skill_complete","skill":"personal-digest","div":"personal","xp":5,"multiplier":1,"streak":1}
+{"ts":"2026-03-22T01:02:58.693Z","event":"skill_complete","skill":"refactor-scan","div":"dev_automation","xp":5,"multiplier":1,"streak":2}
+{"ts":"2026-03-22T01:03:19.753Z","event":"skill_complete","skill":"market-scan","div":"trading","xp":5,"multiplier":1,"streak":2}
+{"ts":"2026-03-22T02:02:55.423Z","event":"skill_complete","skill":"refactor-scan","div":"dev_automation","xp":5,"multiplier":1,"streak":2}
+{"ts":"2026-03-22T02:03:16.139Z","event":"skill_complete","skill":"mobile-audit-review","div":"op_sec","xp":5,"multiplier":1,"streak":2}

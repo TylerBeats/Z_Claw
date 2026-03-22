@@ -2,14 +2,6 @@
   "messages": [
     {
       "role": "user",
-      "content": "Does anything need to be done to properly integrate it as the trader?"
-    },
-    {
-      "role": "assistant",
-      "content": "Good news first -- then what needs changing.\n\n---\n\n## What's Already There\n\nThe **virtual-trader skill already exists** and is fully built for SPX500 and Gold. It:\n- Pulls real prices via yfinance (`^GSPC`, `GC=F`)\n- Reads the active strategy from agent-network\n- Simulates execution and writes `virtual_account.json`\n- trading-report already reads that file as its fallback source\n\nSo the internal simulation chain is **complete and ready to run today** with zero setup.\n\n---\n\n## What OANDA Integration Would Require\n\nOANDA replaces virtual-trader with **real demo order execution**. Here's what would need to be built:\n\n### 1. `.env` -- Add Credentials\n- `OANDA_API_KEY`\n- `OANDA_ACCOUNT_ID`\n- `OANDA_ENV=practice` (OANDA calls their demo environment \"practice\")\n\n### 2. New skill: `skills/oanda-trader/SKILL.md`\nReplaces virtual-trader. Instead of simulating execution internally, it:\n- Generates signals using the same strategy logic\n- Places **real demo orders** via OANDA's v20 REST API (`/orders`)\n- Instruments: `SPX500_USD`, `XAU_USD` (OANDA's names for SPX500 and gold)\n\n### 3. New skill: `skills/oanda-sync/SKILL.md`\nRuns before trading-report. Pulls today's closed transactions from OANDA API (`/accounts/{id}/transactions`) and writes `agent-network/state/oanda_demo_state.json` in the standard trade record format.\n\n### 4. Update `skills/trading-report/SKILL.md`\nAdd OANDA as the **top priority** data source:\n1. Check `oanda_demo_state.json` first\n2. Fall back to `virtual_account.json`\n3. Fall back to \"not activated\"\n\n### 5. Update `divisions/trading/config.json`\nAdd `oanda-trader` and `oanda-sync` as scheduled agents.\n\n### 6. Update `skills/division-chief-trading/SKILL.md`\nReplace virtual-trader in the 18:00 sequence:\n```\noanda-trader → oanda-sync → trading-report → backtester → archive-hot\n```\n\n---\n\n## Decision Point\n\n| Option | Setup Required | Realism | Ready When |\n|---|---|---|---|\n| **Virtual Trader** (already built) | Nothing | Internal simulation, real prices | Today |\n| **OANDA Demo** | API credentials + 4 skill changes | Real demo execution, real spreads | After OANDA account setup |\n\n**Do you want to activate virtual-trader now as an interim step while setting up OANDA, or skip straight to building OANDA?**"
-    },
-    {
-      "role": "user",
       "content": "Please run a cycle to verify it works"
     },
     {
@@ -399,7 +391,15 @@
     {
       "role": "assistant",
       "content": "You've hit your limit · resets 7pm (America/Halifax)"
+    },
+    {
+      "role": "user",
+      "content": "Please review all notifications active for the divisions"
+    },
+    {
+      "role": "assistant",
+      "content": "Here's the full picture of all active notifications across J_Claw:\n\n---\n\n## Active Division Notifications\n\n### Currently Dismissed (silenced in mobile)\n| Alert | Reason |\n|-------|--------|\n| `threat-surface` | Acknowledged |\n| `opsec-digest` | Acknowledged |\n\n---\n\n### Division-by-Division Escalation Triggers\n\n#### WRAITH (Op-Sec)\n| Skill | Trigger |\n|-------|---------|\n| Device Posture | Any 1+ security issue (UAC, firewall, AV, disk encryption, etc.) |\n| Threat Surface | ANY HIGH severity LLM-detected anomaly |\n| Breach Check | Any email found in HIBP database |\n| Credential Audit | Any HIGH severity credential pattern in code/config |\n| Op-Sec Digest | Any sub-skill escalated |\n\n> Current state: `threat-surface` has an active HIGH escalation (AMD scheduled task) -- **dismissed but not resolved**\n\n---\n\n#### ORACLE (Trading)\n| Skill | Trigger |\n|-------|---------|\n| Market Scan | 1+ high-priority signal (SPX ±3%, Crypto ±7%) |\n| Backtester | Strategy change or anomalous results |\n\n> Current state: No active escalations\n\n---\n\n#### VANCE (Opportunity)\n| Skill | Trigger |\n|-------|---------|\n| Job Intake | All sources fail, or Adzuna rate limited |\n| Hard Filter | Tier A job found -- Matthew review required |\n| Funding Finder | All sources fail |\n\n> Current state: No active escalations -- 97 pending review items\n\n---\n\n#### EMBER (Personal)\n| Skill | Trigger |\n|-------|---------|\n| Burnout Monitor | Avg sleep <5.5h, 5+ skipped logs, or 5+ negative emotions in 7 days |\n| Perf Correlation | Significant negative health-to-trading correlation |\n| Personal Digest | Any sub-skill escalated |\n\n> Last log: **2026-03-20** -- one missed day\n\n---\n\n#### FORGE (Dev Automation)\n| Skill | Trigger |\n|-------|---------|\n| Repo Monitor | gh CLI auth failure or high security findings |\n| Debug Agent | **Always escalates** -- all debug results sent to review |\n| Refactor Scan | Security findings or high technical debt |\n| Security Scan | HIGH severity code findings |\n\n> Current state: No active escalations\n\n---\n\n#### SENTINEL (System Health)\n| Skill | Trigger |\n|-------|---------|\n| Provider Health | ALL AI providers down (critical) or <2 healthy |\n| Queue Monitor | Any queue anomalies |\n| Agent Network | Cycle state not updated in 6+ hours (STALE) |\n\n> Current state: 4/6 providers healthy, agent network ACTIVE (0.14h ago) -- clean\n\n---\n\n### Two Things Worth Your Attention\n\n1. **WRAITH's `threat-surface` AMD task alert** -- dismissed but the underlying issue (flagged AMD scheduled task) is still there. Worth a quick look before clearing it permanently.\n\n2. **EMBER's health log** -- last entry was yesterday. Burnout monitor escalates after 5 missed days, but it's worth keeping the streak going.\n\nWant me to dig into any specific alert or adjust any of the thresholds?"
     }
   ],
-  "last_updated": "2026-03-21T19:00:09.792Z"
+  "last_updated": "2026-03-22T00:07:00.917Z"
 }
