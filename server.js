@@ -3459,6 +3459,40 @@ const server = http.createServer(async (req, res) => {
         return jsonOk(res, { ok: true, sent });
       }
 
+      // ── Generated Images: list recent images from generated assets dir ──────
+      if (method === 'GET' && reqPath === '/mobile/api/generated-images') {
+        const generatedRoot = path.join(ROOT, 'mobile', 'assets', 'generated');
+        const results = [];
+        try {
+          // Walk commander dirs -> asset_type dirs -> files
+          const commanders = fs.readdirSync(generatedRoot).filter(d => {
+            try { return fs.statSync(path.join(generatedRoot, d)).isDirectory(); } catch(_) { return false; }
+          });
+          for (const cmd of commanders) {
+            const cmdDir = path.join(generatedRoot, cmd);
+            const assetTypes = fs.readdirSync(cmdDir).filter(d => {
+              try { return fs.statSync(path.join(cmdDir, d)).isDirectory(); } catch(_) { return false; }
+            });
+            for (const at of assetTypes) {
+              const atDir = path.join(cmdDir, at);
+              const files = fs.readdirSync(atDir).filter(f => /\.(png|jpg|webp)$/i.test(f));
+              for (const f of files) {
+                const stat = fs.statSync(path.join(atDir, f));
+                results.push({
+                  url: `/mobile/assets/generated/${cmd}/${at}/${f}`,
+                  filename: f, commander: cmd, assetType: at,
+                  size_kb: Math.round(stat.size / 1024),
+                  created_at: stat.birthtimeMs || stat.ctimeMs,
+                });
+              }
+            }
+          }
+        } catch(_e) { /* dir may not exist yet */ }
+        // Sort newest first
+        results.sort((a, b) => b.created_at - a.created_at);
+        return jsonOk(res, { ok: true, images: results.slice(0, 50) });
+      }
+
       return jsonError(res, 404, 'Unknown mobile endpoint');
     } catch(e) {
       return jsonError(res, 500, e.message);
@@ -3499,7 +3533,19 @@ function runSkillViaPython(skillName, logDiv, extraArgs = []) {
       if (code === 0) {
         logActivity(logDiv || 'SYS', `${skillName} complete`, 'green');
         handleGamifCheck(skillName, mapping.divState);
-        broadcastWS('task_completed', { skill: skillName, division: mapping.divState, ok: true });
+        // For image/sprite generation, read the packet and attach image URLs to the WS event
+        let generatedImages = [];
+        if (['image-generate', 'sprite-generate'].includes(skillName)) {
+          try {
+            const packetPath = path.join(ROOT, 'divisions', 'production', 'packets', `${skillName}.json`);
+            const packet = JSON.parse(fs.readFileSync(packetPath, 'utf8'));
+            const filenames = packet?.metrics?.filenames || [];
+            const assetType = packet?.metrics?.asset_type || 'portrait_bust';
+            const commander = packet?.metrics?.commander || 'generic';
+            generatedImages = filenames.map(f => `/mobile/assets/generated/${commander}/${assetType}/${f}`);
+          } catch(_e) { /* packet may not be written yet */ }
+        }
+        broadcastWS('task_completed', { skill: skillName, division: mapping.divState, ok: true, images: generatedImages });
         broadcastWS('division_status_changed', { division: mapping.divState, status: 'idle' });
         resolve(true);
       } else {

@@ -1060,6 +1060,32 @@
     .skill-dot-running { background: var(--yellow); animation: pulse-live 1s infinite; }
     .skill-dot-done    { background: var(--green); }
 
+    /* ── Image Gallery ── */
+    .img-gallery-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:1200; display:none; flex-direction:column; }
+    .img-gallery-overlay.open { display:flex; }
+    .img-gallery-header { display:flex; align-items:center; justify-content:space-between; padding:16px 20px 12px; border-bottom:1px solid var(--border); flex-shrink:0; }
+    .img-gallery-title { font-size:16px; font-weight:800; letter-spacing:0.03em; }
+    .img-gallery-sub { font-size:11px; color:var(--subtext); margin-top:2px; }
+    .img-gallery-close { width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,0.08); border:none; color:var(--text); font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+    .img-gallery-grid { display:grid; grid-template-columns:repeat(2, 1fr); gap:10px; padding:16px; overflow-y:auto; flex:1; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; }
+    .img-gallery-card { background:var(--surface); border-radius:12px; overflow:hidden; cursor:pointer; position:relative; }
+    .img-gallery-card img { width:100%; aspect-ratio:1/1; object-fit:cover; display:block; background:rgba(255,255,255,0.05); }
+    .img-gallery-card-info { padding:8px 10px; }
+    .img-gallery-card-type { font-size:9px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:var(--accent); }
+    .img-gallery-card-name { font-size:11px; color:var(--subtext); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .img-gallery-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; flex:1; gap:10px; color:var(--subtext); padding:40px 20px; text-align:center; }
+    .img-gallery-empty-icon { font-size:40px; opacity:0.4; }
+    .img-gallery-empty-text { font-size:13px; opacity:0.7; }
+    /* Fullscreen image viewer */
+    .img-viewer-overlay { position:fixed; inset:0; background:#000; z-index:1300; display:none; flex-direction:column; }
+    .img-viewer-overlay.open { display:flex; }
+    .img-viewer-header { display:flex; align-items:center; justify-content:space-between; padding:14px 18px; position:absolute; top:0; left:0; right:0; z-index:10; background:linear-gradient(to bottom,rgba(0,0,0,0.7),transparent); }
+    .img-viewer-close { width:36px; height:36px; border-radius:50%; background:rgba(255,255,255,0.15); border:none; color:#fff; font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+    .img-viewer-img-wrap { flex:1; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+    .img-viewer-img-wrap img { max-width:100%; max-height:100%; object-fit:contain; }
+    .img-viewer-footer { padding:14px 18px 32px; text-align:center; }
+    .img-viewer-name { font-size:12px; color:rgba(255,255,255,0.6); word-break:break-all; }
+
     /* ── Priority cards (Home tab) ── */
     .priority-section { margin-bottom: 4px; }
     .priority-section-hdr { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
@@ -2035,6 +2061,34 @@
       </div>
     </div>
     <button class="cd-run-btn" id="cd-run-btn" onclick="runComboFromDetail()">Run</button>
+  </div>
+</div>
+
+<!-- ── Image Gallery Overlay ── -->
+<div class="img-gallery-overlay" id="img-gallery-overlay">
+  <div class="img-gallery-header">
+    <div>
+      <div class="img-gallery-title">Generated Images</div>
+      <div class="img-gallery-sub" id="img-gallery-sub">Loading…</div>
+    </div>
+    <button class="img-gallery-close" onclick="closeImageGallery()">✕</button>
+  </div>
+  <div class="img-gallery-grid" id="img-gallery-grid">
+    <div class="skeleton" style="height:160px;border-radius:12px;"></div>
+    <div class="skeleton" style="height:160px;border-radius:12px;"></div>
+  </div>
+</div>
+
+<!-- ── Image Fullscreen Viewer ── -->
+<div class="img-viewer-overlay" id="img-viewer-overlay" onclick="closeImageViewer()">
+  <div class="img-viewer-header">
+    <button class="img-viewer-close" onclick="closeImageViewer()">✕</button>
+  </div>
+  <div class="img-viewer-img-wrap" onclick="event.stopPropagation()">
+    <img id="img-viewer-img" src="" alt="Generated image">
+  </div>
+  <div class="img-viewer-footer">
+    <div class="img-viewer-name" id="img-viewer-name"></div>
   </div>
 </div>
 
@@ -7117,6 +7171,10 @@ function _handleWSMessage(msg) {
         showToast(skillName + (msg.ok ? ' complete ✓' : ' failed ✗'));
         if (msg.ok) haptic('success');
       }
+      // Show image gallery if this was a generation skill and images came back
+      if (msg.ok && msg.images && msg.images.length > 0) {
+        showImageGallery(msg.images, true /* auto-open */);
+      }
       // Update that specific skill dot
       if (msg.skill) {
         _updateSkillDot(msg.skill, msg.ok ? 'done' : 'idle');
@@ -7157,6 +7215,75 @@ function _handleWSMessage(msg) {
       _checkStoryState();
       break;
   }
+}
+
+// ══════════════════════════════════════════════════════════
+// IMAGE GALLERY
+// ══════════════════════════════════════════════════════════
+let _galleryImages = [];
+
+function showImageGallery(images, autoOpen = false) {
+  _galleryImages = images || [];
+  const overlay = document.getElementById('img-gallery-overlay');
+  const grid = document.getElementById('img-gallery-grid');
+  const sub = document.getElementById('img-gallery-sub');
+  if (!overlay) return;
+
+  if (_galleryImages.length === 0) {
+    grid.innerHTML = `<div class="img-gallery-empty" style="grid-column:1/-1;"><div class="img-gallery-empty-icon">🖼</div><div class="img-gallery-empty-text">No images generated yet.<br>Run Creative Sprint to create some.</div></div>`;
+    sub.textContent = 'No images yet';
+  } else {
+    sub.textContent = `${_galleryImages.length} image${_galleryImages.length !== 1 ? 's' : ''} generated`;
+    grid.innerHTML = _galleryImages.map((url, i) => {
+      const parts = url.split('/');
+      const filename = parts[parts.length - 1];
+      const assetType = (parts[parts.length - 2] || '').replace(/_/g, ' ');
+      const commander = (parts[parts.length - 3] || '').toUpperCase();
+      return `
+        <div class="img-gallery-card" onclick="openImageViewer('${url}', '${filename}')">
+          <img src="${url}" alt="${filename}" onerror="this.parentElement.style.display='none'">
+          <div class="img-gallery-card-info">
+            <div class="img-gallery-card-type">${commander} · ${assetType}</div>
+            <div class="img-gallery-card-name">${filename}</div>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  if (autoOpen) overlay.classList.add('open');
+}
+
+async function openGalleryFromServer() {
+  const overlay = document.getElementById('img-gallery-overlay');
+  const grid = document.getElementById('img-gallery-grid');
+  const sub = document.getElementById('img-gallery-sub');
+  overlay.classList.add('open');
+  grid.innerHTML = `<div class="skeleton" style="height:160px;border-radius:12px;"></div><div class="skeleton" style="height:160px;border-radius:12px;"></div>`;
+  sub.textContent = 'Loading…';
+  try {
+    const res = await apiFetch('/mobile/api/generated-images');
+    const data = await res.json();
+    if (data.ok && data.images) {
+      showImageGallery(data.images.map(i => i.url));
+    }
+  } catch(e) {
+    sub.textContent = 'Failed to load';
+  }
+}
+
+function closeImageGallery() {
+  document.getElementById('img-gallery-overlay')?.classList.remove('open');
+}
+
+function openImageViewer(url, name) {
+  const v = document.getElementById('img-viewer-overlay');
+  document.getElementById('img-viewer-img').src = url;
+  document.getElementById('img-viewer-name').textContent = name || url;
+  v.classList.add('open');
+}
+
+function closeImageViewer() {
+  document.getElementById('img-viewer-overlay')?.classList.remove('open');
 }
 
 // ══════════════════════════════════════════════════════════
