@@ -2916,18 +2916,30 @@ function handleCodingHistory(res) {
 function handleTradingSignals(res) {
   const marketDir = path.join(ROOT, 'divisions', 'trading', 'hot');
   let signals = [];
+  let latestSummary = '';
   try {
     if (fs.existsSync(marketDir)) {
       const files = fs.readdirSync(marketDir).filter(f => f.startsWith('market-') && f.endsWith('.json')).sort().reverse();
       for (const file of files.slice(0, 5)) {
         try {
           const d = JSON.parse(fs.readFileSync(path.join(marketDir, file), 'utf8'));
-          if (d.signals) signals.push(...d.signals);
+          const fileTs = d.generated_at || '';
+          if (!latestSummary && d.summary) latestSummary = d.summary;
+          if (d.signals) {
+            // Normalise signal fields for the UI
+            const enriched = d.signals.map(s => ({
+              ...s,
+              symbol: s.symbol || s.ticker || s.instrument || '?',
+              generated_at: s.generated_at || fileTs,
+              note: s.note || s.detail || '',
+            }));
+            signals.push(...enriched);
+          }
         } catch(e) {}
       }
     }
   } catch(e) {}
-  jsonOk(res, { signals: signals.slice(0, 20), total: signals.length });
+  jsonOk(res, { signals: signals.slice(0, 20), total: signals.length, summary: latestSummary });
 }
 
 // GET /mobile/api/achievements
