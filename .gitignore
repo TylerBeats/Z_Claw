@@ -5,6 +5,7 @@ dashboard/node_modules/
 # Secrets — never commit
 .env
 *.env
+state/vapid-keys.json
 
 # State files — runtime data and personal data
 state/health-log.json
@@ -28,6 +29,15 @@ state/adzuna-*.json
 state/.seen-ids-tmp.json
 state/_seen_ids_tmp.json
 
+# Runtime event logs and queues
+state/anim-queue.json
+state/anim-history.json
+state/xp-history.jsonl
+state/realm-chronicle.jsonl
+state/coding-history.json
+state/dismissed-alerts.json
+state/story-state.json
+
 # Health log inside skills dir
 skills/health-logger/state/
 
@@ -43,13 +53,22 @@ monitor-processes.ps1
 divisions/personal/hot/
 divisions/personal/packets/
 
-# Op-Sec runtime data (breach email lists)
+# Op-Sec runtime data (breach email lists, personal data)
 divisions/op-sec/breach_emails.json
 divisions/op-sec/hot/
+divisions/op-sec/packets/
 
 # Trading + Opportunity hot cache — ephemeral runtime data
 divisions/trading/hot/
 divisions/opportunity/hot/
+
+# Division packets — generated skill output, not source
+divisions/dev-automation/hot/
+divisions/dev-automation/packets/
+divisions/sentinel/packets/
+divisions/trading/packets/
+divisions/opportunity/packets/
+divisions/production/packets/
 
 # State directory — any unlisted runtime files
 state/chat-system-prompt.txt
@@ -57,6 +76,9 @@ state/chat-system-prompt.txt
 # Runtime state (generated, not source)
 state/orchestrator-state.json
 state/health-prompt.json
+state/mobile-pin.json
+state/jobs-seen.json
+state/intake-temp.json
 
 # Personal files
 resumes/
@@ -67,13 +89,5 @@ resumes/
 # OS
 .DS_Store
 Thumbs.db
-runtime/__pycache__/
 **/__pycache__/
 *.pyc
-state/jobs-seen.json
-state/health-log.json
-state/trade-log.json
-state/applications.json
-state/intake-temp.json
-.env
-state/mobile-pin.json
