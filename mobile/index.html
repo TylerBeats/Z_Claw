@@ -543,7 +543,7 @@
     .battle-commander { font-size: 9px; font-weight: 800; letter-spacing: 0.06em; opacity: 0.8; }
 
     /* ── Character Sheet (bottom sheet) ── */
-    #char-sheet-overlay { position: fixed; inset: 0; z-index: 7990; background: rgba(0,0,0,0.55); opacity: 0; pointer-events: none; transition: opacity 0.25s ease; backdrop-filter: blur(4px); }
+    #char-sheet-overlay { position: fixed; inset: 0; z-index: 7990; background: rgba(0,0,0,0.55); opacity: 0; pointer-events: none; transition: opacity 0.25s ease; -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
     #char-sheet-overlay.open { opacity: 1; pointer-events: all; }
     #char-sheet { position: fixed; bottom: 0; left: 0; right: 0; z-index: 7999; background: var(--surface); border-radius: 20px 20px 0 0; border-top: 1px solid var(--border); padding: 0 0 calc(var(--safe-bottom) + 12px); transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.32,0.72,0,1); max-height: 78dvh; overflow-y: auto; }
     #char-sheet.open { transform: translateY(0); }
@@ -813,8 +813,94 @@
       background: linear-gradient(to top, var(--th-color, #a78bfa)18 0%, transparent 100%);
       opacity: 0.35;
     }
+
+    /* ── Division-specific arena themes ── */
+    /* Opportunity / VAEL — Dawn Hunt: deep violet forest */
+    #th-battle-arena[data-division="opportunity"] .th-arena-bg {
+      background: linear-gradient(180deg, #030520 0%, #09093a 40%, #100840 70%, #060318 100%);
+    }
+    #th-battle-arena[data-division="opportunity"] .th-arena-stars {
+      background-image:
+        radial-gradient(1px 1px at 20% 15%, #a78bfa50 0%, transparent 100%),
+        radial-gradient(2px 2px at 65% 25%, #818cf840 0%, transparent 100%),
+        radial-gradient(1px 1px at 80% 42%, #a78bfa30 0%, transparent 100%),
+        radial-gradient(1px 1px at 38% 62%, #6366f128 0%, transparent 100%),
+        radial-gradient(1px 1px at 12% 78%, #a78bfa20 0%, transparent 100%),
+        radial-gradient(50px 80px at 50% 75%, #a78bfa0a 0%, transparent 100%);
+    }
+    /* Trading / SEREN — Auric Veil: golden amber market */
+    #th-battle-arena[data-division="trading"] .th-arena-bg {
+      background: linear-gradient(180deg, #0c0800 0%, #1c0e00 40%, #251500 70%, #100a00 100%);
+    }
+    #th-battle-arena[data-division="trading"] .th-arena-stars {
+      background-image:
+        radial-gradient(1px 1px at 22% 12%, #f59e0b45 0%, transparent 100%),
+        radial-gradient(2px 2px at 72% 22%, #fbbf2438 0%, transparent 100%),
+        radial-gradient(1px 1px at 88% 45%, #f59e0b28 0%, transparent 100%),
+        radial-gradient(1px 1px at 40% 65%, #d9770620 0%, transparent 100%),
+        radial-gradient(1px 1px at 58% 80%, #f59e0b18 0%, transparent 100%),
+        radial-gradient(50px 50px at 50% 50%, #f59e0b08 0%, transparent 100%);
+    }
+    /* Dev Automation / KAELEN — Iron Codex: cyber forge */
+    #th-battle-arena[data-division="dev_automation"] .th-arena-bg,
+    #th-battle-arena[data-division="dev-automation"] .th-arena-bg {
+      background: linear-gradient(180deg, #000a14 0%, #001222 40%, #001c30 70%, #000a18 100%);
+    }
+    #th-battle-arena[data-division="dev_automation"] .th-arena-stars,
+    #th-battle-arena[data-division="dev-automation"] .th-arena-stars {
+      background-image:
+        radial-gradient(1px 1px at 12% 18%, #3b82f645 0%, transparent 100%),
+        radial-gradient(2px 2px at 62% 10%, #06b6d440 0%, transparent 100%),
+        radial-gradient(1px 1px at 90% 32%, #3b82f630 0%, transparent 100%),
+        radial-gradient(1px 1px at 30% 58%, #0891b225 0%, transparent 100%),
+        radial-gradient(1px 1px at 76% 74%, #3b82f620 0%, transparent 100%),
+        linear-gradient(90deg, transparent 15%, #3b82f60a 50%, transparent 85%),
+        linear-gradient(0deg, #06b6d408 0%, transparent 40%);
+    }
+    /* Personal / LYRIN — Ember Covenant: green ember glade */
+    #th-battle-arena[data-division="personal"] .th-arena-bg {
+      background: linear-gradient(180deg, #010a04 0%, #021408 40%, #031c0c 70%, #010a05 100%);
+    }
+    #th-battle-arena[data-division="personal"] .th-arena-stars {
+      background-image:
+        radial-gradient(1px 1px at 18% 14%, #10b98145 0%, transparent 100%),
+        radial-gradient(2px 2px at 74% 24%, #34d39938 0%, transparent 100%),
+        radial-gradient(1px 1px at 85% 50%, #10b98128 0%, transparent 100%),
+        radial-gradient(1px 1px at 42% 64%, #05966020 0%, transparent 100%),
+        radial-gradient(1px 1px at 20% 80%, #10b98118 0%, transparent 100%),
+        radial-gradient(30px 45px at 28% 82%, #10b9810a 0%, transparent 100%),
+        radial-gradient(25px 35px at 72% 72%, #10b9810a 0%, transparent 100%);
+    }
+    /* Op-Sec / ZETH — Nullward: crimson void */
+    #th-battle-arena[data-division="op_sec"] .th-arena-bg,
+    #th-battle-arena[data-division="op-sec"] .th-arena-bg {
+      background: linear-gradient(180deg, #0c0000 0%, #160000 40%, #1c0004 70%, #0c0002 100%);
+    }
+    #th-battle-arena[data-division="op_sec"] .th-arena-stars,
+    #th-battle-arena[data-division="op-sec"] .th-arena-stars {
+      background-image:
+        radial-gradient(1px 1px at 16% 20%, #ef444440 0%, transparent 100%),
+        radial-gradient(1px 1px at 68% 14%, #dc262630 0%, transparent 100%),
+        radial-gradient(1px 1px at 88% 44%, #ef444428 0%, transparent 100%),
+        radial-gradient(1px 1px at 34% 60%, #b9191920 0%, transparent 100%),
+        radial-gradient(1px 1px at 54% 82%, #ef444418 0%, transparent 100%),
+        radial-gradient(70px 70px at 50% 45%, #ef444408 0%, transparent 100%);
+    }
+    /* Production / LYKE — Lykeon Forge: vibrant magenta studio */
+    #th-battle-arena[data-division="production"] .th-arena-bg {
+      background: linear-gradient(180deg, #0a0008 0%, #140012 40%, #1c001e 70%, #0e000c 100%);
+    }
+    #th-battle-arena[data-division="production"] .th-arena-stars {
+      background-image:
+        radial-gradient(1px 1px at 14% 22%, #ec489940 0%, transparent 100%),
+        radial-gradient(2px 2px at 72% 14%, #f43f5e35 0%, transparent 100%),
+        radial-gradient(1px 1px at 90% 40%, #c026d330 0%, transparent 100%),
+        radial-gradient(1px 1px at 28% 62%, #ec489922 0%, transparent 100%),
+        radial-gradient(1px 1px at 60% 80%, #a21caf18 0%, transparent 100%),
+        radial-gradient(40px 55px at 42% 62%, #ec48990a 0%, transparent 100%);
+    }
     .th-ground-line {
-      position: absolute; bottom: 70px; left: 0; right: 0;
+      position: absolute; bottom: 106px; left: 0; right: 0;
       height: 1px; background: linear-gradient(90deg, transparent 0%, var(--th-color,#a78bfa) 20%, var(--th-color,#a78bfa) 80%, transparent 100%);
       opacity: 0.4;
     }
@@ -833,7 +919,7 @@
 
     /* combatant sprites */
     .th-combatant {
-      position: absolute; bottom: 72px;
+      position: absolute; bottom: 110px;
       transition: transform 0.5s cubic-bezier(0.32,0.72,0,1);
     }
     #th-commander { left: 12%; transform: translateX(-160px); }
@@ -851,21 +937,23 @@
     }
     #th-enemy.defeated { animation: th-defeat 0.65s ease forwards; }
 
-    /* battle text */
+    /* battle text — fixed zone at bottom, characters sit above it */
     .th-battle-text {
       position: absolute; bottom: 0; left: 0; right: 0;
-      background: linear-gradient(to top, #000000e8 0%, #000000a0 70%, transparent 100%);
-      padding: 14px 18px 10px; z-index: 3;
+      background: linear-gradient(to top, #000000f2 0%, #000000cc 60%, #00000088 85%, transparent 100%);
+      padding: 10px 18px 14px; z-index: 3;
+      border-top: 1px solid #ffffff08;
+      max-height: 105px;
     }
-    .th-skill-label { font-size: 9px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 3px; }
-    .th-battle-msg  { font-size: 13px; color: #e0e8ff; line-height: 1.5; margin-bottom: 6px; min-height: 40px; }
+    .th-skill-label { font-size: 8px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 2px; }
+    .th-battle-msg  { font-size: 12px; color: #e0e8ff; line-height: 1.4; margin-bottom: 4px; min-height: 34px; }
     .th-xp-reward   {
-      font-size: 20px; font-weight: 900; letter-spacing: 0.05em;
+      font-size: 18px; font-weight: 900; letter-spacing: 0.05em;
       opacity: 0; transform: scale(0.7) translateY(8px);
       transition: all 0.4s cubic-bezier(0.34,1.56,0.64,1);
     }
     .th-xp-reward.shown { opacity: 1; transform: scale(1) translateY(0); }
-    .th-tap-hint { font-size: 10px; color: #ffffff30; letter-spacing: 0.1em; margin-top: 6px; text-transform: uppercase; }
+    .th-tap-hint { font-size: 9px; color: #ffffff30; letter-spacing: 0.1em; margin-top: 4px; text-transform: uppercase; }
 
     /* choice screen */
     #th-choice-screen {
@@ -971,7 +1059,7 @@
     #ws-dot.ws-error     { background: var(--red); }
 
     /* ── Alert deep-dive sheet ── */
-    #alert-sheet-backdrop { position: fixed; inset: 0; z-index: 8090; background: rgba(0,0,0,0.55); opacity: 0; pointer-events: none; transition: opacity 0.25s ease; backdrop-filter: blur(4px); }
+    #alert-sheet-backdrop { position: fixed; inset: 0; z-index: 8090; background: rgba(0,0,0,0.55); opacity: 0; pointer-events: none; transition: opacity 0.25s ease; -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
     #alert-sheet-backdrop.open { opacity: 1; pointer-events: all; }
     #alert-sheet { position: fixed; bottom: 0; left: 0; right: 0; z-index: 8099; background: var(--surface); border-radius: 20px 20px 0 0; border-top: 1px solid var(--border); padding: 0 0 calc(var(--safe-bottom) + 12px); transform: translateY(100%); transition: transform 0.35s cubic-bezier(0.32,0.72,0,1); max-height: 70dvh; overflow-y: auto; }
     #alert-sheet.open { transform: translateY(0); }
@@ -1527,7 +1615,7 @@
     .sheet-subtitle { font-size: 13px; color: var(--subtext); margin-bottom: 16px; }
     .sheet-backdrop-generic {
       position: fixed; inset: 0; background: rgba(0,0,0,0.55);
-      z-index: 499; display: none; backdrop-filter: blur(3px);
+      z-index: 499; display: none; -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
     }
     .sheet-backdrop-generic.open { display: block; }
 
@@ -1566,7 +1654,7 @@
       position: fixed; inset: 0; z-index: 8000;
       display: flex; align-items: flex-end; justify-content: center;
     }
-    .story-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); }
+    .story-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.7); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
     .story-panel {
       position: relative; background: var(--surface);
       border-radius: 20px 20px 0 0; border-top: 1px solid var(--border);
@@ -2664,6 +2752,111 @@ function animateCounter(el, from, to, duration = 900) {
     if (p < 1) requestAnimationFrame(step);
   }
   requestAnimationFrame(step);
+}
+
+// ── Battle audio engine (Web Audio API — no external files) ─────────────────
+const _BA = {
+  _ctx: null,
+  _get() {
+    if (!this._ctx || this._ctx.state === 'closed') {
+      try { this._ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) { return null; }
+    }
+    if (this._ctx.state === 'suspended') this._ctx.resume();
+    return this._ctx;
+  },
+  _noise(ctx, dur, freq, q, gain, startAt) {
+    const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * dur), ctx.sampleRate);
+    const d   = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    const src = ctx.createBufferSource(), flt = ctx.createBiquadFilter(), g = ctx.createGain();
+    flt.type = 'bandpass'; flt.frequency.value = freq; flt.Q.value = q;
+    g.gain.setValueAtTime(gain, startAt);
+    g.gain.exponentialRampToValueAtTime(0.001, startAt + dur);
+    src.buffer = buf;
+    src.connect(flt); flt.connect(g); g.connect(ctx.destination);
+    src.start(startAt);
+  },
+  battleStart() {
+    const ctx = this._get(); if (!ctx) return;
+    const t = ctx.currentTime;
+    // Sub bass thud
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.frequency.setValueAtTime(90, t); o.frequency.exponentialRampToValueAtTime(32, t + 0.5);
+    g.gain.setValueAtTime(0.55, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.7);
+    o.connect(g); g.connect(ctx.destination); o.start(t); o.stop(t + 0.7);
+    // Tension noise swell
+    this._noise(ctx, 1.0, 260, 0.8, 0.18, t + 0.25);
+  },
+  attack() {
+    const ctx = this._get(); if (!ctx) return;
+    const t = ctx.currentTime;
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'square';
+    o.frequency.setValueAtTime(200, t); o.frequency.exponentialRampToValueAtTime(48, t + 0.18);
+    g.gain.setValueAtTime(0.65, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+    o.connect(g); g.connect(ctx.destination); o.start(t); o.stop(t + 0.22);
+    this._noise(ctx, 0.06, 1800, 1.5, 0.3, t + 0.01);
+  },
+  hit() {
+    const ctx = this._get(); if (!ctx) return;
+    const t = ctx.currentTime;
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'sawtooth';
+    o.frequency.setValueAtTime(520, t); o.frequency.exponentialRampToValueAtTime(120, t + 0.1);
+    g.gain.setValueAtTime(0.4, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+    o.connect(g); g.connect(ctx.destination); o.start(t); o.stop(t + 0.14);
+  },
+  victory() {
+    const ctx = this._get(); if (!ctx) return;
+    const t = ctx.currentTime;
+    [261.63, 329.63, 392.00, 523.25].forEach((f, i) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sine'; o.frequency.value = f;
+      g.gain.setValueAtTime(0.28, t + i * 0.11);
+      g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.11 + 0.45);
+      o.connect(g); g.connect(ctx.destination); o.start(t + i * 0.11); o.stop(t + i * 0.11 + 0.5);
+    });
+  },
+  rankUp() {
+    const ctx = this._get(); if (!ctx) return;
+    const t = ctx.currentTime;
+    // Power chord bass
+    [130.81, 164.81, 196.00].forEach(f => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sine'; o.frequency.value = f;
+      g.gain.setValueAtTime(0.2, t); g.gain.exponentialRampToValueAtTime(0.001, t + 1.4);
+      o.connect(g); g.connect(ctx.destination); o.start(t); o.stop(t + 1.4);
+    });
+    // Ascending fanfare
+    [261.63, 329.63, 392.00, 523.25, 659.25, 783.99, 1046.50].forEach((f, i) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = i < 3 ? 'square' : 'sine'; o.frequency.value = f;
+      const s = t + i * 0.09;
+      g.gain.setValueAtTime(0, s); g.gain.linearRampToValueAtTime(0.22, s + 0.05);
+      g.gain.exponentialRampToValueAtTime(0.001, s + 0.7);
+      o.connect(g); g.connect(ctx.destination); o.start(s); o.stop(s + 0.75);
+    });
+  },
+  chapter() {
+    const ctx = this._get(); if (!ctx) return;
+    const t = ctx.currentTime;
+    [174.61, 220.00, 261.63, 329.63].forEach((f, i) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sine'; o.frequency.value = f;
+      g.gain.setValueAtTime(0, t + i * 0.1); g.gain.linearRampToValueAtTime(0.12, t + i * 0.1 + 0.18);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 2.2);
+      o.connect(g); g.connect(ctx.destination); o.start(t + i * 0.1); o.stop(t + 2.2);
+    });
+  },
+};
+
+// ── Set arena division theme ─────────────────────────────────────────────────
+function _thSetArena(division, color) {
+  const arena = _thEl('th-battle-arena');
+  // Normalise division key (underscore or hyphen both work in CSS)
+  const divKey = (division || '').replace('_', '-').toLowerCase();
+  arena.dataset.division = divKey;
+  _thSetColor(color);
 }
 
 function _playChime() {
@@ -6871,6 +7064,7 @@ async function _thPlayChapter(chapterData) {
   _thEl('th-chap-title').style.opacity = '0';
   _thEl('th-chap-narration').style.opacity = '0';
 
+  _BA.chapter();
   sc.classList.add('visible');
   await _thWaitTap(0);  // wait for tap
   sc.classList.remove('visible');
@@ -6881,7 +7075,7 @@ async function _thPlayBattle(event) {
   _TH.phase = 'battle';
   const { division, skill, commander, color, enemy, enemy_name, xp, multiplier } = event;
 
-  _thSetColor(color);
+  _thSetArena(division, color);
   _thEl('th-chapter-label').textContent = event.chapter?.title || 'Realm Theater';
   _thEl('th-hp-cmd-name').textContent  = commander;
   _thEl('th-hp-cmd-name').style.color  = color;
@@ -6910,6 +7104,7 @@ async function _thPlayBattle(event) {
   _thEl('th-commander').classList.add('entered');
   _thEl('th-enemy').classList.add('entered');
   await _thDelay(700);
+  _BA.battleStart();
 
   // Phase 2: HP bars fill
   _thEl('th-battle-msg').textContent = `${commander} engages the ${enemy_name}...`;
@@ -6917,8 +7112,10 @@ async function _thPlayBattle(event) {
 
   // Phase 3: attack
   _thEl('th-commander').classList.add('attacking');
+  _BA.attack();
   await _thDelay(240);
   _thEl('th-enemy').classList.add('hit');
+  _BA.hit();
   await _thDelay(120);
   _thEl('th-enemy').classList.remove('hit');
   _thEl('th-enemy').classList.add('hit-recover');
@@ -6935,8 +7132,10 @@ async function _thPlayBattle(event) {
   // Phase 4: second attack
   _thEl('th-battle-msg').textContent = `${skillLabel} skill executed — decisive blow!`;
   _thEl('th-commander').classList.add('attacking');
+  _BA.attack();
   await _thDelay(200);
   _thEl('th-enemy').classList.add('hit');
+  _BA.hit();
   await _thDelay(100);
   _thEl('th-enemy').classList.remove('hit');
   _thEl('th-enemy').classList.add('hit-recover');
@@ -6952,6 +7151,7 @@ async function _thPlayBattle(event) {
 
   // Phase 5: enemy defeated
   _thEl('th-enemy').classList.add('defeated');
+  _BA.victory();
   await _thDelay(700);
 
   // Phase 6: XP reward
@@ -6973,6 +7173,7 @@ async function _thPlayRankUp(event) {
   _TH.phase = 'rankup';
   const { division, commander, color, old_rank, new_rank, tier, base_xp_bonus } = event;
   _thSetColor(color);
+  _BA.rankUp();
   _thEl('th-chapter-label').textContent = 'Evolution';
 
   const rs = _thEl('th-rankup-screen');
