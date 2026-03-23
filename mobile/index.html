@@ -936,6 +936,11 @@
       100% { transform: translateX(60px) scale(0.2) rotate(30deg); opacity: 0; }
     }
     #th-enemy.defeated { animation: th-defeat 0.65s ease forwards; }
+    #th-enemy.attacking { transform: translateX(-90px); transition: transform 0.22s ease-in; }
+    #th-enemy.retreating { transform: translateX(0); transition: transform 0.3s ease-out; }
+    #th-commander.hit { filter: brightness(4) saturate(0) !important; transition: filter 0.08s ease; }
+    #th-commander.hit-recover { filter: brightness(1) !important; transition: filter 0.25s ease; }
+    #th-commander.defeated { animation: th-defeat 0.65s ease forwards; transform-origin: left bottom; }
 
     /* battle text — fixed zone at bottom, characters sit above it */
     .th-battle-text {
@@ -1814,6 +1819,55 @@
 
     /* ── Skeleton list ── */
     .skeleton-list .skeleton { height: 60px; margin-bottom: 10px; }
+
+    /* ── Biometric scanner overlay ── */
+    #biometric-overlay { position:fixed; inset:0; z-index:9100; background:#000; display:flex; flex-direction:column; align-items:center; justify-content:center; opacity:0; pointer-events:none; transition:opacity 0.3s; }
+    #biometric-overlay.active { opacity:1; pointer-events:all; }
+    .bio-title { font-family:monospace; font-size:11px; letter-spacing:3px; color:#60a5fa; margin-bottom:5px; text-transform:uppercase; }
+    .bio-subtitle { font-family:monospace; font-size:8px; letter-spacing:2px; color:#334155; margin-bottom:28px; }
+    .bio-face-wrap { position:relative; width:180px; height:180px; margin-bottom:28px; }
+    .bio-face-outline { position:absolute; inset:0; border-radius:50%; border:1px solid #1e3a5f; }
+    .bio-corner { position:absolute; width:22px; height:22px; }
+    .bio-corner.tl { top:0; left:0; border-top:2px solid #3b82f6; border-left:2px solid #3b82f6; border-radius:3px 0 0 0; }
+    .bio-corner.tr { top:0; right:0; border-top:2px solid #3b82f6; border-right:2px solid #3b82f6; border-radius:0 3px 0 0; }
+    .bio-corner.bl { bottom:0; left:0; border-bottom:2px solid #3b82f6; border-left:2px solid #3b82f6; border-radius:0 0 0 3px; }
+    .bio-corner.br { bottom:0; right:0; border-bottom:2px solid #3b82f6; border-right:2px solid #3b82f6; border-radius:0 0 3px 0; }
+    #biometric-overlay.bio-success .bio-corner { border-color:#22c55e; }
+    #biometric-overlay.bio-fail .bio-corner { border-color:#ef4444; }
+    .bio-scan-line { position:absolute; left:4px; right:4px; height:2px; background:linear-gradient(90deg,transparent,#3b82f680,#60a5fa,#3b82f680,transparent); box-shadow:0 0 8px #3b82f6; top:0; animation:bio-scan 1.8s ease-in-out infinite; }
+    #biometric-overlay.bio-success .bio-scan-line { background:linear-gradient(90deg,transparent,#22c55e80,#22c55e,#22c55e80,transparent); box-shadow:0 0 8px #22c55e; animation:none; top:50%; }
+    #biometric-overlay.bio-fail .bio-scan-line { background:linear-gradient(90deg,transparent,#ef444480,#ef4444,#ef444480,transparent); box-shadow:0 0 8px #ef4444; animation:none; }
+    .bio-face-svg { position:absolute; inset:20px; opacity:0.15; }
+    .bio-dots { display:flex; gap:7px; margin-bottom:14px; }
+    .bio-dot { width:6px; height:6px; border-radius:50%; background:#1e3a5f; transition:background 0.15s; }
+    .bio-dot.lit { background:#3b82f6; }
+    #biometric-overlay.bio-success .bio-dot { background:#22c55e !important; }
+    #biometric-overlay.bio-fail .bio-dot { background:#ef4444 !important; }
+    .bio-status { font-family:monospace; font-size:10px; letter-spacing:2px; color:#475569; transition:color 0.3s; min-height:16px; }
+    .bio-status.success { color:#22c55e; }
+    .bio-status.fail { color:#ef4444; }
+    .bio-cancel-btn { font-family:monospace; font-size:10px; letter-spacing:1px; color:#334155; background:none; border:none; margin-top:22px; padding:10px 24px; cursor:pointer; -webkit-appearance:none; }
+    @keyframes bio-scan { 0%{top:0;opacity:1} 80%{top:calc(100% - 2px);opacity:0.5} 100%{top:calc(100% - 2px);opacity:0} }
+
+    /* ── J_Claw speech bubble ── */
+    .jclaw-sprite-wrap { cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .jclaw-bubble { position:absolute; bottom:115px; left:50%; transform:translateX(-50%); background:#0f172a; border:1px solid #3b82f630; border-radius:12px; padding:8px 13px; max-width:230px; min-width:110px; text-align:center; font-size:10px; color:#94a3b8; line-height:1.5; pointer-events:none; opacity:0; transition:opacity 0.22s; z-index:10; white-space:normal; box-shadow:0 4px 16px #0006; }
+    .jclaw-bubble::after { content:''; position:absolute; bottom:-7px; left:50%; transform:translateX(-50%); border:6px solid transparent; border-top:7px solid #0f172a; }
+    .jclaw-bubble.visible { opacity:1; }
+
+    /* ── Story arc panel ── */
+    .story-arc-panel { background:linear-gradient(135deg,#0f0a1a 0%,#0d1117 100%); border:1px solid #7c3aed28; border-radius:12px; padding:14px; margin-bottom:12px; }
+    .story-arc-label { font-size:8px; letter-spacing:2px; color:#7c3aed; margin-bottom:5px; font-weight:700; text-transform:uppercase; }
+    .story-arc-name { font-size:13px; font-weight:700; color:#e2e8f0; margin-bottom:5px; }
+    .story-arc-text { font-size:10px; color:#64748b; line-height:1.6; font-style:italic; margin-bottom:8px; }
+    .story-choice-log { border-top:1px solid #ffffff08; padding-top:8px; display:flex; flex-direction:column; gap:5px; }
+    .story-choice-row { display:flex; gap:8px; align-items:flex-start; }
+    .story-choice-div { font-size:8px; letter-spacing:1px; color:#475569; flex-shrink:0; padding-top:1px; text-transform:uppercase; min-width:52px; }
+    .story-choice-text { font-size:9px; color:#64748b; flex:1; }
+    .story-choice-badge { font-size:8px; padding:1px 5px; border-radius:3px; flex-shrink:0; }
+    .story-choice-badge.aggressive { background:#7f1d1d20; color:#f87171; border:1px solid #f8717130; }
+    .story-choice-badge.patient    { background:#1e3a5f20; color:#60a5fa; border:1px solid #60a5fa30; }
+    .story-choice-badge.balanced   { background:#14532d20; color:#4ade80; border:1px solid #4ade8030; }
   </style>
 </head>
 <body>
@@ -4270,7 +4324,8 @@ async function loadStatsTab() {
     // ── Hero ──
     let html = `
       <div class="jclaw-hero">
-        <div class="jclaw-sprite-wrap">
+        <div class="jclaw-sprite-wrap" onclick="tapJclaw(event)" id="jclaw-sprite-wrap" style="position:relative;">
+          <div id="jclaw-bubble" class="jclaw-bubble"></div>
           <div class="jclaw-sprite-glow"></div>
           <div class="jclaw-diamond jclaw-diamond-1"></div>
           <div class="jclaw-diamond jclaw-diamond-2"></div>
@@ -4476,9 +4531,10 @@ async function loadStatsTab() {
       });
     }, 60));
 
-    // ── Today's Battles + Weekly summary + Chronicle (async, appended after main render) ──
+    // ── Today's Battles + Weekly summary + Story arc + Chronicle (async, appended after main render) ──
     _loadBattles(el);
     _loadWeeklySummary(el);
+    _loadStoryArc(el);
     _loadChronicle(el);
   } catch(e) {
     el.innerHTML = '<div class="card"><div class="card-body" style="color:var(--subtext)">Failed to load J_Claw</div></div>';
@@ -4565,6 +4621,67 @@ async function _loadWeeklySummary(el) {
   } catch(e) {}
 }
 
+async function _loadStoryArc(el) {
+  try {
+    const state = await api('/mobile/api/story/state');
+    const choices = (state.choices || []).slice(-8).reverse(); // last 8, newest first
+    if (!choices.length) {
+      // Placeholder when no story has unfolded yet
+      const panel = document.createElement('div');
+      panel.innerHTML = `
+        <div class="jclaw-section-title" style="margin-top:12px;">📖 The Realm's Story</div>
+        <div class="story-arc-panel">
+          <div class="story-arc-label">PROLOGUE · ARC I</div>
+          <div class="story-arc-name">The Awakening</div>
+          <div class="story-arc-text">"The realm stirs. A sovereign has arrived — their first commands will shape what follows. The commanders wait. The orders have not yet been given."</div>
+          <div style="font-size:9px;color:#334155;margin-top:6px;">Complete battles to unlock chapters and make choices that shape the narrative.</div>
+        </div>`;
+      el.appendChild(panel);
+      return;
+    }
+
+    const DIV_NAMES = { trading:'Trading', opportunity:'Opportunity', dev_automation:'Dev', personal:'Personal', op_sec:'Op-Sec', production:'Production', sentinel:'Sentinel' };
+    const DIV_COMMANDERS = { trading:'SEREN', opportunity:'VAEL', dev_automation:'KAELEN', personal:'LYRIN', op_sec:'ZETH', production:'LYKE', sentinel:'ZETH' };
+
+    // Compute narrative arc from choices
+    const aggressiveCount = choices.filter(c => c.choice_id === 'aggressive').length;
+    const patientCount    = choices.filter(c => c.choice_id === 'patient').length;
+    const balancedCount   = choices.filter(c => c.choice_id === 'balanced').length;
+    const dominant = aggressiveCount >= patientCount && aggressiveCount >= balancedCount ? 'aggressive'
+                   : patientCount >= balancedCount ? 'patient' : 'balanced';
+
+    const arcNarrative = {
+      aggressive: { name:'The Relentless Campaign', text:'"The sovereign drives forward without hesitation. The commanders follow at full sprint — the realm expands at cost. VAEL says the pace is sustainable. ZETH isn\'t sure."' },
+      patient:    { name:'The Long Game', text:'"Patience as doctrine. The realm does not rush — it calculates. Each move deliberate. The commanders respect the restraint. The enemy adapts slowly. The realm adapts faster."' },
+      balanced:   { name:'The Measured Ascent', text:'"Balance. Expansion without overreach. The realm grows steadily — no single division burns too bright or too cold. This is how empires are built."' },
+    };
+    const arc = arcNarrative[dominant];
+
+    let html = `
+      <div class="jclaw-section-title" style="margin-top:12px;">📖 The Realm's Story</div>
+      <div class="story-arc-panel">
+        <div class="story-arc-label">ACTIVE ARC · ${dominant.toUpperCase()}</div>
+        <div class="story-arc-name">${arc.name}</div>
+        <div class="story-arc-text">${arc.text}</div>
+        <div class="story-choice-log">`;
+
+    for (const c of choices.slice(0, 5)) {
+      const divName = DIV_NAMES[c.division] || c.division;
+      const cmd     = DIV_COMMANDERS[c.division] || '';
+      html += `<div class="story-choice-row">
+        <div class="story-choice-div">${cmd || divName}</div>
+        <div class="story-choice-text">${c.choice_text || c.choice_id}</div>
+        <div class="story-choice-badge ${c.choice_id}">${c.choice_id}</div>
+      </div>`;
+    }
+
+    html += `</div></div>`;
+    const panel = document.createElement('div');
+    panel.innerHTML = html;
+    el.appendChild(panel);
+  } catch(e) {}
+}
+
 async function _loadChronicle(el) {
   try {
     const c = await api('/mobile/api/realm/chronicle?limit=12');
@@ -4642,24 +4759,16 @@ async function requireBiometricThenAct(action, payload) {
     return;
   }
 
+  // Biometric scanner first — PIN fallback if unavailable
   let biometricOk = false;
   try {
-    if (window.PublicKeyCredential) {
-      const cred = await navigator.credentials.get({
-        publicKey: {
-          challenge: new TextEncoder().encode(challengeId),
-          timeout: 3000,
-          userVerification: 'required',
-          rpId: location.hostname,
-        }
-      });
-      biometricOk = !!cred;
-    }
+    biometricOk = await openBiometricScanner();
   } catch(e) {
+    if (e.message === 'cancelled') return;
     biometricOk = false;
   }
 
-  // Fallback: In-app PIN sheet (server-side verify)
+  // PIN fallback when biometric is not available on this device
   if (!biometricOk) {
     try {
       const pin = await openPinSheet();
@@ -4669,7 +4778,6 @@ async function requireBiometricThenAct(action, payload) {
         verifyRes = await api('/mobile/api/pin/verify', { method: 'POST', body: JSON.stringify({ hash: h }) });
       } catch(verifyErr) {
         if (verifyErr.message && verifyErr.message.includes('No PIN')) {
-          // First time: set the PIN server-side with confirmation
           await api('/mobile/api/pin/set', { method: 'POST', body: JSON.stringify({ hash: h }) });
           showToast('PIN set — re-enter to confirm');
           const pin2 = await openPinSheet();
@@ -4685,7 +4793,7 @@ async function requireBiometricThenAct(action, payload) {
         else { showToast(verifyRes.reason || 'Incorrect PIN'); haptic('error'); return; }
       }
     } catch(e) {
-      if (e.message !== 'cancelled') showToast('PIN error: ' + e.message);
+      if (e.message !== 'cancelled') showToast('Auth error: ' + e.message);
       return;
     }
   }
@@ -4704,6 +4812,174 @@ async function requireBiometricThenAct(action, payload) {
     haptic('error');
     showToast('Error: ' + e.message);
   }
+}
+
+// ── Biometric facial scanner ───────────────────────────────────────────────
+let _bioCancelFn = null;
+
+function _bioAnimDots() {
+  const dots = [0,1,2,3,4].map(n => document.getElementById('bd'+n));
+  let i = 0;
+  const t = setInterval(() => {
+    dots.forEach((d, idx) => d && d.classList.toggle('lit', idx <= (i % 6)));
+    i++;
+  }, 180);
+  return () => clearInterval(t);
+}
+
+function openBiometricScanner() {
+  return new Promise((resolve, reject) => {
+    const overlay = document.getElementById('biometric-overlay');
+    const status  = document.getElementById('bio-status');
+    overlay.classList.remove('bio-success','bio-fail');
+    status.className  = 'bio-status';
+    status.textContent = 'SCANNING...';
+    overlay.classList.add('active');
+    haptic('medium');
+
+    const stopDots = _bioAnimDots();
+    let done = false;
+
+    _bioCancelFn = () => {
+      if (done) return;
+      done = true; stopDots();
+      overlay.classList.remove('active');
+      _bioCancelFn = null;
+      reject(new Error('cancelled'));
+    };
+
+    const finish = (ok) => {
+      if (done) return;
+      done = true; stopDots(); _bioCancelFn = null;
+      const dots = [0,1,2,3,4].map(n => document.getElementById('bd'+n));
+      dots.forEach(d => d && d.classList.add('lit'));
+      if (ok) {
+        overlay.classList.add('bio-success');
+        status.className = 'bio-status success';
+        status.textContent = 'IDENTITY CONFIRMED';
+        haptic('success');
+        setTimeout(() => { overlay.classList.remove('active','bio-success'); resolve(true); }, 900);
+      } else {
+        overlay.classList.add('bio-fail');
+        status.className = 'bio-status fail';
+        status.textContent = 'BIOMETRIC UNAVAILABLE';
+        haptic('error');
+        setTimeout(() => { overlay.classList.remove('active','bio-fail'); resolve(false); }, 700);
+      }
+    };
+
+    (async () => {
+      try {
+        if (window.PublicKeyCredential) {
+          const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().catch(() => false);
+          if (available) {
+            // Use a simple time-based challenge (server challenge not needed for local biometric gate)
+            const challenge = new Uint8Array(16);
+            crypto.getRandomValues(challenge);
+            const cred = await navigator.credentials.get({
+              publicKey: { challenge, timeout: 10000, userVerification: 'required', rpId: location.hostname }
+            });
+            if (cred) { finish(true); return; }
+          }
+        }
+      } catch(e) {}
+      finish(false);
+    })();
+  });
+}
+
+// ── J_Claw interactive character ──────────────────────────────────────────
+let _jclawTaps = 0, _jclawBubbleTimer = null, _jclawLastTap = 0;
+
+const _JCLAW_LINES = {
+  morning: [
+    'The realm stirs. The day's battles have not yet been fought.',
+    'Early light. The commanders are running their pre-dawn checks.',
+    'Morning protocols initiated. All systems — nominal.',
+  ],
+  afternoon: [
+    'Mid-cycle. The data is flowing. All divisions are active.',
+    'The realm's engines are running hot today.',
+    'Peak hours. The party is at full operational strength.',
+  ],
+  evening: [
+    'The day's battles are almost settled. The realm holds.',
+    'Evening sweep underway. Zeth watches the perimeter.',
+    'Late cycle. Time to review what was earned today.',
+  ],
+  night: [
+    'The realm doesn't sleep. Neither does the Watch.',
+    'Deep cycle. Only the sentinels remain active.',
+    'Night protocols engaged. The forge runs cool until dawn.',
+  ],
+  power: [
+    '⚡ POWER SURGE — ALL SYSTEMS MAXIMUM CAPACITY.',
+    '⚡ The core ignites. The realm trembles.',
+    '⚡ FULL POWER. Nothing can stop what is coming.',
+  ],
+  milestone: [
+    'You know... the more you tap, the more the realm resonates.',
+    'Persistence is a weapon. You've proven that.',
+    'Every interaction feeds the system. It's learning.',
+    'The commanders notice when you pay attention.',
+  ],
+  random: [
+    'VAEL tracked three new leads this cycle.',
+    'SEREN's signals are running at 74% accuracy this week.',
+    'KAELEN sealed four vulnerabilities since last boot.',
+    'The XP curve accelerates at Prestige tier.',
+    'Every skill run is a battle. Every battle shapes the realm.',
+    'ZETH hasn't blinked in three days. It's unsettling.',
+    'LYRIN says you should drink water. Not a request.',
+    'The forge is hot. LYKE says the next asset is almost ready.',
+    'The realm has memory. It knows what you've done here.',
+    'Streak multipliers compound. Play the long game.',
+  ],
+};
+
+function tapJclaw(e) {
+  e && e.stopPropagation();
+  const now = Date.now();
+  const doubleTap = now - _jclawLastTap < 320;
+  _jclawLastTap = now;
+  _jclawTaps++;
+
+  haptic('light');
+
+  if (doubleTap) {
+    triggerSpriteAnim('power-surge');
+    _BA.battleStart && _BA.battleStart();
+    _showJclawBubble(_JCLAW_LINES.power[Math.floor(Math.random() * _JCLAW_LINES.power.length)]);
+    return;
+  }
+
+  if (_jclawTaps % 5 === 0) {
+    triggerSpriteAnim('achievement');
+    _showJclawBubble(_JCLAW_LINES.milestone[Math.floor((_jclawTaps / 5 - 1) % _JCLAW_LINES.milestone.length)]);
+    return;
+  }
+
+  // Context-aware line based on time of day
+  const h = new Date().getHours();
+  const pool = h < 6 ? _JCLAW_LINES.night
+             : h < 12 ? _JCLAW_LINES.morning
+             : h < 18 ? _JCLAW_LINES.afternoon
+             : h < 22 ? _JCLAW_LINES.evening
+             : _JCLAW_LINES.night;
+
+  // Mix time-of-day (40%) with random (60%)
+  const allLines = [...pool, ..._JCLAW_LINES.random];
+  const line = allLines[Math.floor(Math.random() * allLines.length)];
+  _showJclawBubble(line);
+}
+
+function _showJclawBubble(text) {
+  const bubble = document.getElementById('jclaw-bubble');
+  if (!bubble) return;
+  clearTimeout(_jclawBubbleTimer);
+  bubble.textContent = text;
+  bubble.classList.add('visible');
+  _jclawBubbleTimer = setTimeout(() => bubble.classList.remove('visible'), 3200);
 }
 
 async function sha256(str) {
@@ -7074,98 +7350,169 @@ async function _thPlayChapter(chapterData) {
 async function _thPlayBattle(event) {
   _TH.phase = 'battle';
   const { division, skill, commander, color, enemy, enemy_name, xp, multiplier } = event;
+  const status   = event.status   || 'success';
+  const escalate = event.escalate || false;
 
+  // Determine outcome from real skill data
+  let outcome = 'victory';
+  if (status === 'failed')                    outcome = 'defeat';
+  else if (escalate || status === 'partial')  outcome = 'narrow';
+  const diff   = outcome === 'defeat' ? 'hard' : outcome === 'narrow' ? 'medium' : 'easy';
+  const rounds = diff === 'hard' ? 4 : diff === 'medium' ? 3 : 2;
+
+  // Division-specific battle dialogue pools
+  const MSGS = {
+    trading:        { atk:['Strike pattern confirmed!','Signal locked — moving in!','The Veil reads the gap!','Market timing — execute!'], cnt:['Volatility counter!','False signal — the enemy adapts!','Market fights back!'], crit:['PERFECT SIGNAL — CRITICAL HIT!','Pattern collapse — maximum damage!'] },
+    opportunity:    { atk:['Target acquired!','VAEL lines up the shot!','Hunt protocol: execute!','The lead is real — move!'], cnt:['Target evades!','Counter-intelligence surge!','The mark goes dark!'], crit:['CLEAN CONTACT — CRITICAL!','Dawnhunt strikes true — devastating blow!'] },
+    dev_automation: { atk:['Exploit pattern found!','Kaelen seals the gap!','Code breach executed!','Refactor strike!'], cnt:['System pushes back!','Runtime exception — stumble!','Error cascade hits!'], crit:['CORE BREACH — CRITICAL!','The forge burns bright — maximum yield!'] },
+    personal:       { atk:['Covenant activated!','Lyrin channels vitality!','Discipline strike!','Health protocol — execute!'], cnt:['Fatigue counter-attack!','The flame wavers under pressure!','Burnout flare — stumble!'], crit:['PEAK CONDITION — CRITICAL!','Lyrin channels everything — full surge!'] },
+    op_sec:         { atk:['Intrusion neutralized!','Zeth closes the shadow!','Null-space collapsed!','Threat vector sealed!'], cnt:['Counter-intrusion active!','Jammer deployed — blinded!','Ghost protocol failed!'], crit:['ZERO-DAY EXPLOIT — CRITICAL!','Zeth vanishes — lethal precision!'] },
+    production:     { atk:['Blueprint executed!','LYKE fires the forge!','Asset strike confirmed!','Generation sequence locked!'], cnt:['Render corruption!','Asset integrity breach!','Output failure — stumble!'], crit:['FLAWLESS OUTPUT — CRITICAL!','The forge ignites — masterwork!'] },
+    sentinel:       { atk:['System scan deployed!','Queue cleared — strike!','Uptime maintained — advance!'], cnt:['Overload spike!','Provider down — stumble!','Queue flood hits!'], crit:['ALL SYSTEMS GREEN — CRITICAL!','Sentinel holds the line!'] },
+  };
+  const dm   = MSGS[division] || MSGS.trading;
+  const rnd  = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+  // Enemy HP milestones per round
+  const enemyHpMilestones = diff === 'hard'
+    ? [85, 60, 35, outcome === 'defeat' ? 20 : 0]
+    : diff === 'medium'
+    ? [65, 30, 0]
+    : [55, 0];
+
+  // Setup UI
   _thSetArena(division, color);
-  _thEl('th-chapter-label').textContent = event.chapter?.title || 'Realm Theater';
-  _thEl('th-hp-cmd-name').textContent  = commander;
-  _thEl('th-hp-cmd-name').style.color  = color;
+  _thEl('th-chapter-label').textContent    = event.chapter?.title || 'Realm Theater';
+  _thEl('th-hp-cmd-name').textContent      = commander;
+  _thEl('th-hp-cmd-name').style.color      = color;
   _thEl('th-hp-cmd-fill').style.background = color;
-  _thEl('th-hp-cmd-fill').style.width = '100%';
-  _thEl('th-hp-enemy-name').textContent = enemy_name;
-  _thEl('th-hp-enemy-fill').style.width = '100%';
-  _thEl('th-tap-hint').style.opacity = '0';
+  _thEl('th-hp-cmd-fill').style.width      = '100%';
+  _thEl('th-hp-cmd-fill').style.transition = 'width 0.4s ease';
+  _thEl('th-hp-enemy-name').textContent    = enemy_name;
+  _thEl('th-hp-enemy-fill').style.width    = '100%';
+  _thEl('th-hp-enemy-fill').style.transition = 'width 0.4s ease';
+  _thEl('th-tap-hint').style.opacity       = '0';
   _thEl('th-xp-reward').classList.remove('shown');
-
-  // Set sprites
-  const divKey = division;
-  _thEl('th-commander').innerHTML = commanderPortraitSVG(divKey, color, 48);
-  _thEl('th-enemy').innerHTML     = _enemySVG(enemy, 44, 57);
-
-  // Skill label + flavor
   const skillLabel = skill.replace(/_/g, ' ').toUpperCase();
-  _thEl('th-skill-label').style.color = color;
-  _thEl('th-skill-label').textContent = skillLabel;
-  _thEl('th-battle-msg').textContent  = '';
+  _thEl('th-skill-label').style.color      = color;
+  _thEl('th-skill-label').textContent      = skillLabel;
+  _thEl('th-battle-msg').textContent       = '';
+  _thEl('th-commander').innerHTML          = commanderPortraitSVG(division, color, 48);
+  _thEl('th-enemy').innerHTML              = _enemySVG(enemy, 44, 57);
 
-  // Phase 1: slide in
-  _thEl('th-commander').classList.remove('attacking','retreating','entered');
-  _thEl('th-enemy').classList.remove('hit','hit-recover','defeated','entered');
+  // Live HP trackers
+  let cmdHp = 100;
+  const setCmdHp   = p => { cmdHp = Math.max(0, p); _thEl('th-hp-cmd-fill').style.width = cmdHp + '%'; };
+  const setEnemyHp = p => { _thEl('th-hp-enemy-fill').style.width = Math.max(0, p) + '%'; };
+
+  const cmdDmg = diff === 'hard' ? 22 : diff === 'medium' ? 14 : 6;
+
+  // Helper: commander attacks enemy
+  async function cmdAttack(isCrit) {
+    const msg = isCrit ? rnd(dm.crit) : rnd(dm.atk);
+    _thEl('th-battle-msg').textContent = msg;
+    _thEl('th-commander').classList.add('attacking');
+    _BA.attack();
+    await _thDelay(220);
+    _thEl('th-enemy').classList.add('hit');
+    _BA.hit();
+    await _thDelay(130);
+    _thEl('th-enemy').classList.remove('hit');
+    _thEl('th-enemy').classList.add('hit-recover');
+    _thEl('th-commander').classList.remove('attacking');
+    _thEl('th-commander').classList.add('retreating');
+    await _thDelay(280);
+    _thEl('th-enemy').classList.remove('hit-recover');
+    _thEl('th-commander').classList.remove('retreating');
+  }
+
+  // Helper: enemy attacks commander
+  async function enemyAttack() {
+    _thEl('th-battle-msg').textContent = rnd(dm.cnt);
+    _thEl('th-enemy').classList.add('attacking');
+    await _thDelay(220);
+    _thEl('th-commander').classList.add('hit');
+    _BA.hit();
+    await _thDelay(130);
+    _thEl('th-commander').classList.remove('hit');
+    _thEl('th-commander').classList.add('hit-recover');
+    _thEl('th-enemy').classList.remove('attacking');
+    _thEl('th-enemy').classList.add('retreating');
+    await _thDelay(280);
+    _thEl('th-commander').classList.remove('hit-recover');
+    _thEl('th-enemy').classList.remove('retreating');
+    setCmdHp(cmdHp - cmdDmg);
+    await _thDelay(300);
+  }
+
+  // Phase 1: enter
+  _thEl('th-commander').classList.remove('attacking','retreating','entered','hit','hit-recover','defeated');
+  _thEl('th-enemy').classList.remove('attacking','retreating','hit','hit-recover','defeated','entered');
   await _thDelay(80);
   _thEl('th-commander').classList.add('entered');
   _thEl('th-enemy').classList.add('entered');
   await _thDelay(700);
   _BA.battleStart();
+  _thEl('th-battle-msg').textContent = `${commander} faces the ${enemy_name}...`;
+  await _thDelay(700);
 
-  // Phase 2: HP bars fill
-  _thEl('th-battle-msg').textContent = `${commander} engages the ${enemy_name}...`;
-  await _thDelay(600);
+  // ── COMBAT ROUNDS ──────────────────────────────────────────────────────────
+  for (let r = 0; r < rounds; r++) {
+    const isLast = r === rounds - 1;
+    const isCrit = isLast && outcome === 'victory' && Math.random() < 0.4;
 
-  // Phase 3: attack
-  _thEl('th-commander').classList.add('attacking');
-  _BA.attack();
-  await _thDelay(240);
-  _thEl('th-enemy').classList.add('hit');
-  _BA.hit();
-  await _thDelay(120);
-  _thEl('th-enemy').classList.remove('hit');
-  _thEl('th-enemy').classList.add('hit-recover');
-  _thEl('th-commander').classList.remove('attacking');
-  _thEl('th-commander').classList.add('retreating');
+    // Commander attacks
+    await cmdAttack(isCrit);
+    setEnemyHp(enemyHpMilestones[r] ?? 0);
+    await _thDelay(350);
+
+    // Enemy counter — skipped on last round of clean victory
+    const shouldCounter = !isLast || outcome !== 'victory';
+    if (shouldCounter && diff !== 'easy') {
+      await enemyAttack();
+    } else if (diff === 'easy' && r === 0 && Math.random() < 0.4) {
+      // Occasional glancing blow even on easy
+      await enemyAttack();
+    }
+
+    if (!isLast) await _thDelay(200);
+  }
+
   await _thDelay(300);
-  _thEl('th-enemy').classList.remove('hit-recover');
-  _thEl('th-commander').classList.remove('retreating');
 
-  // Drain enemy HP to 55%
-  _thEl('th-hp-enemy-fill').style.width = '55%';
-  await _thDelay(700);
+  // ── OUTCOME ─────────────────────────────────────────────────────────────
+  if (outcome === 'defeat') {
+    setCmdHp(0);
+    _thEl('th-commander').classList.add('defeated');
+    _BA.hit();
+    await _thDelay(700);
+    _thEl('th-battle-msg').textContent = `${commander} was overwhelmed. The realm endures the loss.`;
+  } else {
+    setEnemyHp(0);
+    _thEl('th-enemy').classList.add('defeated');
+    _BA.victory();
+    await _thDelay(700);
+    _thEl('th-battle-msg').textContent = outcome === 'narrow'
+      ? `Narrow victory — ${commander} pushed through at ${cmdHp}% HP.`
+      : `${enemy_name} vanquished. The realm grows stronger.`;
+  }
+  await _thDelay(500);
 
-  // Phase 4: second attack
-  _thEl('th-battle-msg').textContent = `${skillLabel} skill executed — decisive blow!`;
-  _thEl('th-commander').classList.add('attacking');
-  _BA.attack();
-  await _thDelay(200);
-  _thEl('th-enemy').classList.add('hit');
-  _BA.hit();
-  await _thDelay(100);
-  _thEl('th-enemy').classList.remove('hit');
-  _thEl('th-enemy').classList.add('hit-recover');
-  _thEl('th-commander').classList.remove('attacking');
-  _thEl('th-commander').classList.add('retreating');
-  await _thDelay(250);
-  _thEl('th-enemy').classList.remove('hit-recover');
-  _thEl('th-commander').classList.remove('retreating');
-
-  // Drain to 0%
-  _thEl('th-hp-enemy-fill').style.width = '0%';
-  await _thDelay(400);
-
-  // Phase 5: enemy defeated
-  _thEl('th-enemy').classList.add('defeated');
-  _BA.victory();
-  await _thDelay(700);
-
-  // Phase 6: XP reward
-  const multTxt = multiplier > 1 ? ` ×${multiplier}` : '';
-  _thEl('th-xp-reward').textContent = `+${xp} XP${multTxt}`;
-  _thEl('th-xp-reward').style.color = color;
+  // XP reward
+  const xpDisplay = outcome === 'defeat' ? Math.floor(xp * 0.5) : xp;
+  const multTxt   = multiplier > 1 ? ` ×${multiplier}` : '';
+  _thEl('th-xp-reward').textContent = `+${xpDisplay} XP${multTxt}${outcome === 'defeat' ? ' (partial)' : ''}`;
+  _thEl('th-xp-reward').style.color = outcome === 'defeat' ? '#94a3b8' : color;
   _thEl('th-xp-reward').classList.add('shown');
-  _thEl('th-battle-msg').textContent = `${enemy_name} vanquished. The realm grows stronger.`;
   await _thDelay(600);
 
   _thEl('th-tap-hint').style.opacity = '1';
-  await _thWaitTap(5000);  // auto-advance after 5s
+  await _thWaitTap(5000);
   _thEl('th-tap-hint').style.opacity = '0';
   _thEl('th-xp-reward').classList.remove('shown');
+
+  // Reset commander HP bar for next battle
+  setCmdHp(100);
 }
 
 // ── Phase: rank-up evolution cutscene ──────────────────────────────────────
@@ -8809,6 +9156,42 @@ checkSetup();
       <div class="th-evo-tap">TAP TO CONTINUE</div>
     </div>
   </div>
+</div>
+
+<!-- Biometric scanner overlay -->
+<div id="biometric-overlay">
+  <div class="bio-title">BIOMETRIC VERIFICATION</div>
+  <div class="bio-subtitle">MISSION CONTROL · SECURE ACCESS</div>
+  <div class="bio-face-wrap">
+    <div class="bio-face-outline"></div>
+    <div class="bio-corner tl"></div>
+    <div class="bio-corner tr"></div>
+    <div class="bio-corner bl"></div>
+    <div class="bio-corner br"></div>
+    <div class="bio-scan-line"></div>
+    <svg class="bio-face-svg" viewBox="0 0 100 100" fill="none" stroke="#60a5fa" stroke-width="0.9">
+      <ellipse cx="50" cy="48" rx="26" ry="30"/>
+      <line x1="38" y1="40" x2="44" y2="40"/>
+      <line x1="56" y1="40" x2="62" y2="40"/>
+      <circle cx="41" cy="41" r="3"/>
+      <circle cx="59" cy="41" r="3"/>
+      <path d="M43 56 Q50 62 57 56"/>
+      <line x1="50" y1="18" x2="50" y2="23"/>
+      <line x1="24" y1="48" x2="29" y2="48"/>
+      <line x1="71" y1="48" x2="76" y2="48"/>
+      <line x1="28" y1="30" x2="33" y2="35"/>
+      <line x1="72" y1="30" x2="67" y2="35"/>
+    </svg>
+  </div>
+  <div class="bio-dots">
+    <div class="bio-dot" id="bd0"></div>
+    <div class="bio-dot" id="bd1"></div>
+    <div class="bio-dot" id="bd2"></div>
+    <div class="bio-dot" id="bd3"></div>
+    <div class="bio-dot" id="bd4"></div>
+  </div>
+  <div class="bio-status" id="bio-status">SCANNING...</div>
+  <button class="bio-cancel-btn" onclick="_bioCancelFn && _bioCancelFn()">CANCEL</button>
 </div>
 </body>
 </html>
