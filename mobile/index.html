@@ -2448,6 +2448,12 @@
 </div>
 
 <script>
+// ── Nuke any stale service workers immediately ────────
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(regs => {
+    regs.forEach(r => r.unregister());
+  }).catch(() => {});
+}
 // ══════════════════════════════════════════════════════
 // Mission Control Mobile — Ultimate Edition
 // Trust model: mobile is untrusted client. All actions
@@ -2535,8 +2541,14 @@ function haptic(type = 'light') {
 // ── Fetch with retry ─────────────────────────────────────
 async function fetchWithRetry(url, opts, retries = 3, delay = 500) {
   for (let i = 0; i < retries; i++) {
-    try { return await fetch(url, opts); }
-    catch(e) {
+    const ctrl = new AbortController();
+    const tid  = setTimeout(() => ctrl.abort(), 10000);
+    try {
+      const res = await fetch(url, { ...opts, signal: ctrl.signal });
+      clearTimeout(tid);
+      return res;
+    } catch(e) {
+      clearTimeout(tid);
       if (i === retries - 1) throw e;
       await new Promise(r => setTimeout(r, delay * Math.pow(2, i)));
     }
@@ -2623,7 +2635,7 @@ function init() {
   // WebSocket live updates
   _connectWebSocket();
 
-  // Service Worker registration
+  // Register service worker (v2 — clears stale v1 cache on activate)
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/mobile/sw.js').catch(() => {});
   }

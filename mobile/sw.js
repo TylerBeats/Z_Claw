@@ -1,7 +1,7 @@
 // Mission Control — Service Worker
 // Cache shell assets; network-first for API; cache-first for statics.
 
-const CACHE_NAME = 'mc-shell-v1';
+const CACHE_NAME = 'mc-shell-v2';
 const SHELL_ASSETS = [
   '/mobile/',
   '/mobile/index.html',

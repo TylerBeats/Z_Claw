@@ -36,6 +36,7 @@ state/xp-history.jsonl
 state/realm-chronicle.jsonl
 state/coding-history.json
 state/dismissed-alerts.json
+state/escalated-alerts.json
 state/story-state.json
 
 # Health log inside skills dir
