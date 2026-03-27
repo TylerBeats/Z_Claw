@@ -1717,10 +1717,17 @@ Hit ⚡ GENERATE NOW to compile immediately.
       const btn = document.getElementById('an-btn-run');
       btn.disabled = true; btn.textContent = '...';
       try {
-        await fetch('/api/trading/cycle/run', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        const res = await fetch('/api/trading/cycle/run', { method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ cycle: 1, asset: 'SPX500', auto: false }) });
-        addLog('TRADING', 'Agent-network cycle started', 'green');
-        setTimeout(loadTradingCycleStatus, 1000);
+        const result = await res.json();
+        if (result.available === false || result.error) {
+          const statusEl = document.getElementById('an-run-status');
+          if (statusEl) { statusEl.textContent = 'OFFLINE'; statusEl.style.color = 'var(--red)'; }
+          addLog('TRADING', 'Agent-network offline', 'red');
+        } else {
+          addLog('TRADING', 'Agent-network cycle started', 'green');
+          setTimeout(loadTradingCycleStatus, 1000);
+        }
       } catch(e) { addLog('TRADING', 'Failed to start cycle: ' + e.message, 'red'); }
       btn.disabled = false; btn.textContent = '▶ RUN';
     }

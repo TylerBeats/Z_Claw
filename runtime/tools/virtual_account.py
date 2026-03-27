@@ -327,8 +327,8 @@ def run_virtual_account(cycle_state: Optional[dict] = None) -> dict:
     if cycle_state:
         strat       = cycle_state.get("active_strategy", {})
         strategy_id = (
-            strat.get("strategy_id")
-            or strat.get("strategy_name")
+            strat.get("strategy_name")
+            or strat.get("strategy_id")
             or strategy_id
         )
         # Read timeframe from the strategy schema (15m, 1h, 4h, 1d)

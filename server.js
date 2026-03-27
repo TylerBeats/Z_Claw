@@ -4301,8 +4301,18 @@ cron.schedule('0 8,10,12,14,16,18,20,22 * * *', async () => {
   await runSkillViaPython('market-scan', 'TRADING');
 }, { timezone: TZ });
 
-// Trading performance report daily at 6:00 PM
+// Virtual trader daily at 6:00 PM — must run first (produces trade data for backtester/report)
 cron.schedule('0 18 * * *', async () => {
+  await runSkillViaPython('virtual-trader', 'TRADING');
+}, { timezone: TZ });
+
+// Backtester daily at 6:05 PM — runs after virtual-trader produces trade data
+cron.schedule('5 18 * * *', async () => {
+  await runSkillViaPython('backtester', 'TRADING');
+}, { timezone: TZ });
+
+// Trading performance report daily at 6:10 PM — runs last, summarises both above
+cron.schedule('10 18 * * *', async () => {
   await runSkillViaPython('trading-report', 'TRADING');
 }, { timezone: TZ });
 
@@ -4514,7 +4524,7 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log('  Server    : http://localhost:' + PORT);
   console.log('  Dashboard : http://localhost:' + PORT + '/dashboard');
   console.log('');
-  console.log('  Scheduler : node-cron active — full SOUL.md schedule (22 crons)');
+  console.log('  Scheduler : node-cron active — full SOUL.md schedule (25 crons)');
   console.log('  Queue     : polling every 2 min (zero-cost when idle)');
   console.log('  Timezone  : America/Halifax');
   console.log('');

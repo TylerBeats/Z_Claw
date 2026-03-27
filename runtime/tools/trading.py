@@ -280,6 +280,15 @@ def append_to_trade_log(paired: list, stats: dict, source: str) -> None:
         "trades": paired,
         "stats": stats,
     })
+    # Aggregate stats from the most recent session for dashboard consumption
+    if log_data["sessions"]:
+        latest_stats = log_data["sessions"][-1].get("stats", {})
+        log_data["stats"] = {
+            "total_trades": latest_stats.get("total_trades", 0),
+            "win_rate": latest_stats.get("win_rate"),
+            "avg_r": latest_stats.get("avg_r"),
+            "last_session_date": log_data["sessions"][-1].get("date"),
+        }
     log_data["last_updated"] = datetime.now(timezone.utc).isoformat()
 
     with open(STATE_DIR / "trade-log.json", "w", encoding="utf-8") as f:
