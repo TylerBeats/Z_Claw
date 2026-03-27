@@ -2075,7 +2075,8 @@ const MOBILE_ALLOWED_ACTIONS = new Set([
   'restart_server', // graceful process.exit(0) — PM2 auto-restarts
   'restart_pm2',    // spawns a new PowerShell window running: pm2 restart openclaw
   'git_sync',       // stash → pull → stash pop → push in a visible PowerShell window
-  'launch_comfyui', // start ComfyUI via run_amd_gpu.bat if not already running
+  'launch_comfyui',      // start ComfyUI via run_amd_gpu.bat if not already running
+  'start_agent_network', // start agent-network via PM2 if not already running on :8000
   'approve_coding', // keep file edits made by a mobile coding session
   'revert_coding',  // git reset --hard back to pre-session HEAD
 ]);
@@ -2169,6 +2170,8 @@ async function handleMobileAction(body, req, res) {
         result = mobileGitSync(); break;
       case 'launch_comfyui':
         result = await mobileLaunchComfyUI(); break;
+      case 'start_agent_network':
+        result = await mobileStartAgentNetwork(); break;
       case 'approve_coding':
         result = mobileApproveCoding(targetId); break;
       case 'revert_coding':
@@ -2356,6 +2359,33 @@ async function mobileLaunchComfyUI() {
     return { ok: true, message: 'ComfyUI is starting — this takes 20-40 seconds. A window opened on the desktop.' };
   } catch(e) {
     return { ok: false, message: 'Failed to launch ComfyUI: ' + e.message };
+  }
+}
+
+async function mobileStartAgentNetwork() {
+  // Check if agent-network is already running on port 8000
+  try {
+    const http = require('http');
+    await new Promise((resolve, reject) => {
+      const req = http.get('http://127.0.0.1:8000', { timeout: 2000 }, res => resolve(res));
+      req.on('error', reject);
+      req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
+    });
+    return { ok: true, message: 'Agent-network already running', already_running: true };
+  } catch(_) { /* not running — proceed to start */ }
+
+  try {
+    const proc = spawn(
+      'powershell.exe',
+      ['-NoProfile', '-Command', 'pm2 start C:/Users/Tyler/agent-network/pm2.config.js --no-daemon'],
+      { detached: true, stdio: 'ignore' }
+    );
+    proc.unref();
+    logActivity('SYS', '[MOBILE] Agent-network start initiated via mobile dashboard', 'yellow');
+    mobileAuditLog({ action: 'start_agent_network', actor: 'mobile-operator', result: 'succeeded' });
+    return { ok: true, message: 'Agent-network start initiated' };
+  } catch(e) {
+    return { ok: false, message: 'Failed to start agent-network: ' + e.message };
   }
 }
 
@@ -3357,6 +3387,14 @@ const server = http.createServer(async (req, res) => {
       if (method === 'GET' && reqPath === '/api/trading/cycle') { return handleGetTradingCycle(res); }
       if (method === 'GET' && reqPath === '/api/trading/accounts') { return handleGetTradingAccounts(res); }
       if (method === 'GET' && reqPath === '/api/trading/cycle/status') { return proxyZenith('GET', '/status', null, res); }
+      if (method === 'GET' && reqPath === '/api/trading/agent-network/start') {
+        try {
+          const result = await mobileStartAgentNetwork();
+          return jsonOk(res, result);
+        } catch(e) {
+          return jsonError(res, 500, e.message);
+        }
+      }
       if (method === 'POST' && reqPath === '/api/trading/cycle/run') {
         const body = await parseBody(req); return proxyZenith('POST', '/run', body, res);
       }

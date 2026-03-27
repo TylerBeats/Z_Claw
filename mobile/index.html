@@ -4893,7 +4893,7 @@ function closeSheet() {
 }
 
 // ── Biometric / challenge gate ────────────────────────────
-async function requireBiometricThenAct(action, payload) {
+async function requireBiometricThenAct(action, payload, callback = null) {
   let challengeId;
   try {
     const ch = await api('/mobile/api/challenge?action=' + encodeURIComponent(action));
@@ -4945,17 +4945,21 @@ async function requireBiometricThenAct(action, payload) {
 
   if (!biometricOk) { showToast('Auth failed'); haptic('error'); return; }
 
-  try {
-    const result = await api('/mobile/api/action', {
-      method: 'POST',
-      body: JSON.stringify({ ...payload, action, challenge_id: challengeId }),
-    });
-    haptic('medium');
-    showToast(result.message || 'Done');
-    setTimeout(() => loadTab(_currentTab), 500);
-  } catch(e) {
-    haptic('error');
-    showToast('Error: ' + e.message);
+  if (callback) {
+    await callback(challengeId);  // caller handles response + UI
+  } else {
+    try {
+      const result = await api('/mobile/api/action', {
+        method: 'POST',
+        body: JSON.stringify({ ...payload, action, challenge_id: challengeId }),
+      });
+      haptic('medium');
+      showToast(result.message || 'Done');
+      setTimeout(() => loadTab(_currentTab), 500);
+    } catch(e) {
+      haptic('error');
+      showToast('Error: ' + e.message);
+    }
   }
 }
 
@@ -6559,6 +6563,8 @@ function _renderTrading(d, histIdx) {
     html += `<button class="btn btn-pause" onclick="tradingControl('pause_trading')">⏸ Pause Trading</button>`;
     html += `<button class="btn btn-resume" onclick="tradingControl('resume_trading')">▶ Resume Trading</button>`;
     html += '</div>';
+    html += `<button class="btn-primary" style="width:100%;margin-top:8px;" id="btn-start-agent-network" onclick="startAgentNetwork()">⚡ Start Agent-Network</button>`;
+    html += `<div id="start-agent-network-status" style="font-size:12px;color:var(--subtext);margin-top:6px;min-height:16px;"></div>`;
   }
 
   // ── Recent trades (current cycle only) ──
@@ -6614,6 +6620,26 @@ function tradingControl(action) {
     action === 'pause_trading' ? 'btn-pause' : 'btn-resume',
     () => requireBiometricThenAct(action, {})
   );
+}
+
+async function startAgentNetwork() {
+  const statusEl = document.getElementById('start-agent-network-status');
+  if (statusEl) { statusEl.textContent = ''; statusEl.style.color = 'var(--subtext)'; }
+  await requireBiometricThenAct('start_agent_network', {}, async (challengeId) => {
+    const res = await api('/mobile/api/action', {
+      method: 'POST',
+      body: JSON.stringify({ action: 'start_agent_network', challenge_id: challengeId }),
+    });
+    haptic('medium');
+    const msg = res.ok
+      ? (res.already_running ? 'Already running' : 'Start initiated — check status in ~30s')
+      : (res.error || res.message || 'Failed');
+    if (statusEl) {
+      statusEl.textContent = msg;
+      statusEl.style.color = res.ok ? 'var(--green)' : 'var(--red)';
+    }
+    showToast(msg);
+  });
 }
 
 // ── Chat ─────────────────────────────────────────────────

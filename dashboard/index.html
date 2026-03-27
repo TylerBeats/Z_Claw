@@ -1053,6 +1053,7 @@
           <span style="display:flex;align-items:center;gap:3px;">
             <span id="an-stale-badge" style="display:none;" class="tag tag-red" style="font-size:6px;">STALE</span>
             <span id="an-run-status" class="tag" style="font-size:6px;background:var(--surface);color:var(--subtext);border:1px solid var(--border);">IDLE</span>
+            <button id="an-btn-start" onclick="agentNetworkStart()" style="font-size:6px;padding:1px 4px;background:var(--yellow);color:var(--base);border:none;border-radius:2px;cursor:pointer;display:none;">⚡ START SERVER</button>
             <button id="an-btn-run" onclick="agentNetworkRun()" style="font-size:6px;padding:1px 4px;background:var(--green);color:var(--base);border:none;border-radius:2px;cursor:pointer;">▶ RUN</button>
             <button id="an-btn-stop" onclick="agentNetworkStop()" style="font-size:6px;padding:1px 4px;background:var(--red);color:var(--base);border:none;border-radius:2px;cursor:pointer;display:none;">■ STOP</button>
           </span>
@@ -1723,6 +1724,8 @@ Hit ⚡ GENERATE NOW to compile immediately.
         if (result.available === false || result.error) {
           const statusEl = document.getElementById('an-run-status');
           if (statusEl) { statusEl.textContent = 'OFFLINE'; statusEl.style.color = 'var(--red)'; }
+          const startBtn = document.getElementById('an-btn-start');
+          if (startBtn) startBtn.style.display = 'inline-block';
           addLog('TRADING', 'Agent-network offline', 'red');
         } else {
           addLog('TRADING', 'Agent-network cycle started', 'green');
@@ -1762,6 +1765,57 @@ Hit ⚡ GENERATE NOW to compile immediately.
           stopBtn.style.display = running ? 'inline' : 'none';
         }
       } catch(e) {}
+    }
+
+    async function agentNetworkStart() {
+      const btn = document.getElementById('an-btn-start');
+      const status = document.getElementById('an-run-status');
+      btn.disabled = true;
+      status.textContent = 'Starting...';
+      status.style.color = '#f0a500';
+      try {
+        const r = await fetch('/api/trading/agent-network/start');
+        const data = await r.json();
+        if (!data.ok) {
+          status.textContent = data.message || 'START FAILED';
+          status.style.color = '#ff4444';
+          btn.disabled = false;
+          return;
+        }
+        if (data.already_running) {
+          status.textContent = 'ONLINE';
+          status.style.color = '#00ff88';
+          btn.style.display = 'none';
+          return;
+        }
+        // Poll for up to 60 seconds — check cd.running (Zenith's actual field)
+        let attempts = 0;
+        const poll = setInterval(async () => {
+          attempts++;
+          try {
+            const check = await fetch('/api/trading/cycle/status');
+            const cd = await check.json();
+            if (cd.running) {
+              clearInterval(poll);
+              status.textContent = 'ONLINE';
+              status.style.color = '#00ff88';
+              btn.style.display = 'none';
+              btn.disabled = false;
+              document.getElementById('an-btn-run').disabled = false;
+            }
+          } catch (_) {}
+          if (attempts >= 20) {
+            clearInterval(poll);
+            status.textContent = 'START TIMEOUT';
+            status.style.color = '#ff4444';
+            btn.disabled = false;
+          }
+        }, 3000);
+      } catch (e) {
+        status.textContent = 'ERROR';
+        status.style.color = '#ff4444';
+        btn.disabled = false;
+      }
     }
 
     // ── Agent-network page navigation ──
@@ -1912,8 +1966,19 @@ Hit ⚡ GENERATE NOW to compile immediately.
         if (!res.ok) return;
         const d = await res.json();
         const block = document.getElementById('agent-network-block');
-        if (!d.available) { block.style.display = 'none'; return; }
+        if (!d.available) {
+          block.style.display = 'block';
+          const startBtn = document.getElementById('an-btn-start');
+          if (startBtn) startBtn.style.display = 'inline-block';
+          document.getElementById('an-btn-run').style.display = 'none';
+          document.getElementById('an-btn-stop').style.display = 'none';
+          document.getElementById('an-run-status').textContent = 'OFFLINE';
+          document.getElementById('an-run-status').style.color = 'var(--red)';
+          return;
+        }
         block.style.display = 'block';
+        const startBtn = document.getElementById('an-btn-start');
+        if (startBtn) startBtn.style.display = 'none';
 
         // Header metrics
         document.getElementById('an-cycle').textContent    = d.cycle_number || '—';
