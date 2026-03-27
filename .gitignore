@@ -92,3 +92,8 @@ resumes/
 Thumbs.db
 **/__pycache__/
 *.pyc
+
+# BitNet training data — captured LLM pairs and approved exports (personal/private)
+state/training-capture.jsonl
+state/training-approved.jsonl
+state/training-exports/

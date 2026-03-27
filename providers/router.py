@@ -12,6 +12,7 @@ import logging
 from typing import Optional
 
 from providers.base import BaseProvider
+from providers.capture import CaptureProvider
 
 log = logging.getLogger(__name__)
 
@@ -148,7 +149,7 @@ class ProviderRouter:
                 provider = _build_provider(key)
                 if provider.is_available():
                     log.debug("Router: %s → %s", task_type, provider.provider_id)
-                    return provider
+                    return CaptureProvider(provider, task_type=task_type)
                 else:
                     log.debug("Router: %s skipped (unavailable)", key)
             except Exception as e:
