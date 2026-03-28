@@ -5,8 +5,9 @@ Writes to state/asset-catalog.json. Source of truth for the production pipeline.
 
 import json
 import logging
+import shutil
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from runtime.config import BASE_DIR, STATE_DIR
@@ -15,6 +16,9 @@ log = logging.getLogger(__name__)
 
 CATALOG_FILE = STATE_DIR / "asset-catalog.json"
 ASSET_ROOT   = BASE_DIR / "mobile" / "assets" / "generated"
+HOT_ROOT     = BASE_DIR / "divisions" / "production" / "hot"
+COLD_ROOT    = BASE_DIR / "divisions" / "production" / "cold"
+HOT_TTL_DAYS = 7
 
 _VALID_TYPES    = {"portrait", "sprite", "video", "audio", "graphic", "background", "ui"}
 _VALID_STATUSES = {"pending", "approved", "rejected", "delivered"}
@@ -81,6 +85,52 @@ def _scan_assets() -> list:
     return entries
 
 
+def _age_hot_to_cold() -> dict:
+    """Move assets older than HOT_TTL_DAYS from hot/ to cold/."""
+    if not HOT_ROOT.exists():
+        return {"moved": 0}
+    catalog  = _load_catalog()
+    cutoff   = datetime.now(timezone.utc) - timedelta(days=HOT_TTL_DAYS)
+    moved    = 0
+    for f in HOT_ROOT.rglob("*"):
+        if not f.is_file():
+            continue
+        mtime = datetime.fromtimestamp(f.stat().st_mtime, tz=timezone.utc)
+        if mtime >= cutoff:
+            continue
+        rel     = f.relative_to(HOT_ROOT)
+        dest    = COLD_ROOT / rel
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(f), str(dest))
+        moved  += 1
+        rel_hot  = str(f.relative_to(BASE_DIR)).replace("\\", "/")
+        rel_cold = str(dest.relative_to(BASE_DIR)).replace("\\", "/")
+        entry = next((e for e in catalog if e["path"] == rel_hot), None)
+        if entry:
+            entry["path"]          = rel_cold
+            entry["lifecycle"]     = "cold"
+            entry["cold_moved_at"] = datetime.now(timezone.utc).isoformat()
+        else:
+            catalog.append({
+                "id":           str(uuid.uuid4())[:8],
+                "type":         _infer_type(dest),
+                "commander":    "generic",
+                "tier":         0,
+                "path":         rel_cold,
+                "filename":     dest.name,
+                "size_kb":      round(dest.stat().st_size / 1024, 1),
+                "status":       "approved",
+                "generated_at": mtime.isoformat(),
+                "delivered":    True,
+                "lifecycle":    "cold",
+                "cold_moved_at": datetime.now(timezone.utc).isoformat(),
+            })
+    if moved > 0:
+        _save_catalog(catalog)
+        log.info("asset_catalog: aged %d file(s) from hot/ to cold/", moved)
+    return {"moved": moved}
+
+
 def run() -> dict:
     """Asset Cataloger skill entry point — scans and syncs the asset catalog."""
     catalog       = _load_catalog()
@@ -93,26 +143,31 @@ def run() -> dict:
     catalog.extend(new_entries)
     _save_catalog(catalog)
 
+    # Age hot assets to cold storage
+    aged = _age_hot_to_cold()
+
     total     = len(catalog)
     pending   = sum(1 for e in catalog if e["status"] == "pending")
     approved  = sum(1 for e in catalog if e["status"] == "approved")
     delivered = sum(1 for e in catalog if e.get("delivered"))
 
-    log.info("asset_catalog: total=%d, new=%d, pending=%d, approved=%d",
-             total, len(new_entries), pending, approved)
+    log.info("asset_catalog: total=%d, new=%d, pending=%d, approved=%d, aged_to_cold=%d",
+             total, len(new_entries), pending, approved, aged["moved"])
 
     return {
         "status":  "success",
         "summary": (
             f"Asset catalog synced. {total} total assets, {len(new_entries)} newly indexed. "
-            f"{pending} pending review, {approved} approved, {delivered} delivered."
+            f"{pending} pending review, {approved} approved, {delivered} delivered. "
+            f"{aged['moved']} aged from hot to cold."
         ),
         "metrics": {
-            "total":        total,
-            "new_indexed":  len(new_entries),
-            "pending":      pending,
-            "approved":     approved,
-            "delivered":    delivered,
+            "total":          total,
+            "new_indexed":    len(new_entries),
+            "pending":        pending,
+            "approved":       approved,
+            "delivered":      delivered,
+            "aged_to_cold":   aged["moved"],
         },
         "action_items": [{
             "priority":        "normal",

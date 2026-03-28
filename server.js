@@ -4399,9 +4399,14 @@ cron.schedule('0 15 * * *', async () => {
   await runSkillViaPython('dev-digest', 'DEV');
 }, { timezone: TZ });
 
-// Dev weekly scans — TEMP: daily until verified, then restore Sunday-only
-// refactor-scan: TEMP hourly for verification
-cron.schedule('0 * * * *', async () => {
+// Dev weekly scans — daily
+// repo-monitor at 2:00 AM
+cron.schedule('0 2 * * *', async () => {
+  await runSkillViaPython('repo-monitor', 'DEV');
+}, { timezone: TZ });
+
+// refactor-scan at 2:30 AM (30 min after repo-monitor to avoid VRAM contention)
+cron.schedule('30 2 * * *', async () => {
   await runSkillViaPython('refactor-scan', 'DEV');
 }, { timezone: TZ });
 
@@ -4452,6 +4457,23 @@ cron.schedule('0 16 * * *', async () => {
 // opsec-digest — daily at 16:30 (after breach/cred/privacy complete)
 cron.schedule('30 16 * * *', async () => {
   await runSkillViaPython('opsec-digest', 'OP_SEC');
+}, { timezone: TZ });
+
+// network-monitor at 3:30 AM
+cron.schedule('30 3 * * *', async () => {
+  await runSkillViaPython('network-monitor', 'OP_SEC');
+}, { timezone: TZ });
+
+// ── Opportunity Division ────────────────────────────────────────────────────
+// application-tracker at 10:00 AM (after job-intake at 9:00 AM)
+cron.schedule('0 10 * * *', async () => {
+  await runSkillViaPython('application-tracker', 'OPPORTUNITY');
+}, { timezone: TZ });
+
+// ── Production Division ─────────────────────────────────────────────────────
+// asset-deliver every 6 hours
+cron.schedule('0 */6 * * *', async () => {
+  await runSkillViaPython('asset-deliver', 'PRODUCTION');
 }, { timezone: TZ });
 
 // ── Briefings ──────────────────────────────────────────────────────────────

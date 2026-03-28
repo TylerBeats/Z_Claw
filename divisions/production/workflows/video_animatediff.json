@@ -1,0 +1,62 @@
+{
+  "_comment": "AnimateDiff-Evolved workflow for ComfyUI — SDXL pipeline, 16 frames @ 8fps",
+  "_requires": [
+    "ComfyUI-AnimateDiff-Evolved (https://github.com/Kosinkadink/ComfyUI-AnimateDiff-Evolved)",
+    "mm_sdxl_v10_beta.ckpt in ComfyUI/models/animatediff_models/",
+    "animagine-xl-3.1.safetensors in ComfyUI/models/checkpoints/"
+  ],
+  "loader": {
+    "class_type": "CheckpointLoaderSimple",
+    "inputs": { "ckpt_name": "animagine-xl-3.1.safetensors" }
+  },
+  "animatediff_loader": {
+    "class_type": "ADE_AnimateDiffLoaderWithContext",
+    "inputs": {
+      "model":         ["loader", 0],
+      "model_name":    "mm_sdxl_v10_beta.ckpt",
+      "beta_schedule": "sqrt_linear (AnimateDiff)"
+    }
+  },
+  "positive_prompt": {
+    "class_type": "CLIPTextEncode",
+    "inputs": { "clip": ["loader", 1], "text": "{{POSITIVE_PROMPT}}" }
+  },
+  "negative_prompt": {
+    "class_type": "CLIPTextEncode",
+    "inputs": { "clip": ["loader", 1], "text": "{{NEGATIVE_PROMPT}}" }
+  },
+  "latent": {
+    "class_type": "EmptyLatentImage",
+    "inputs": { "width": 768, "height": 512, "batch_size": 16 }
+  },
+  "sampler": {
+    "class_type": "KSampler",
+    "inputs": {
+      "model":        ["animatediff_loader", 0],
+      "positive":     ["positive_prompt", 0],
+      "negative":     ["negative_prompt", 0],
+      "latent_image": ["latent", 0],
+      "seed":         42,
+      "steps":        20,
+      "cfg":          7.0,
+      "sampler_name": "euler_ancestral",
+      "scheduler":    "karras",
+      "denoise":      1.0
+    }
+  },
+  "decode": {
+    "class_type": "VAEDecode",
+    "inputs": { "samples": ["sampler", 0], "vae": ["loader", 2] }
+  },
+  "save": {
+    "class_type": "SaveAnimatedWEBP",
+    "inputs": {
+      "images":          ["decode", 0],
+      "filename_prefix": "vid_output",
+      "fps":             8,
+      "lossless":        false,
+      "quality":         85,
+      "method":          "default"
+    }
+  }
+}
