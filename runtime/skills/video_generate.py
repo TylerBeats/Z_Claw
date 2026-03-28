@@ -40,8 +40,67 @@ WORKFLOW_DIR        = BASE_DIR / "divisions" / "production" / "workflows"
 QUEUE_FILE          = BASE_DIR / "state" / "video-queue.json"
 _DIV_CONFIG_PATH    = BASE_DIR / "divisions" / "production" / "config.json"
 
-# ComfyUI's local output directory — override via env if your path differs
-COMFYUI_OUTPUT_DIR  = Path(os.getenv("COMFYUI_OUTPUT_DIR", "C:/Users/Tyler/ComfyUI/output"))
+
+def _resolve_comfyui_output_dir() -> Path:
+    """
+    Resolve the ComfyUI local output directory using the following priority:
+
+    1. COMFYUI_OUTPUT_DIR environment variable (explicit override).
+    2. comfyui_path in divisions/production/config.json — infer root from the
+       bat-file path (e.g. C:\\ComfyUI\\run_amd_gpu.bat → C:\\ComfyUI\\output).
+    3. Common Windows fallback paths in order:
+         C:/ComfyUI/output
+         C:/Users/Tyler/ComfyUI/output
+         ~/ComfyUI/output
+
+    Returns the first path that exists as a directory.  If none exist yet
+    (ComfyUI may not have run for the first time), returns the env-var path
+    when set, or the config-derived path when available, so the caller can
+    still attempt to use it and emit a clear error.
+    """
+    env_val = os.getenv("COMFYUI_OUTPUT_DIR")
+
+    # --- 1. env var set → honour it regardless of existence ---
+    if env_val:
+        resolved = Path(env_val)
+        log.info("video_generate: COMFYUI_OUTPUT_DIR from env: %s", resolved)
+        return resolved
+
+    # --- 2. derive from config.json comfyui_path ---
+    config_derived: Path | None = None
+    try:
+        with open(_DIV_CONFIG_PATH, "r", encoding="utf-8") as _f:
+            _cfg = json.load(_f)
+        bat_path = _cfg.get("comfyui_path", "")
+        if bat_path:
+            config_derived = Path(bat_path).parent / "output"
+    except Exception:
+        pass  # handled below via fallbacks
+
+    # --- 3. candidate list: config-derived first, then common Windows paths ---
+    fallbacks = [
+        Path("C:/ComfyUI/output"),
+        Path("C:/Users/Tyler/ComfyUI/output"),
+        Path.home() / "ComfyUI" / "output",
+    ]
+    candidates: list[Path] = []
+    if config_derived:
+        candidates.append(config_derived)
+    candidates.extend(fallbacks)
+
+    for candidate in candidates:
+        if candidate.is_dir():
+            log.info("video_generate: COMFYUI_OUTPUT_DIR resolved to: %s", candidate)
+            return candidate
+
+    # Nothing exists yet — return best guess so callers get a useful error path
+    best = config_derived if config_derived else Path("C:/Users/Tyler/ComfyUI/output")
+    log.info("video_generate: COMFYUI_OUTPUT_DIR not found on disk yet, defaulting to: %s", best)
+    return best
+
+
+# ComfyUI's local output directory — resolved at import time
+COMFYUI_OUTPUT_DIR = _resolve_comfyui_output_dir()
 
 
 # ---------------------------------------------------------------------------
@@ -272,6 +331,16 @@ def _submit_and_wait(workflow: dict, timeout_s: int = 600) -> dict:
 
 def _copy_output(filename: str, out_dir: Path) -> Path:
     """Copy a ComfyUI output file to the asset directory using the local filesystem."""
+    if not COMFYUI_OUTPUT_DIR.is_dir():
+        log.warning(
+            "video_generate: ComfyUI output directory not found at %s — "
+            "set COMFYUI_OUTPUT_DIR env var or check comfyui_path in "
+            "divisions/production/config.json",
+            COMFYUI_OUTPUT_DIR,
+        )
+        raise FileNotFoundError(
+            f"ComfyUI output directory not found: {COMFYUI_OUTPUT_DIR}"
+        )
     src = COMFYUI_OUTPUT_DIR / filename
     if not src.exists():
         candidates = list(COMFYUI_OUTPUT_DIR.rglob(filename))

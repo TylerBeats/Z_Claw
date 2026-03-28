@@ -194,6 +194,7 @@
     }
     .dm-val { font-size: 12px; font-weight: 700; }
     .dm-lbl { font-size: 9px; color: var(--subtext); text-transform: uppercase; letter-spacing: 0.04em; }
+    .stat-placeholder { color: var(--subtext, #666); font-style: italic; font-size: 0.85em; }
     .div-lastrun { font-size: 10px; color: var(--subtext); }
 
     /* ── Alert card ── */
@@ -4715,7 +4716,7 @@ async function _loadBattles(el) {
 async function _loadWeeklySummary(el) {
   try {
     const w = await api('/mobile/api/battles/week');
-    if (!w.total_battles) return;
+    if (!w.total_battles) { el.insertAdjacentHTML('beforeend', `<div class="card"><div style="padding:4px 0;"><span class="stat-placeholder">No battles yet this week</span></div></div>`); return; }
     const DIV_ICONS = { trading: '📈', dev_automation: '💻', op_sec: '🛡', opportunity: '🏹', personal: '🌿' };
     const maxDayXp = Math.max(...(w.by_day || []).map(d => d.xp), 1);
 
@@ -5934,22 +5935,27 @@ async function loadIntel(silent = false, targetId = 'intel-content') {
     const bmM = bm.metrics || {};
 
     // Sleep card
+    const hlEmpty = !hl.summary && !hl.generated_at && !hlM.sleep_hours;
     html += '<div class="card">';
     html += '<div class="card-title">Sleep</div>';
     const sleepHrs = hlM.sleep_hours ?? bmM.avg_sleep_hours;
     const sleepGoal = 8;
     const sleepPct  = sleepHrs != null ? Math.min(100, (sleepHrs / sleepGoal) * 100) : 0;
     const sleepColor = sleepHrs == null ? 'var(--subtext)' : sleepHrs >= 7 ? 'var(--green)' : sleepHrs >= 6 ? 'var(--yellow)' : 'var(--red)';
-    html += `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-      <span style="font-size:22px;font-weight:700;color:${sleepColor}">${sleepHrs != null ? sleepHrs + 'h' : '—'}</span>
-      <span class="pill pill-grey">Goal: ${sleepGoal}h</span>
-    </div>`;
-    html += `<div class="sleep-bar-wrap"><div class="sleep-bar-fill" style="width:${sleepPct.toFixed(0)}%;background:${sleepColor};"></div></div>`;
-    if (hlM.sleep_quality) {
-      html += `<div class="card-meta">Quality: ${escHtml(hlM.sleep_quality)}</div>`;
-    }
-    if (bmM.avg_sleep_hours != null) {
-      html += `<div class="card-meta">7-day avg: ${bmM.avg_sleep_hours}h</div>`;
+    if (hlEmpty && sleepHrs == null) {
+      html += `<span class="stat-placeholder">No check-in logged yet</span>`;
+    } else {
+      html += `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+        <span style="font-size:22px;font-weight:700;color:${sleepColor}">${sleepHrs != null ? sleepHrs + 'h' : '—'}</span>
+        <span class="pill pill-grey">Goal: ${sleepGoal}h</span>
+      </div>`;
+      html += `<div class="sleep-bar-wrap"><div class="sleep-bar-fill" style="width:${sleepPct.toFixed(0)}%;background:${sleepColor};"></div></div>`;
+      if (hlM.sleep_quality) {
+        html += `<div class="card-meta">Quality: ${escHtml(hlM.sleep_quality)}</div>`;
+      }
+      if (bmM.avg_sleep_hours != null) {
+        html += `<div class="card-meta">7-day avg: ${bmM.avg_sleep_hours}h</div>`;
+      }
     }
     html += '</div>';
 
@@ -6114,9 +6120,12 @@ async function loadOps(silent = false) {
     const secFindings = ssM.findings ?? 0;
     const secHigh     = ssM.high ?? 0;
     const secFP       = ssM.false_positives ?? 0;
+    const breachEmpty = !bc.status && !bc.summary && !bc.generated_at;
     html += `<div class="info-row">
       <span class="info-lbl">Breach Check</span>
-      <span class="pill ${breachPill}">${escHtml(breachStatus.toUpperCase())}</span>
+      ${breachEmpty
+        ? `<span class="stat-placeholder">Scheduled Sunday</span>`
+        : `<span class="pill ${breachPill}">${escHtml(breachStatus.toUpperCase())}</span>`}
     </div>`;
     if (bcM.emails_checked != null) {
       html += `<div class="info-row"><span class="info-lbl">Emails Checked</span><span class="info-val">${bcM.emails_checked}</span></div>`;
@@ -6135,9 +6144,9 @@ async function loadOps(silent = false) {
     html += '</div>';
 
     // Cred audit + privacy scan
+    html += '<div class="card">';
+    html += '<div class="card-title">Cred Audit &amp; Privacy</div>';
     if (ca.summary || ps.summary || (ca.action_items || []).length || (ps.action_items || []).length) {
-      html += '<div class="card">';
-      html += '<div class="card-title">Cred Audit &amp; Privacy</div>';
       if (ca.summary) html += `<div class="card-body" style="font-size:12px;line-height:1.5;margin-bottom:6px;">${escHtml(ca.summary)}</div>`;
       if (ps.summary) html += `<div class="card-body" style="font-size:12px;line-height:1.5;">${escHtml(ps.summary)}</div>`;
       const allActions = [...(ca.action_items || []), ...(ps.action_items || [])];
@@ -6148,8 +6157,10 @@ async function loadOps(silent = false) {
         });
         html += '</ul>';
       }
-      html += '</div>';
+    } else {
+      html += `<div class="card-body"><span class="stat-placeholder">Scheduled Sunday — first run pending</span></div>`;
     }
+    html += '</div>';
 
     // ── SYSTEM CONTROLS ──
     html += '<div class="section-title">System</div>';
@@ -6989,8 +7000,11 @@ function _renderDivisionAgents(key) {
   return html;
 }
 
-function _packetCard(name, pkt) {
-  if (!pkt) return `<div class="detail-packet"><div class="detail-packet-header"><span class="detail-packet-name">${escHtml(name)}</span><span class="pill pill-grey">no data</span></div></div>`;
+function _packetCard(name, pkt, scheduleHint) {
+  if (!pkt) {
+    const hint = scheduleHint ? `<span class="stat-placeholder">${escHtml(scheduleHint)}</span>` : '<span class="pill pill-grey">no data</span>';
+    return `<div class="detail-packet"><div class="detail-packet-header"><span class="detail-packet-name">${escHtml(name)}</span>${hint}</div></div>`;
+  }
   const statusClass = pkt.status === 'success' ? 'pill-green' : pkt.status === 'partial' ? 'pill-yellow' : pkt.status === 'skipped' ? 'pill-grey' : 'pill-red';
   let html = `<div class="detail-packet">`;
   html += `<div class="detail-packet-header"><span class="detail-packet-name">${escHtml(name)}</span><span class="pill ${statusClass}">${escHtml(pkt.status || '—')}</span></div>`;
@@ -7028,15 +7042,23 @@ function _renderDivisionPackets(key, divData) {
   let html = '';
   const packetNames = {
     opportunity:    { job_intake: 'Job Intake', funding_finder: 'Funding Finder' },
-    personal:       { health_logger: 'Health Logger', burnout_monitor: 'Burnout Monitor', perf_correlation: 'Perf Correlation' },
+    personal:       { health_logger: 'Health Logger', burnout_monitor: 'Burnout Monitor', perf_correlation: 'Perf Correlation', personal_digest: 'Personal Digest' },
     dev_automation: { repo_monitor: 'Repo Monitor', refactor_scan: 'Refactor Scan', doc_update: 'Doc Update', dev_digest: 'Dev Digest', artifact_manager: 'Artifact Manager' },
     op_sec:         { device_posture: 'Device Posture', threat_surface: 'Threat Surface', breach_check: 'Breach Check', cred_audit: 'Cred Audit', security_scan: 'Security Scan', privacy_scan: 'Privacy Scan', opsec_digest: 'OpSec Digest' },
     production:     { image_generate: 'Image Generate', sprite_generate: 'Sprite Generate', graphic_design: 'Graphic Design', prompt_craft: 'Prompt Craft', style_check: 'Style Check', image_review: 'Image Review', audio_test: 'Audio Test', video_review: 'Video Review', storyboard_compose: 'Storyboard', continuity_check: 'Continuity', asset_catalog: 'Asset Catalog', asset_deliver: 'Asset Deliver', production_digest: 'Forge Digest' },
     sentinel:       {},
   };
+  // Schedule hints for packets that only run on specific triggers / cadences
+  const scheduleHints = {
+    health_logger: 'No check-in logged yet',
+    breach_check:  'Scheduled Sunday',
+    cred_audit:    'Scheduled Sunday',
+    privacy_scan:  'Scheduled Sunday',
+    personal_digest: 'Runs nightly at 21:30',
+  };
   const names = packetNames[key] || {};
   for (const [pktKey, pktLabel] of Object.entries(names)) {
-    html += _packetCard(pktLabel, divData[pktKey] || null);
+    html += _packetCard(pktLabel, divData[pktKey] || null, scheduleHints[pktKey]);
   }
   if (!html) html = '<div class="empty-state"><div class="empty-icon">📭</div><p>No packets found</p></div>';
   return html;
@@ -9245,14 +9267,19 @@ function _renderDivisionPacket(key, divData) {
     const mood = hlM.mood || bmM.mood_trend;
     const streak = hlM.streak_days || bmM.streak_days;
     const burnout = bmM.burnout_level || (bmM.negative_emotions > 2 ? 'check' : 'normal');
+    const hlMissing = !hl.generated_at && !hl.summary && avgSleep == null && !mood;
     html += '<div class="card"><div class="card-title" style="color:var(--green);">LYRIN · Personal</div>';
-    html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;">';
-    html += `<div class="cs-stat"><div class="cs-stat-val" style="color:${avgSleep != null ? (avgSleep >= 7 ? 'var(--green)' : 'var(--yellow)') : 'var(--subtext)'};">${avgSleep != null ? avgSleep + 'h' : '—'}</div><div class="cs-stat-lbl">AVG SLEEP</div></div>`;
-    html += `<div class="cs-stat"><div class="cs-stat-val">${mood ? escHtml(String(mood)) : '—'}</div><div class="cs-stat-lbl">MOOD</div></div>`;
-    html += `<div class="cs-stat"><div class="cs-stat-val" style="color:var(--yellow);">${streak != null ? streak + 'd' : '—'}</div><div class="cs-stat-lbl">STREAK</div></div>`;
-    html += '</div>';
-    const burnColor = burnout === 'elevated' ? 'var(--red)' : burnout === 'check' ? 'var(--yellow)' : 'var(--green)';
-    html += `<div style="font-size:11px;color:var(--subtext);">Burnout: <span style="color:${burnColor};font-weight:700;">${escHtml(burnout.toUpperCase())}</span></div>`;
+    if (hlMissing) {
+      html += `<div style="margin-bottom:8px;"><span class="stat-placeholder">No check-in logged yet</span></div>`;
+    } else {
+      html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;">';
+      html += `<div class="cs-stat"><div class="cs-stat-val" style="color:${avgSleep != null ? (avgSleep >= 7 ? 'var(--green)' : 'var(--yellow)') : 'var(--subtext)'};">${avgSleep != null ? avgSleep + 'h' : '—'}</div><div class="cs-stat-lbl">AVG SLEEP</div></div>`;
+      html += `<div class="cs-stat"><div class="cs-stat-val">${mood ? escHtml(String(mood)) : '—'}</div><div class="cs-stat-lbl">MOOD</div></div>`;
+      html += `<div class="cs-stat"><div class="cs-stat-val" style="color:var(--yellow);">${streak != null ? streak + 'd' : '—'}</div><div class="cs-stat-lbl">STREAK</div></div>`;
+      html += '</div>';
+      const burnColor = burnout === 'elevated' ? 'var(--red)' : burnout === 'check' ? 'var(--yellow)' : 'var(--green)';
+      html += `<div style="font-size:11px;color:var(--subtext);">Burnout: <span style="color:${burnColor};font-weight:700;">${escHtml(burnout.toUpperCase())}</span></div>`;
+    }
     html += '</div>';
 
   } else if (key === 'op_sec') {
@@ -9277,6 +9304,11 @@ function _renderDivisionPacket(key, divData) {
     html += '</div>';
     if (lastScan) html += `<div style="font-size:11px;color:var(--subtext);">Last scan: ${relTime(lastScan)}</div>`;
     if (dp.summary) html += `<div style="font-size:11px;color:var(--subtext);margin-top:6px;">${escHtml(dp.summary)}</div>`;
+    // Note when weekly packets (breach/cred/privacy) haven't run yet
+    const weeklyMissing = !divData.breach_check?.generated_at && !divData.cred_audit?.generated_at && !divData.privacy_scan?.generated_at;
+    if (weeklyMissing) {
+      html += `<div style="margin-top:6px;"><span class="stat-placeholder">Weekly scans (breach/cred/privacy) — first run pending Sunday</span></div>`;
+    }
     html += '</div>';
 
   } else if (key === 'production') {

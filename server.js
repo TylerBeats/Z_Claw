@@ -2553,9 +2553,10 @@ function handleMobileDivisions(res) {
         application_tracker: readPkt('opportunity', 'application-tracker'),
       },
       personal: {
-        health_logger:   readPkt('personal', 'health-logger'),
-        burnout_monitor: readPkt('personal', 'burnout-monitor'),
+        health_logger:    readPkt('personal', 'health-logger'),
+        burnout_monitor:  readPkt('personal', 'burnout-monitor'),
         perf_correlation: readPkt('personal', 'perf-correlation'),
+        personal_digest:  readPkt('personal', 'personal-digest'),
       },
       dev_automation: {
         repo_monitor:  readPkt('dev-automation', 'repo-monitor'),
@@ -2574,6 +2575,29 @@ function handleMobileDivisions(res) {
         privacy_scan:   readPkt('op-sec', 'privacy-scan'),
         opsec_digest:   readPkt('op-sec', 'opsec-digest'),
       },
+      trading: {
+        market_scan:    readPkt('trading', 'market-scan'),
+        trading_report: readPkt('trading', 'trading-report'),
+        virtual_trader: readPkt('trading', 'virtual-trader'),
+        risk_monitor:   readPkt('trading', 'risk-monitor'),
+      },
+      production: (() => {
+        const hotDir  = path.join(ROOT, 'divisions', 'production', 'hot');
+        const coldDir = path.join(ROOT, 'divisions', 'production', 'cold');
+        const dirCount = (d) => { try { return fs.readdirSync(d).length; } catch(e) { return 0; } };
+        return {
+          asset_catalog:  readPkt('production', 'asset-catalog'),
+          asset_deliver:  readPkt('production', 'asset-deliver'),
+          concept_generate: readPkt('production', 'concept-generate'),
+          image_generate: readPkt('production', 'image-generate'),
+          video_generate: readPkt('production', 'video-generate'),
+          music_compose:  readPkt('production', 'music-compose'),
+          voice_generate: readPkt('production', 'voice-generate'),
+          production_digest: readPkt('production', 'production-digest'),
+          hot_count:  dirCount(hotDir),
+          cold_count: dirCount(coldDir),
+        };
+      })(),
     });
   } catch(e) {
     return jsonError(res, 500, e.message);
@@ -4366,8 +4390,39 @@ cron.schedule('0 14 * * *', async () => {
 }, { timezone: TZ });
 
 // ── Trading Division ───────────────────────────────────────────────────────
+async function _checkZenithHealth() {
+  try {
+    await new Promise((resolve, reject) => {
+      const req = http.get('http://127.0.0.1:8000/health', { timeout: 5000 }, (res) => {
+        resolve(res.statusCode);
+      });
+      req.on('error', reject);
+      req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
+    });
+    // Zenith is up — nothing to do
+    return true;
+  } catch (e) {
+    const msg = `Zenith orchestrator unreachable on port 8000: ${e.message}`;
+    logActivity('TRADING', msg, 'red');
+    const alertPath = path.join(ROOT, 'divisions', 'trading', 'packets', 'zenith-health.json');
+    const alert = {
+      status: 'failed',
+      summary: msg,
+      escalate: true,
+      escalation_reason: msg,
+      checked_at: new Date().toISOString(),
+      metrics: { zenith_online: false, port: 8000, error: e.message },
+      action_items: [{ priority: 'high', description: 'Restart Zenith: cd C:/Users/Tyler/agent-network && pm2 restart zenith-orchestrator', requires_matthew: true }]
+    };
+    fs.writeFileSync(alertPath, JSON.stringify(alert, null, 2));
+    return false;
+  }
+}
+
 // Market scan every 2 hours, 8am–10pm, all days (crypto is 24/7)
+// Also probes Zenith health each cycle so downtime is caught within 2 hours
 cron.schedule('0 8,10,12,14,16,18,20,22 * * *', async () => {
+  await _checkZenithHealth();
   await runSkillViaPython('market-scan', 'TRADING');
 }, { timezone: TZ });
 
