@@ -2775,7 +2775,7 @@ Hit ⚡ GENERATE NOW to compile immediately.
 
       // Control queue — show QUEUED status for pending skills
       try {
-        const res = await fetch('../state/control.json?t=' + Date.now());
+        const res = await fetch('/api/control?t=' + Date.now());
         if (res.ok) {
           const ctrl = await res.json();
           (ctrl.queue || []).forEach(entry => {
@@ -2894,68 +2894,49 @@ Hit ⚡ GENERATE NOW to compile immediately.
         }
       } catch(e) {}
 
-      // Burnout monitor packet
+      // Division packets — burnout, market scan, op-sec, dev flags
       try {
-        const res = await fetch('../divisions/personal/packets/burnout-monitor.json?t=' + Date.now());
-        if (res.ok) {
-          const pkt = await res.json();
-          const level = (pkt.metrics && pkt.metrics.level) || (pkt.summary || '').toLowerCase().includes('alert') ? 'ALERT'
-            : (pkt.summary || '').toLowerCase().includes('warn') ? 'WARN' : 'OK';
-          const el = document.getElementById('stat-burnout');
-          el.textContent = level;
-          el.style.color = level === 'ALERT' ? 'var(--red)' : level === 'WARN' ? 'var(--yellow)' : 'var(--green)';
-          if (level !== 'OK' && pkt.escalate) {
-            alerts.push({
-              id: 'burnout-' + level,
-              division: 'PERSONAL',
-              message: `Burnout monitor: ${level} — ${pkt.summary || ''}`,
-              color: level === 'ALERT' ? 'red' : 'yellow',
-              time: now.toTimeString().slice(0,8)
-            });
-          }
-        }
-      } catch(e) {}
+        const pktRes = await fetch('/api/packets?t=' + Date.now());
+        if (pktRes.ok) {
+          const pkts = await pktRes.json();
+          // Normalise keys to underscores
+          const p = {};
+          for (const [k, v] of Object.entries(pkts)) p[k.replace(/-/g, '_')] = v;
 
-      // Market scan packet
-      try {
-        const res = await fetch('../divisions/trading/packets/market-scan.json?t=' + Date.now());
-        if (res.ok) {
-          const pkt = await res.json();
-          const signals = (pkt.metrics && pkt.metrics.signals) || (pkt.metrics && pkt.metrics.high) || 0;
+          // Burnout monitor
+          const bmPkt = (p.personal || {})['burnout-monitor'] || {};
+          const bmLevel = (bmPkt.metrics && bmPkt.metrics.level)
+            ? bmPkt.metrics.level.toUpperCase()
+            : (bmPkt.summary || '').toLowerCase().includes('alert') ? 'ALERT'
+            : (bmPkt.summary || '').toLowerCase().includes('warn') ? 'WARN' : 'OK';
+          const burnEl = document.getElementById('stat-burnout');
+          burnEl.textContent = bmLevel;
+          burnEl.style.color = bmLevel === 'ALERT' ? 'var(--red)' : bmLevel === 'WARN' ? 'var(--yellow)' : 'var(--green)';
+          if (bmLevel !== 'OK' && bmPkt.escalate) {
+            alerts.push({ id: 'burnout-' + bmLevel, division: 'PERSONAL', message: `Burnout monitor: ${bmLevel} — ${bmPkt.summary || ''}`, color: bmLevel === 'ALERT' ? 'red' : 'yellow', time: now.toTimeString().slice(0,8) });
+          }
+
+          // Market scan signals
+          const msPkt = (p.trading || {})['market-scan'] || {};
+          const signals = (msPkt.metrics && (msPkt.metrics.signals || msPkt.metrics.high)) || 0;
           document.getElementById('stat-signals').textContent = signals || '0';
-          if (pkt.escalate) {
-            alerts.push({
-              id: 'market-signal-' + signals,
-              division: 'TRADING',
-              message: `Market scan: ${signals} high-priority signal(s) detected`,
-              color: 'teal',
-              time: now.toTimeString().slice(0,8)
-            });
+          if (msPkt.escalate) {
+            alerts.push({ id: 'market-signal-' + signals, division: 'TRADING', message: `Market scan: ${signals} high-priority signal(s) detected`, color: 'teal', time: now.toTimeString().slice(0,8) });
           }
-        }
-      } catch(e) {}
 
-      // OP-SEC threat-surface flags
-      try {
-        const res = await fetch('../divisions/op-sec/packets/threat-surface.json?t=' + Date.now());
-        if (res.ok) {
-          const pkt = await res.json();
-          const high = (pkt.metrics && pkt.metrics.high) || 0;
-          const el = document.getElementById('stat-opsec');
-          el.textContent = high;
-          el.style.color = high > 0 ? 'var(--red)' : 'var(--green)';
-        }
-      } catch(e) {}
+          // OP-SEC threat flags
+          const tsPkt = (p.op_sec || {})['threat-surface'] || {};
+          const tsHigh = (tsPkt.metrics && tsPkt.metrics.high) || 0;
+          const opsecEl = document.getElementById('stat-opsec');
+          opsecEl.textContent = tsHigh;
+          opsecEl.style.color = tsHigh > 0 ? 'var(--red)' : 'var(--green)';
 
-      // Dev repo flags
-      try {
-        const res = await fetch('../divisions/dev-automation/packets/dev-digest.json?t=' + Date.now());
-        if (res.ok) {
-          const pkt = await res.json();
-          const high = (pkt.metrics && pkt.metrics.total_high) || 0;
-          const el = document.getElementById('stat-repo');
-          el.textContent = high;
-          el.style.color = high > 0 ? 'var(--yellow)' : 'var(--green)';
+          // Dev repo flags
+          const ddPkt = (p.dev_automation || {})['dev-digest'] || {};
+          const devHigh = (ddPkt.metrics && ddPkt.metrics.total_high) || 0;
+          const repoEl = document.getElementById('stat-repo');
+          repoEl.textContent = devHigh;
+          repoEl.style.color = devHigh > 0 ? 'var(--yellow)' : 'var(--green)';
         }
       } catch(e) {}
 

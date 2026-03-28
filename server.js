@@ -3618,6 +3618,9 @@ const server = http.createServer(async (req, res) => {
       if (method === 'GET' && reqPath === '/api/orchestrator-state') {
         return jsonOk(res, readState('orchestrator-state.json') || { divisions: {} });
       }
+      if (method === 'GET' && reqPath === '/api/control') {
+        return jsonOk(res, readState('control.json') || { queue: [] });
+      }
       if (method === 'GET' && reqPath === '/api/agent-overrides') {
         return jsonOk(res, readState('agent-overrides.json') || {});
       }
