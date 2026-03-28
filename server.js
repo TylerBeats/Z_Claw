@@ -281,6 +281,7 @@ const SKILL_XP = {
   'job-intake':         { division: 'opportunity',    amount: 10 },
   'hard-filter':        { division: 'opportunity',    amount:  5 },
   'funding-finder':     { division: 'opportunity',    amount:  5 },
+  'application-tracker': { division: 'opportunity',   amount:  8 },
   // Trading — The Auric Veil
   'trading-report':     { division: 'trading',        amount: 15 },
   'market-scan':        { division: 'trading',        amount:  5 },
@@ -306,6 +307,7 @@ const SKILL_XP = {
   'cred-audit':         { division: 'op_sec',         amount:  8 },
   'privacy-scan':       { division: 'op_sec',         amount:  5 },
   'opsec-digest':       { division: 'op_sec',         amount:  5 },
+  'network-monitor':    { division: 'op_sec',         amount:  8 },
   'mobile-audit-review':{ division: 'op_sec',         amount:  5 },
   'sentinel-health':    { division: 'op_sec',         amount:  5 },
   'security-scan':      { division: 'op_sec',         amount: 10 },
@@ -357,6 +359,8 @@ const SKILL_TASK_MAP = {
   'privacy-scan':     { divState: 'op_sec', division: 'op-sec', task: 'privacy-scan'    },
   'security-scan':    { divState: 'op_sec', division: 'op-sec', task: 'security-scan'   },
   'opsec-digest':     { divState: 'op_sec', division: 'op-sec', task: 'opsec-digest'    },
+  'network-monitor':  { divState: 'op_sec', division: 'op-sec', task: 'network-monitor' },
+  'application-tracker': { divState: 'opportunity', division: 'opportunity', task: 'application-tracker' },
   // Production Division — The Lykeon Forge
   'image-generate':     { divState: 'production', division: 'production', task: 'image-generate'     },
   'sprite-generate':    { divState: 'production', division: 'production', task: 'sprite-generate'    },
@@ -2544,8 +2548,9 @@ function handleMobileDivisions(res) {
 
     return jsonOk(res, {
       opportunity: {
-        job_intake:     readPkt('opportunity', 'job-intake'),
-        funding_finder: readPkt('opportunity', 'funding-finder'),
+        job_intake:          readPkt('opportunity', 'job-intake'),
+        funding_finder:      readPkt('opportunity', 'funding-finder'),
+        application_tracker: readPkt('opportunity', 'application-tracker'),
       },
       personal: {
         health_logger:   readPkt('personal', 'health-logger'),
@@ -2560,8 +2565,9 @@ function handleMobileDivisions(res) {
         artifact_manager: readPkt('dev-automation', 'artifact-manager'),
       },
       op_sec: {
-        device_posture: readPkt('op-sec', 'device-posture'),
-        threat_surface: readPkt('op-sec', 'threat-surface'),
+        device_posture:  readPkt('op-sec', 'device-posture'),
+        threat_surface:  readPkt('op-sec', 'threat-surface'),
+        network_monitor: readPkt('op-sec', 'network-monitor'),
         breach_check:   readPkt('op-sec', 'breach-check'),
         cred_audit:     readPkt('op-sec', 'cred-audit'),
         security_scan:  readPkt('op-sec', 'security-scan'),
@@ -2702,6 +2708,12 @@ function _readDivisionMetrics() {
     };
   } catch(e) {
     m.production = { total_assets: 0, pending_review: 0, approved: 0, delivered: 0 };
+  }
+  const hotDir  = path.join(ROOT, 'divisions', 'production', 'hot');
+  const coldDir = path.join(ROOT, 'divisions', 'production', 'cold');
+  if (m.production) {
+    m.production.hot_count  = fs.existsSync(hotDir)  ? (fs.readdirSync(hotDir,  { withFileTypes: true }).filter(f => f.isFile()).length) : 0;
+    m.production.cold_count = fs.existsSync(coldDir) ? (fs.readdirSync(coldDir, { withFileTypes: true }).filter(f => f.isFile()).length) : 0;
   }
 
   return m;
@@ -3991,6 +4003,18 @@ const server = http.createServer(async (req, res) => {
         return jsonOk(res, { ok: true, images: results.slice(0, 50) });
       }
 
+      // ── Voice References: check which commander .wav files exist ─────────────
+      if (method === 'GET' && reqPath === '/mobile/api/voice-references') {
+        const refDir = path.join(ROOT, 'divisions', 'production', 'voice_references');
+        const commanders = ['vael', 'seren', 'kaelen', 'lyrin', 'zeth', 'lyke'];
+        const status = {};
+        for (const cmd of commanders) {
+          status[cmd] = fs.existsSync(path.join(refDir, `${cmd}.wav`));
+        }
+        const active = Object.values(status).filter(Boolean).length;
+        return jsonOk(res, { commanders: status, active, total: commanders.length });
+      }
+
       return jsonError(res, 404, 'Unknown mobile endpoint');
     } catch(e) {
       return jsonError(res, 500, e.message);
@@ -4050,6 +4074,12 @@ function runSkillViaPython(skillName, logDiv, extraArgs = []) {
             const commander = packet?.metrics?.commander || 'generic';
             generatedImages = filenames.map(f => `/mobile/assets/generated/${commander}/${assetType}/${f}`);
           } catch(_e) { /* packet may not be written yet */ }
+        }
+        if (['video-generate'].includes(skillName) && result && result.metrics) {
+          const videoPaths = result.metrics.video_paths || result.metrics.copied_paths || [];
+          if (videoPaths.length > 0) {
+            broadcastToClients({ type: 'video_generated', skill: skillName, videos: videoPaths, commander: result.metrics.commander || 'generic' });
+          }
         }
         broadcastWS('task_completed', { skill: skillName, division: mapping.divState, ok: true, images: generatedImages });
         broadcastWS('division_status_changed', { division: mapping.divState, status: 'idle' });
@@ -4228,8 +4258,10 @@ async function processControlQueue() {
       'cred-audit':       'OP_SEC',
       'privacy-scan':     'OP_SEC',
       'security-scan':    'OP_SEC',
-      'opsec-digest':     'OP_SEC',
-      'daily-briefing':   'SYS',
+      'opsec-digest':       'OP_SEC',
+      'network-monitor':    'OP_SEC',
+      'application-tracker': 'OPPORTUNITY',
+      'daily-briefing':     'SYS',
     };
 
     for (const entry of queued) {

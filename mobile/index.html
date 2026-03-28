@@ -3173,6 +3173,8 @@ async function loadOpsReportsRendered(silent = false) {
     el.innerHTML = '<div class="skeleton-list"><div class="skeleton-card"></div><div class="skeleton-card"></div></div>';
   }
   try {
+    // Pre-fetch production card auxiliary data (voice refs + ComfyUI status)
+    await Promise.allSettled([_loadVoiceRefStatus(), _checkComfyUI()]);
     const d = await api('/mobile/api/divisions');
     let html = '<div class="section-title" style="color:var(--purple);">Operations Intel Packets</div>';
     html += _renderDivisionPacket('dev_automation', d.dev_automation || {});
@@ -8023,6 +8025,12 @@ function _handleWSMessage(msg) {
       if (_currentTab === 'intel' && msg.division === 'trading') setTimeout(() => loadTrading(true), 500);
       break;
     }
+    case 'video_generated': {
+      if (msg.videos && msg.videos.length > 0) {
+        showToast(`Video generated: ${msg.commander} — ${msg.videos.length} file(s) ready`);
+      }
+      break;
+    }
     case 'combo_completed': {
       const combo = _SKILL_COMBOS.find(c => c.name === msg.name || c.id === msg.name);
       if (combo) {
@@ -9131,6 +9139,21 @@ function _drawSignalSparkline(canvas, prices, entryIdx) {
 // ══════════════════════════════════════════════════════════
 // ITEM 5 — Intel Reports tab rendered division packets
 // ══════════════════════════════════════════════════════════
+
+// Production card helpers — cached state
+let _voiceRefStatus = null;
+async function _loadVoiceRefStatus() {
+  try { _voiceRefStatus = await api('/mobile/api/voice-references'); } catch(e) {}
+}
+
+let _comfyuiOnline = null;
+async function _checkComfyUI() {
+  try {
+    await fetch('http://127.0.0.1:8188/system_stats', { signal: AbortSignal.timeout(2000) });
+    _comfyuiOnline = true;
+  } catch(e) { _comfyuiOnline = false; }
+}
+
 function _renderDivisionPacket(key, divData) {
   if (!divData || !Object.keys(divData).length) {
     return '<div class="card"><div class="card-body" style="color:var(--subtext);font-size:12px;">No report yet.</div></div>';
@@ -9164,6 +9187,16 @@ function _renderDivisionPacket(key, divData) {
     const topJobs = m.top_jobs || m.top_titles || [];
     if (topJobs.length) {
       html += `<div class="card-meta" style="margin-top:8px;">Top roles: ${topJobs.slice(0,3).map(j => escHtml(typeof j === 'string' ? j : j.title || j)).join(', ')}</div>`;
+    }
+    // Application tracker summary
+    const appPkt = divData.opportunity?.application_tracker;
+    if (appPkt) {
+      const sent    = appPkt.metrics?.applications_sent ?? 0;
+      const pending = appPkt.metrics?.pending_reply ?? 0;
+      html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;">';
+      html += `<div class="cs-stat"><div class="cs-stat-val">${sent}</div><div class="cs-stat-lbl">APPS SENT</div></div>`;
+      html += `<div class="cs-stat"><div class="cs-stat-val" style="color:var(--yellow);">${pending}</div><div class="cs-stat-lbl">AWAITING REPLY</div></div>`;
+      html += '</div>';
     }
     html += '</div>';
 
@@ -9236,6 +9269,11 @@ function _renderDivisionPacket(key, divData) {
     html += `<div class="cs-stat"><div class="cs-stat-val" style="color:var(--red);">${high}</div><div class="cs-stat-lbl">HIGH</div></div>`;
     html += `<div class="cs-stat"><div class="cs-stat-val" style="color:var(--yellow);">${medium}</div><div class="cs-stat-lbl">MEDIUM</div></div>`;
     html += `<div class="cs-stat"><div class="cs-stat-val" style="color:var(--blue);">${low}</div><div class="cs-stat-lbl">LOW</div></div>`;
+    const netPkt = divData.op_sec?.network_monitor;
+    if (netPkt) {
+      const anomalies = netPkt.metrics?.anomalies ?? netPkt.metrics?.flagged_hosts ?? 0;
+      html += `<div class="cs-stat"><div class="cs-stat-val" style="color:${anomalies > 0 ? 'var(--yellow)' : ''}">${anomalies}</div><div class="cs-stat-lbl">NET ANOMALIES</div></div>`;
+    }
     html += '</div>';
     if (lastScan) html += `<div style="font-size:11px;color:var(--subtext);">Last scan: ${relTime(lastScan)}</div>`;
     if (dp.summary) html += `<div style="font-size:11px;color:var(--subtext);margin-top:6px;">${escHtml(dp.summary)}</div>`;
@@ -9249,6 +9287,19 @@ function _renderDivisionPacket(key, divData) {
     html += `<div class="cs-stat"><div class="cs-stat-val" style="color:var(--peach);">${m.total_assets ?? '—'}</div><div class="cs-stat-lbl">ASSETS</div></div>`;
     html += `<div class="cs-stat"><div class="cs-stat-val" style="color:var(--yellow);">${m.pending_review ?? '—'}</div><div class="cs-stat-lbl">PENDING</div></div>`;
     html += `<div class="cs-stat"><div class="cs-stat-val" style="color:var(--green);">${m.delivered ?? '—'}</div><div class="cs-stat-lbl">DELIVERED</div></div>`;
+    // Gap 5 — HOT/COLD lifecycle counts
+    const hotCount  = divData.production?.hot_count  ?? 0;
+    const coldCount = divData.production?.cold_count ?? 0;
+    html += `<div class="cs-stat"><div class="cs-stat-val" style="color:var(--warning)">${hotCount}</div><div class="cs-stat-lbl">HOT</div></div>`;
+    html += `<div class="cs-stat"><div class="cs-stat-val" style="color:var(--subtext)">${coldCount}</div><div class="cs-stat-lbl">COLD</div></div>`;
+    // Gap 4 — Voice clone status
+    if (_voiceRefStatus) {
+      html += `<div class="cs-stat"><div class="cs-stat-val">${_voiceRefStatus.active}/${_voiceRefStatus.total}</div><div class="cs-stat-lbl">VOICE CLONES</div></div>`;
+    }
+    // Gap 6 — ComfyUI online indicator
+    if (_comfyuiOnline !== null) {
+      html += `<div class="cs-stat"><div class="cs-stat-val" style="color:${_comfyuiOnline ? 'var(--success)' : 'var(--danger)'}">●</div><div class="cs-stat-lbl">COMFYUI</div></div>`;
+    }
     html += '</div>';
     if (ai.summary) html += `<div style="font-size:11px;color:var(--subtext);">${escHtml(ai.summary)}</div>`;
     html += '</div>';

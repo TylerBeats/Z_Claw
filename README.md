@@ -18,48 +18,74 @@ Mission Control (Node.js / PM2)
 Python Skill Runtime
   └── runtime/
       ├── orchestrators/        # Per-division LLM orchestrators
-      ├── skills/               # Individual skill modules
+      ├── skills/               # Individual skill modules (70+)
       └── tools/                # Shared data tools (trading, XP, state, etc.)
 
 Divisions (agents)
   ├── trading/                  # Market scans, virtual paper trading, backtesting
-  ├── opportunity/              # Job intake, filtering, funding discovery
-  ├── dev-automation/           # Repo monitoring, refactor scans, code review
+  ├── opportunity/              # Job intake, filtering, funding discovery, application tracking
+  ├── dev-automation/           # Repo monitoring, refactor scans, dependency checks, code review
   ├── personal/                 # Health logging, performance correlation, burnout monitoring
-  ├── op-sec/                   # Device posture, breach monitoring, privacy scans
-  ├── production/               # AI media generation (images, sprites, audio, video)
+  ├── op-sec/                   # Device posture, breach monitoring, network monitoring, privacy scans
+  ├── production/               # AI media generation — images, sprites, video (AnimateDiff), music (MusicGen), voice (XTTS)
   └── sentinel/                 # System health, provider uptime, queue monitoring
 
 State
-  └── state/                    # jclaw-stats.json, xp-history.jsonl, anim-queue.json, etc.
+  └── state/                    # jclaw-stats.json, xp-history.jsonl, anim-queue.json, queues, etc.
 ```
 
 ---
 
 ## Key Features
 
-- **Multi-division agent orchestration** — each division runs scheduled Python skills via `run_division.py`, with results written as JSON packets
-- **LLM routing** — Tier 0 (pure Python), Tier 1 (local Ollama 7B), Tier 2 (GPT-4o) per skill
+- **Multi-division agent orchestration** — 7 divisions run 70+ scheduled Python skills via `run_division.py`, with results written as JSON packets
+- **LLM routing** — Tier 0 (pure Python), Tier 1 (local Ollama), Tier 2 (GPT-4o) per skill
 - **Gamification** — XP, per-division ranks, streaks, streak multipliers, prestige system, achievements
-- **Theater system** — animated battle scenes queued from division activity, viewable on both desktop and mobile
+- **Theater system** — animated battle scenes queued from division activity, viewable on both desktop and mobile (iOS + Android)
 - **Real-time updates** — WebSocket + SSE streams push live events to dashboard and mobile
 - **Realm Layer** — commanders (VAEL, SEREN, KAELEN, LYRIN, ZETH, LYKE) represent each division's identity
-- **Virtual paper trading** — SPX500 and Gold simulation via yfinance with real market data, no broker required
-- **Mobile PWA** — full-featured mobile interface accessible over Tailscale private network
+- **Virtual paper trading** — SPX500 and Gold simulation via yfinance with real market data, no broker required; autonomous Zenith orchestrator runs daily cycles
+- **Local media generation pipeline** — AnimateDiff video (ComfyUI), MusicGen audio (transformers + DirectML), Coqui XTTS voice synthesis with per-commander voice cloning
+- **Mobile PWA** — full-featured iOS + Android mobile interface over Tailscale; alert badges, all 7 division cards, Intel sub-nav with live alert routing, ComfyUI status indicator
+- **Alert escalation** — packet-level escalation surfaces to mobile Reports tab with division labels
+- **Asset lifecycle management** — hot/cold TTL pipeline; catalog tracks total, pending, approved, delivered, hot, cold counts
+- **BitNet fine-tuning pipeline** — every LLM call captured to `state/training-capture.jsonl` for future domain-specific model fine-tuning
 
 ---
 
 ## Divisions & Agents
 
-| Division | Key Agents | Schedule |
-|---|---|---|
-| **Trading** | market-scan, virtual-trader, backtester, trading-report | Hourly / Daily 18:00 |
-| **Opportunity** | job-intake, hard-filter, funding-finder | Every 3h / Daily 14:00 |
-| **Dev Automation** | repo-monitor, refactor-scan, debug-agent, dev-digest | Daily |
-| **Personal** | health-logger, perf-correlation, burnout-monitor | Daily |
-| **Op-Sec** | device-posture, threat-surface, breach-check, cred-audit, privacy-scan | Daily / Weekly |
-| **Production** | image-generate, sprite-generate, prompt-craft, asset-catalog, production-digest | On-demand / Daily |
-| **Sentinel** | provider-health, queue-monitor, sentinel-digest | Every 30min / Daily |
+| Division | Commander | Key Skills | Schedule |
+|---|---|---|---|
+| **Trading** | SEREN (Auric Veil) | market-scan, virtual-trader, backtester, trading-report, risk-monitor | Hourly / Daily |
+| **Opportunity** | VAEL (Dawnhunt Order) | job-intake, hard-filter, funding-finder, application-tracker | Every 3h / Daily 10:00 |
+| **Dev Automation** | KAELEN (Iron Codex) | repo-monitor (2am), refactor-scan (2:30am), doc-update, artifact-manager, dev-digest, dependency-checker | Daily |
+| **Personal** | LYRIN (Ember Covenant) | health-logger, perf-correlation, burnout-monitor, personal-digest, weekly-retrospective | Daily |
+| **Op-Sec** | ZETH (Nullward) | device-posture, threat-surface, breach-check, cred-audit, privacy-scan, network-monitor (3:30am), opsec-digest | Daily / Weekly |
+| **Production** | LYKE (Lykeon Forge) | concept-generate, character-sheet, image-generate, video-generate, music-compose, voice-generate, level-design, systems-balance, art-director, asset-catalog, asset-deliver, qa-pipeline, production-digest | On-demand / Daily |
+| **Sentinel** | — (Watchtower) | provider-health, queue-monitor, agent-network-monitor, sentinel-digest | Every 15–30min |
+
+---
+
+## Local Media Generation (Production Division)
+
+The Production division generates game assets entirely on-device using the AMD RX 9070 XT (16GB VRAM, RDNA 4).
+
+### Image & Video — ComfyUI + AnimateDiff
+- **Images**: SDXL pipeline via ComfyUI (`animagine-xl-3.1.safetensors`), 6 workflow types (portrait, concept, character sheet, environment, UI, sprite)
+- **Video**: AnimateDiff-Evolved custom node, 16-frame animated WEBP at 8fps, `mm_sdxl_v10_beta.ckpt` motion module
+- Queues gracefully when ComfyUI is offline; processes on next run
+
+### Music — MusicGen (local)
+- `facebook/musicgen-medium` via HuggingFace Transformers + `torch-directml` (AMD DirectML)
+- 8 track types × 6 division music identities; outputs WAV to `mobile/assets/generated/music/`
+- Install: `pip install transformers accelerate scipy torch-directml`
+
+### Voice — Coqui XTTS v2 (local)
+- CPU inference (no CUDA required); voice cloning from `divisions/production/voice_references/{commander}.wav`
+- Falls back to built-in speaker when no reference file exists
+- Install: `pip install TTS`
+- Place 5–30 second WAV files in `divisions/production/voice_references/` to enable per-commander voice cloning
 
 ---
 
@@ -70,8 +96,11 @@ State
 - **Local LLM**: Ollama (Qwen2.5 7B / Coder 14B via AMD RX 9070 XT + ROCm/Vulkan)
 - **Cloud LLM fallback**: Groq (70B), DeepSeek, Gemini, Claude (escalation only)
 - **Fine-tuning target**: BitNet b1.58 13B via QVAC Fabric (Vulkan, AMD native)
-- **Image generation**: ComfyUI (local)
-- **Trading data**: yfinance
+- **Image generation**: ComfyUI (local, DirectML)
+- **Video generation**: ComfyUI + AnimateDiff-Evolved (`mm_sdxl_v10_beta.ckpt`)
+- **Music generation**: HuggingFace Transformers MusicGen + torch-directml
+- **Voice synthesis**: Coqui XTTS v2 (CPU inference, voice cloning)
+- **Trading data**: yfinance + Zenith autonomous orchestrator
 - **Private networking**: Tailscale
 - **Notifications**: Telegram bot, Discord (Zenith bot)
 
@@ -188,11 +217,10 @@ Expected outcome: 130+ tokens/second inference, zero API cost, full trading stra
 
 See commit history for detailed change notes. Major milestones:
 
-- **2026-03-26** — BitNet fine-tuning pipeline: `CaptureProvider` wrapper captures all LLM calls to `state/training-capture.jsonl`; export and review scripts added; router wired — zero changes to any skill
-- **2026-03-22** — Trading account growth tracking fixed; backtester wired to skill runner; source label corrected (`virtual_account` vs `dry_run`)
-- **2026-03-22** — Phase 2 gamification: auto-prestige, streak multiplier SSE, full-screen rank-up overlay, stats division breakdown
-- **2026-03-22** — Security hardening: CORS preflight fix, timing-safe PIN, all op-sec division agents wired
-- **2026-03-22** — Production division: storage increased to 10GB, all agent skill keys verified
-- **Earlier** — Virtual paper trader, backtester, market-scan, trading-report pipeline built
-- **Earlier** — Mobile PWA with haptics, XP floats, commander panels, theater system
-- **Earlier** — Realm Layer architecture: commanders, orders, chronicle, directive endpoint
+- **2026-03-28** — Full gap analysis + closure: all 7 division packets surfaced in dashboard, network-monitor/application-tracker wired to SKILL_TASK_MAP (were silently failing), video_generated WS event, voice-references API + cloning status UI, hot/cold asset counts in production card, ComfyUI status indicator on Forge card
+- **2026-03-28** — Local media generation backends: AnimateDiff video (ComfyUI, class_type-scanning workflow builder, shutil.copy2 output retrieval), MusicGen audio (transformers + DirectML, WAV output), Coqui XTTS voice (CPU inference, per-commander voice cloning from reference WAVs)
+- **2026-03-28** — System audit & gap closure: all 7 divisions on home tab, 5 missing crons added as actual cron.schedule() calls, ComfyUI SDXL workflow integration, production dashboard real packet data, alert routing to Intel/Reports, art-director commander default fixed, runSkillFromMobile auth hardened
+- **2026-03-26** — BitNet fine-tuning pipeline: `CaptureProvider` wrapper captures all LLM calls to `state/training-capture.jsonl`; export and review scripts added
+- **2026-03-24** — iOS theater battles fixed; Settings tab added; health check-in expanded
+- **2026-03-22** — Trading account growth tracking; Phase 2 gamification: auto-prestige, streak multiplier SSE, rank-up overlay; security hardening: CORS preflight, timing-safe PIN
+- **Earlier** — Virtual paper trader, backtester, market-scan, trading-report pipeline; Realm Layer architecture; Mobile PWA theater system
