@@ -346,7 +346,7 @@ const SKILL_TASK_MAP = {
   'personal-digest':  { divState: 'personal',       division: 'personal',       task: 'personal-digest'  },
   'repo-monitor':     { divState: 'dev_automation', division: 'dev-automation', task: 'repo-monitor'     },
   'debug-agent':      { divState: 'dev_automation', division: 'dev-automation', task: 'debug-agent'      },
-  'dev-pipeline':     { divState: 'dev_automation', division: 'dev-automation', task: 'dev-pipeline'     },
+  'dev-pipeline':     { divState: 'dev_automation', division: 'dev',            task: 'pipeline'         },
   'refactor-scan':    { divState: 'dev_automation', division: 'dev-automation', task: 'refactor-scan'    },
   'doc-update':       { divState: 'dev_automation', division: 'dev-automation', task: 'doc-update'       },
   'artifact-manager': { divState: 'dev_automation', division: 'dev-automation', task: 'artifact-manager' },
