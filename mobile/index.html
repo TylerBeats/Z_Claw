@@ -5516,18 +5516,32 @@ async function loadOverview(silent = false) {
           <span class="dm-item"><span class="dm-val">${m.delivered ?? '—'}</span><span class="dm-lbl">DELIV</span></span>
         </div>`;
 
+      } else if (key === 'sentinel') {
+        const isCrit    = m.urgency === 'critical';
+        const isWarn    = m.urgency === 'high';
+        cardClass = isCrit ? 'danger' : isWarn ? 'warning' : '';
+        const provColor = isCrit ? 'var(--red)' : isWarn ? 'var(--yellow)' : 'var(--green)';
+        const qDepth    = m.queue_depth ?? '—';
+        const provStr   = m.healthy_count != null ? `${m.healthy_count}/${m.total_count}` : '—';
+        const urgStr    = (m.urgency || 'ok').toUpperCase();
+        metricsHtml = `<div class="div-metrics">
+          <span class="dm-item"><span class="dm-val" style="color:${provColor};">${provStr}</span><span class="dm-lbl">PROVID</span></span>
+          <span class="dm-item"><span class="dm-val" style="${qDepth > 0 ? 'color:var(--yellow)' : ''}">${qDepth}</span><span class="dm-lbl">QUEUE</span></span>
+          <span class="dm-item"><span class="dm-val" style="color:${provColor};">${urgStr}</span><span class="dm-lbl">STATUS</span></span>
+        </div>`;
       } else {
-        // sentinel or unknown
+        // unknown
         metricsHtml = `<div class="div-metrics"><span class="dm-item" style="flex:unset;padding:4px 8px;"><span class="dm-val" style="font-size:10px;color:var(--subtext);">—</span></span></div>`;
       }
 
       const divLabel = key.replace(/_/g, '-');
-      const divColor = {trading:'#06b6d4',opportunity:'#f59e0b',personal:'#10b981',dev_automation:'#a78bfa',op_sec:'#ef4444',production:'#f97316'}[key] || '';
-      const _charMap = {opportunity:{name:'VAEL',sub:'Dawnhunt'},trading:{name:'SEREN',sub:'Auric Veil'},dev_automation:{name:'KAELEN',sub:'Iron Codex'},personal:{name:'LYRIN',sub:'Ember Cov.'},op_sec:{name:'ZETH',sub:'Nullward'},production:{name:'LYKE',sub:'Lykeon Forge'}};
+      const divColor = {trading:'#06b6d4',opportunity:'#f59e0b',personal:'#10b981',dev_automation:'#a78bfa',op_sec:'#ef4444',production:'#f97316',sentinel:'#94a3b8'}[key] || '';
+      const _charMap = {opportunity:{name:'VAEL',sub:'Dawnhunt'},trading:{name:'SEREN',sub:'Auric Veil'},dev_automation:{name:'KAELEN',sub:'Iron Codex'},personal:{name:'LYRIN',sub:'Ember Cov.'},op_sec:{name:'ZETH',sub:'Nullward'},production:{name:'LYKE',sub:'Lykeon Forge'},sentinel:{name:'VEIL',sub:'Sentinel Watch'}};
       const char = _charMap[key] || {name: divLabel.toUpperCase(), sub: ''};
       const statusRaw = (div.status || 'idle').toLowerCase();
       const questLabel = statusRaw === 'running' ? 'ON QUEST' : statusRaw === 'error' ? 'WOUNDED' : 'RESTING';
       const questPillClass = statusRaw === 'running' ? 'pill-blue' : statusRaw === 'error' ? 'pill-red' : 'pill-grey';
+      const _aiHigh = m.action_items_high || 0;
       html += `<div class="div-card ${cardClass}" onclick="openDivisionDetail('${key}')" style="${divColor ? `border-top:2px solid ${divColor}66;` : ''}">
         <div class="div-card-header">
           <div style="display:flex;flex-direction:column;gap:1px;">
@@ -5535,6 +5549,7 @@ async function loadOverview(silent = false) {
             <span style="font-size:9px;color:var(--subtext);letter-spacing:0.5px;">${escHtml(char.sub)}</span>
           </div>
           <div style="display:flex;gap:6px;align-items:center;">
+            ${_aiHigh > 0 ? `<span class="pill pill-red" style="font-size:9px;letter-spacing:0.5px;" title="${_aiHigh} high-priority action item${_aiHigh>1?'s':''}">${_aiHigh}!</span>` : ''}
             <button class="div-report-btn" onclick="event.stopPropagation();viewDivisionReport('${key}')">Report</button>
             <span class="pill ${questPillClass}" style="font-size:9px;letter-spacing:0.5px;">${questLabel}</span>
           </div>

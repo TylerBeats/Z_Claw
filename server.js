@@ -2460,6 +2460,15 @@ function handleMobileOverview(res) {
       }
     }
 
+    // Inject sentinel metrics (not in orchestrator-state, read directly from _readDivisionMetrics)
+    if (divMetrics.sentinel) {
+      divisions.sentinel = {
+        status:   divMetrics.sentinel.urgency === 'critical' ? 'error' : divMetrics.sentinel.urgency === 'high' ? 'warning' : 'idle',
+        last_run: divMetrics.sentinel.last_run || null,
+        metrics:  divMetrics.sentinel,
+      };
+    }
+
     // Active alerts from escalated packets
     const alerts = _collectMobileAlerts();
 
@@ -2738,6 +2747,46 @@ function _readDivisionMetrics() {
   if (m.production) {
     m.production.hot_count  = fs.existsSync(hotDir)  ? (fs.readdirSync(hotDir,  { withFileTypes: true }).filter(f => f.isFile()).length) : 0;
     m.production.cold_count = fs.existsSync(coldDir) ? (fs.readdirSync(coldDir, { withFileTypes: true }).filter(f => f.isFile()).length) : 0;
+  }
+
+  // Action items — high priority count across all packets (all divisions)
+  const _divFolders = { trading: 'trading', opportunity: 'opportunity', personal: 'personal', dev_automation: 'dev-automation', op_sec: 'op-sec', production: 'production' };
+  for (const [divKey, divFolder] of Object.entries(_divFolders)) {
+    try {
+      const pktDir = path.join(ROOT, 'divisions', divFolder, 'packets');
+      if (fs.existsSync(pktDir) && m[divKey]) {
+        let hiCount = 0;
+        for (const f of fs.readdirSync(pktDir).filter(x => x.endsWith('.json'))) {
+          try {
+            const pkt = JSON.parse(fs.readFileSync(path.join(pktDir, f), 'utf8'));
+            hiCount += (pkt.action_items || []).filter(a => a.priority === 'high').length;
+          } catch(e) {}
+        }
+        m[divKey].action_items_high = hiCount;
+      }
+    } catch(e) {}
+  }
+
+  // Sentinel — provider + queue health
+  try {
+    const ph  = JSON.parse(fs.readFileSync(path.join(ROOT, 'divisions', 'sentinel', 'packets', 'provider-health.json'), 'utf8'));
+    const phM = ph.metrics || {};
+    m.sentinel = {
+      healthy_count: phM.healthy_count ?? 0,
+      total_count:   phM.total_count   ?? 0,
+      urgency:       ph.urgency || 'normal',
+      last_run:      ph.generated_at || null,
+    };
+  } catch(e) {
+    m.sentinel = { healthy_count: null, total_count: null, urgency: 'unknown', last_run: null };
+  }
+  try {
+    const qm  = JSON.parse(fs.readFileSync(path.join(ROOT, 'divisions', 'sentinel', 'packets', 'queue-monitor.json'), 'utf8'));
+    const qmM = qm.metrics || {};
+    m.sentinel.queue_depth  = qmM.queue_depth  ?? 0;
+    m.sentinel.failed_count = qmM.failed_count ?? 0;
+  } catch(e) {
+    m.sentinel.queue_depth = 0; m.sentinel.failed_count = 0;
   }
 
   return m;
@@ -3539,6 +3588,18 @@ const server = http.createServer(async (req, res) => {
             return jsonOk(res, JSON.parse(fs.readFileSync(sentinelPkt, 'utf8')));
           }
           return jsonOk(res, { status: 'no_data', message: 'Run sentinel provider-health first' });
+        } catch(e) { return jsonError(res, 500, e.message); }
+      }
+      // ── Task Queue depth (used by Sentinel bar) ──────────────────────────
+      if (method === 'GET' && reqPath === '/api/queue') {
+        try {
+          const qf   = path.join(STATE_DIR, 'task-queue.json');
+          const data = fs.existsSync(qf) ? JSON.parse(fs.readFileSync(qf, 'utf8')) : { tasks: [] };
+          const tasks   = data.tasks || [];
+          const depth   = tasks.filter(t => t.status === 'pending' || t.status === 'queued').length;
+          const running = tasks.filter(t => t.status === 'running').length;
+          const failed  = tasks.filter(t => t.status === 'failed').length;
+          return jsonOk(res, { queue: tasks.slice(-20), depth, running, failed });
         } catch(e) { return jsonError(res, 500, e.message); }
       }
       // ── Audit Log ─────────────────────────────────────────────────────────

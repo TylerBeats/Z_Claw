@@ -1,226 +1,202 @@
-# J_Claw — Personal AI Orchestration System
+# J_Claw — Personal AI Orchestration Platform
 
-A modular, locally-hosted AI automation platform built on Windows 11. J_Claw runs a persistent Mission Control server that orchestrates Python skill agents across multiple life domains, with a desktop dashboard and mobile PWA accessible over a private network.
+A modular, locally-hosted AI automation system running on Windows 11. J_Claw orchestrates 7 specialized agent divisions across trading, security, personal health, dev automation, and media production — all routed through a persistent Node.js Mission Control server with desktop and mobile dashboards.
 
-J_Claw is also building toward full local AI independence — capturing every LLM call it makes to fine-tune domain-specific BitNet models that run privately, for free, on consumer hardware.
+Built for two users: **Tyler** (PC dashboard, port 3000) and **Matthew** (mobile PWA via Tailscale, iPhone 16 Pro Max).
+
+---
+
+## Hardware
+
+| Component | Spec |
+|---|---|
+| CPU | AMD Ryzen 5 5600G |
+| GPU | AMD RX 9070 XT — 16GB VRAM (RDNA 4) |
+| RAM | 32GB |
+| OS | Windows 11 |
+| Network | Tailscale (private CGNAT mesh) |
 
 ---
 
 ## Architecture
 
 ```
-Mission Control (Node.js / PM2)
-  └── server.js                 # HTTP server, WebSocket, SSE, skill runner
-      ├── dashboard/            # Desktop dashboard (vanilla JS PWA)
-      ├── mobile/               # Mobile PWA (Tailscale access)
-      └── run_division.py       # Python runtime entry point
+┌─────────────────────────────────────────────────────────┐
+│  Mission Control — server.js (Node.js, PM2, port 3000)  │
+│                                                         │
+│  ├── dashboard/index.html   PC dashboard (Catppuccin)   │
+│  ├── mobile/index.html      Mobile PWA (9500+ lines)    │
+│  ├── mission_control/       Task queue + approval gates │
+│  ├── state/                 Runtime state (JSON/JSONL)  │
+│  └── providers/             LLM provider router         │
+│       ├── OllamaProvider                                │
+│       ├── AnthropicProvider                             │
+│       ├── GeminiProvider                                │
+│       └── DeterministicProvider                         │
+└──────────────────────┬──────────────────────────────────┘
+                       │ HTTP / SSE / WebSocket
+┌──────────────────────▼──────────────────────────────────┐
+│  Python Skill Runtime                                   │
+│                                                         │
+│  runtime/orchestrators/   Per-division LLM orchestrators│
+│  divisions/{div}/packets/ Executive Packet outputs      │
+└─────────────────────────────────────────────────────────┘
+```
 
-Python Skill Runtime
-  └── runtime/
-      ├── orchestrators/        # Per-division LLM orchestrators
-      ├── skills/               # Individual skill modules (70+)
-      └── tools/                # Shared data tools (trading, XP, state, etc.)
+**PM2 processes:**
+- `server` — Mission Control on port 3000
+- `openclaw-gateway` — Zenith/Discord bot on localhost:40000 (Ollama `zenith-expert`)
 
-Divisions (agents)
-  ├── trading/                  # Market scans, virtual paper trading, backtesting
-  ├── opportunity/              # Job intake, filtering, funding discovery, application tracking
-  ├── dev-automation/           # Repo monitoring, refactor scans, dependency checks, code review
-  ├── personal/                 # Health logging, performance correlation, burnout monitoring
-  ├── op-sec/                   # Device posture, breach monitoring, network monitoring, privacy scans
-  ├── production/               # AI media generation — images, sprites, video (AnimateDiff), music (MusicGen), voice (XTTS)
-  └── sentinel/                 # System health, provider uptime, queue monitoring
+---
 
-State
-  └── state/                    # jclaw-stats.json, xp-history.jsonl, anim-queue.json, queues, etc.
+## The 7 Divisions
+
+| Division | Commander | Order | Cron Schedule |
+|---|---|---|---|
+| **Trading** | SEREN | Auric Veil | market-scan (2h), virtual-trader (18:00), backtester (18:05), trading-report (18:10) |
+| **Opportunity** | VAEL | Dawnhunt | job-intake (3h), hard-filter (auto), funding-finder (14:00) |
+| **Dev Automation** | KAELEN | Iron Codex | repo-monitor (02:00), refactor-scan (02:30), security-scan (11:00), doc-update (13:00), artifact-manager (03:00), dev-digest (15:00) |
+| **Personal** | LYRIN | Ember Covenant | health-logger (18:00), perf-correlation (20:00), burnout-monitor (21:00), personal-digest (21:30) |
+| **OP-Sec** | ZETH | Nullward | device-posture (08:00), breach-check (14:00), threat-surface (19:00), cred-audit (15:00), privacy-scan (16:00), opsec-digest (16:30), mobile-audit-review (23:00) |
+| **Production** | LYKE | Lykeon Forge | prompt-craft, image-generate, sprite-generate, video-generate (on-demand), asset-deliver (6h) |
+| **Sentinel** | VEIL | Sentinel Watch | provider-health (2h), queue-monitor (continuous) |
+
+Each skill outputs a standardized **Executive Packet**:
+
+```json
+{
+  "division": "trading",
+  "skill": "market-scan",
+  "generated_at": "2026-03-28T18:00:00Z",
+  "status": "success|partial|failed",
+  "summary": "...",
+  "action_items": [{"priority": "high|normal|low", "description": "..."}],
+  "metrics": {},
+  "escalate": false,
+  "urgency": "normal|high|critical",
+  "confidence": 0.85,
+  "provider_used": "ollama:qwen2.5:7b"
+}
 ```
 
 ---
 
-## Key Features
+## Dashboards
 
-- **Multi-division agent orchestration** — 7 divisions run 70+ scheduled Python skills via `run_division.py`, with results written as JSON packets
-- **LLM routing** — Tier 0 (pure Python), Tier 1 (local Ollama), Tier 2 (GPT-4o) per skill
-- **Gamification** — XP, per-division ranks, streaks, streak multipliers, prestige system, achievements
-- **Theater system** — animated battle scenes queued from division activity, viewable on both desktop and mobile (iOS + Android)
-- **Real-time updates** — WebSocket + SSE streams push live events to dashboard and mobile
-- **Realm Layer** — commanders (VAEL, SEREN, KAELEN, LYRIN, ZETH, LYKE) represent each division's identity
-- **Virtual paper trading** — SPX500 and Gold simulation via yfinance with real market data, no broker required; autonomous Zenith orchestrator runs daily cycles
-- **Local media generation pipeline** — AnimateDiff video (ComfyUI), MusicGen audio (transformers + DirectML), Coqui XTTS voice synthesis with per-commander voice cloning
-- **Mobile PWA** — full-featured iOS + Android mobile interface over Tailscale; alert badges, all 7 division cards, Intel sub-nav with live alert routing, ComfyUI status indicator
-- **Alert escalation** — packet-level escalation surfaces to mobile Reports tab with division labels
-- **Asset lifecycle management** — hot/cold TTL pipeline; catalog tracks total, pending, approved, delivered, hot, cold counts
-- **BitNet fine-tuning pipeline** — every LLM call captured to `state/training-capture.jsonl` for future domain-specific model fine-tuning
+### PC Dashboard (`dashboard/index.html`)
+- Pixel-art Catppuccin theme
+- 7 division cards with live packet data, XP, and rank
+- Real-time SSE: gamification events, alerts, rank-up cinematics
 
----
-
-## Divisions & Agents
-
-| Division | Commander | Key Skills | Schedule |
-|---|---|---|---|
-| **Trading** | SEREN (Auric Veil) | market-scan, virtual-trader, backtester, trading-report, risk-monitor | Hourly / Daily |
-| **Opportunity** | VAEL (Dawnhunt Order) | job-intake, hard-filter, funding-finder, application-tracker | Every 3h / Daily 10:00 |
-| **Dev Automation** | KAELEN (Iron Codex) | repo-monitor (2am), refactor-scan (2:30am), doc-update, artifact-manager, dev-digest, dependency-checker | Daily |
-| **Personal** | LYRIN (Ember Covenant) | health-logger, perf-correlation, burnout-monitor, personal-digest, weekly-retrospective | Daily |
-| **Op-Sec** | ZETH (Nullward) | device-posture, threat-surface, breach-check, cred-audit, privacy-scan, network-monitor (3:30am), opsec-digest | Daily / Weekly |
-| **Production** | LYKE (Lykeon Forge) | concept-generate, character-sheet, image-generate, video-generate, music-compose, voice-generate, level-design, systems-balance, art-director, asset-catalog, asset-deliver, qa-pipeline, production-digest | On-demand / Daily |
-| **Sentinel** | — (Watchtower) | provider-health, queue-monitor, agent-network-monitor, sentinel-digest | Every 15–30min |
+### Mobile PWA (`mobile/index.html`)
+- Biometric (WebAuthn) + PIN auth (server-side timing-safe hash)
+- 5 tabs: **Home** (division cards), **Intel** (full packets), **J_Claw** (rank/XP), **Command** (tasks/approvals), **Log** (chronicle)
+- Realm Layer: commanders as RPG characters with battle history
+- Coding chat: Claude CLI agent mode with commit approval gate
+- PM2 restart button in Settings
+- Push notifications (VAPID)
+- Real-time SSE for all events
 
 ---
 
-## Local Media Generation (Production Division)
+## Gamification
 
-The Production division generates game assets entirely on-device using the AMD RX 9070 XT (16GB VRAM, RDNA 4).
-
-### Image & Video — ComfyUI + AnimateDiff
-- **Images**: SDXL pipeline via ComfyUI (`animagine-xl-3.1.safetensors`), 6 workflow types (portrait, concept, character sheet, environment, UI, sprite)
-- **Video**: AnimateDiff-Evolved custom node, 16-frame animated WEBP at 8fps, `mm_sdxl_v10_beta.ckpt` motion module
-- Queues gracefully when ComfyUI is offline; processes on next run
-
-### Music — MusicGen (local)
-- `facebook/musicgen-medium` via HuggingFace Transformers + `torch-directml` (AMD DirectML)
-- 8 track types × 6 division music identities; outputs WAV to `mobile/assets/generated/music/`
-- Install: `pip install transformers accelerate scipy torch-directml`
-
-### Voice — Coqui XTTS v2 (local)
-- CPU inference (no CUDA required); voice cloning from `divisions/production/voice_references/{commander}.wav`
-- Falls back to built-in speaker when no reference file exists
-- Install: `pip install TTS`
-- Place 5–30 second WAV files in `divisions/production/voice_references/` to enable per-commander voice cloning
+- **XP** earned per skill run, per division
+- **5-tier ranks** per division (Rank 1–5)
+- **Streaks** with weekly shields
+- **8 achievements**: `first_hunt`, `market_watcher`, `code_warden`, `healthy_habits`, and more
+- **Prestige**: all 5 divisions at Rank 5 unlocks +5% permanent XP multiplier (stackable)
+- **Rank-up cinematic**: CSS overlay + Web Audio API
 
 ---
 
-## Stack
+## Production Division — Local Media Generation
 
-- **Runtime**: Node.js 20 (Mission Control), Python 3.13 (skills)
-- **Process manager**: PM2
-- **Local LLM**: Ollama (Qwen2.5 7B / Coder 14B via AMD RX 9070 XT + ROCm/Vulkan)
-- **Cloud LLM fallback**: Groq (70B), DeepSeek, Gemini, Claude (escalation only)
-- **Fine-tuning target**: BitNet b1.58 13B via QVAC Fabric (Vulkan, AMD native)
-- **Image generation**: ComfyUI (local, DirectML)
-- **Video generation**: ComfyUI + AnimateDiff-Evolved (`mm_sdxl_v10_beta.ckpt`)
-- **Music generation**: HuggingFace Transformers MusicGen + torch-directml
-- **Voice synthesis**: Coqui XTTS v2 (CPU inference, voice cloning)
-- **Trading data**: yfinance + Zenith autonomous orchestrator
-- **Private networking**: Tailscale
-- **Notifications**: Telegram bot, Discord (Zenith bot)
+All media generated entirely on-device via the AMD RX 9070 XT.
+
+| Pipeline | Backend | Notes |
+|---|---|---|
+| Images | ComfyUI + SDXL (`animagine-xl-3.1`) | 6 workflow types |
+| Sprites | ComfyUI + SDXL | Pixel-art variant workflow |
+| Video | ComfyUI + AnimateDiff-Evolved | 16-frame WEBP @ 8fps, `mm_sdxl_v10_beta.ckpt` |
+| Music | HuggingFace MusicGen + torch-directml | 8 track types, WAV output |
+| Voice | Coqui XTTS v2 (CPU) | Per-commander voice cloning from reference WAVs |
+
+Assets follow a **hot/cold TTL lifecycle**: `divisions/production/packets/` tracks total, pending, approved, delivered, hot, and cold counts.
 
 ---
 
 ## BitNet Fine-Tuning Pipeline
 
-J_Claw is designed to eventually replace all external AI API calls with locally fine-tuned models that know its specific domain — trading signals, codebase patterns, operator interaction style — running entirely on-device.
+Every LLM call J_Claw makes is silently captured via `CaptureProvider` to `state/training-capture.jsonl`. The goal: replace all cloud API calls with locally fine-tuned domain-specific models.
 
-### Why
-
-Every LLM call J_Claw makes is a training example. A prompt containing live market data sent to `market-scan` and the resulting signal analysis is exactly the kind of pair that, accumulated over time, teaches a model to reason about *your* instruments, *your* strategy, *your* risk parameters. The same applies to coding tasks, security scans, and operator chat.
-
-Cloud APIs are used as the initial teacher. The goal is to graduate to a student that runs locally, faster, for free, with full privacy.
-
-### How It Works
-
-A `CaptureProvider` wrapper sits invisibly between J_Claw's skill layer and every AI model it calls. It is injected at the provider router — the single chokepoint all LLM calls flow through — so zero skill code was changed. When any skill calls `.chat()`, the wrapper:
-
-1. Forwards the call to the real provider (Ollama, Groq, etc.) unchanged
-2. Records the full prompt, the response, the task type, the provider used, and the latency
-3. Appends one JSON line to `state/training-capture.jsonl`
-4. Returns the response to the skill — which never knows capture happened
-
-Short responses (< 30 chars) and pure-Python deterministic calls are skipped automatically.
+**Target**: BitNet b1.58 13B (TQ2_0, ~4.3 GB VRAM), fine-tuned via QVAC Fabric (Vulkan, AMD native). Expected: 130+ tok/s, zero API cost, full privacy.
 
 ```
-Skill calls .chat(messages)
-        │
-        ▼
-CaptureProvider.chat()          ← intercepts here
-        │
-        ├── writes to training-capture.jsonl (fire-and-forget)
-        │
-        ▼
-inner_provider.chat(messages)   ← real call, unmodified
-        │
-        ▼
-response returned to skill      ← skill sees nothing different
+Phase 1 — Accumulate   J_Claw runs normally → all LLM calls captured (automatic)
+Phase 2 — Review       python scripts/review_captures.py --domain trading
+Phase 3 — Export       python scripts/export_training_data.py --domain trading
+Phase 4 — Fine-tune    llama-finetune --model bitnet-13b-tq2_0.gguf --lora-r 32 --vulkan
+Phase 5 — Deploy       Router updated: skill → ["bitnet", "ollama:qwen2.5:7b", "groq"]
 ```
 
-### Capture File Format
+---
 
-Each line in `state/training-capture.jsonl`:
+## Stack
 
-```json
-{
-  "ts": "2026-03-26T18:00:00+00:00",
-  "task_type": "market-scan",
-  "provider_id": "ollama:qwen2.5:7b-instruct-q4_K_M",
-  "messages": [
-    {"role": "system", "content": "You are the Signal Keeper..."},
-    {"role": "user", "content": "Analyze today's market data for SPX500..."}
-  ],
-  "response": "SPX500 up 0.8% — EMA20 holding above EMA50, ATR expanding...",
-  "latency_ms": 1243,
-  "json_mode": false
-}
+| Layer | Tech |
+|---|---|
+| Mission Control | Node.js 20, PM2 |
+| Skills | Python 3.13 |
+| Local LLM | Ollama (Qwen2.5 7B / Coder 14B, AMD ROCm/Vulkan) |
+| Cloud LLM | Groq 70B, Gemini, Anthropic Claude (escalation) |
+| Image/Video | ComfyUI + AnimateDiff-Evolved |
+| Music | HuggingFace Transformers + torch-directml |
+| Voice | Coqui XTTS v2 |
+| Mobile network | Tailscale |
+| Notifications | VAPID push, Discord (Zenith bot) |
+
+---
+
+## Running
+
+```bash
+# Start everything
+pm2 start ecosystem.config.js
+
+# Check status
+pm2 status
+
+# View logs
+pm2 logs server
+pm2 logs openclaw-gateway
 ```
 
-### Workflow
-
-```
-Phase 1 — Accumulate (ongoing, automatic)
-  J_Claw runs normally → every LLM call captured to training-capture.jsonl
-  Target: 500–2000 quality pairs per domain (est. 4–6 weeks of normal operation)
-
-Phase 2 — Review (manual, before training)
-  python scripts/review_captures.py --domain trading
-  Browse pairs interactively: [k]eep / [d]elete / [s]kip
-  Approved pairs written to state/training-approved.jsonl
-
-Phase 3 — Export (one command)
-  python scripts/export_training_data.py --domain trading
-  Outputs state/training-exports/training-trading.jsonl in llama-finetune format
-
-Phase 4 — Fine-tune (AMD RX 9070 XT, Vulkan backend)
-  llama-finetune --model bitnet-13b-tq2_0.gguf \
-                 --train-data training-trading.jsonl \
-                 --lora-r 32 --ctx 2048 --vulkan
-
-Phase 5 — Deploy
-  llama-server --model bitnet-13b.gguf --lora adapters/trading-v1/ --port 8082
-  Router updated: "market-scan" → ["bitnet", "ollama:qwen2.5:7b", "groq"]
-```
-
-### Scripts
-
-| Script | Purpose |
-|--------|---------|
-| `scripts/export_training_data.py --stats` | Show capture stats by domain/provider |
-| `scripts/export_training_data.py --domain trading` | Export trading domain for fine-tuning |
-| `scripts/review_captures.py --domain coding` | Interactively approve/reject coding pairs |
-
-### Target Hardware
-
-The fine-tuning target is a **BitNet b1.58 13B** model (Microsoft) in TQ2_0 format (~4.3 GB VRAM), trained and served on an AMD RX 9070 XT (16 GB GDDR6, RDNA 4) using [QVAC Fabric](https://github.com/tetherto/qvac-fabric-llm.cpp) — the first open framework for BitNet LoRA fine-tuning on consumer GPUs via Vulkan.
-
-Expected outcome: 130+ tokens/second inference, zero API cost, full trading strategy privacy, domain accuracy exceeding general-purpose 7B models for J_Claw-specific tasks.
+The PC dashboard is at `http://localhost:3000`.
+Mobile access via Tailscale: `http://<tailscale-ip>:3000/mobile`.
 
 ---
 
 ## Security
 
-- CORS restricted to localhost and private Tailscale CGNAT range
-- Bearer token + PIN authentication for mobile access
-- Timing-safe PIN comparison (`crypto.timingSafeEqual`)
-- Windows Firewall rule scoped to local subnet + Tailscale
-- Health and credential data stays local — no API fallback for sensitive skills
+- CORS restricted to localhost and Tailscale CGNAT range
+- Mobile: server-side PIN (timing-safe) + optional WebAuthn biometric
+- Windows Firewall scoped to local subnet + Tailscale
+- Health and credential data never sent to cloud providers
+- Sensitive state files gitignored
 
 ---
 
-## Changelog
+## What's Next
 
-See commit history for detailed change notes. Major milestones:
+- **Streak XP multiplier** — +10% per 7-day milestone, stacks to +50%
+- **Stats screen** — longest streak, XP rate/day, prestige stars
+- **Rank-up overlay** — enhanced sound design
+- **WebAuthn Face ID** — registration flow for Matthew's iPhone
+- **Agent-network expansion** — live P&L streaming integration
+- **Voice clone status** — Production division UI integration
+- **BitNet Phase 2** — training review + first fine-tune run (Trading domain)
 
-- **2026-03-28** — Full gap analysis + closure: all 7 division packets surfaced in dashboard, network-monitor/application-tracker wired to SKILL_TASK_MAP (were silently failing), video_generated WS event, voice-references API + cloning status UI, hot/cold asset counts in production card, ComfyUI status indicator on Forge card
-- **2026-03-28** — Local media generation backends: AnimateDiff video (ComfyUI, class_type-scanning workflow builder, shutil.copy2 output retrieval), MusicGen audio (transformers + DirectML, WAV output), Coqui XTTS voice (CPU inference, per-commander voice cloning from reference WAVs)
-- **2026-03-28** — System audit & gap closure: all 7 divisions on home tab, 5 missing crons added as actual cron.schedule() calls, ComfyUI SDXL workflow integration, production dashboard real packet data, alert routing to Intel/Reports, art-director commander default fixed, runSkillFromMobile auth hardened
-- **2026-03-26** — BitNet fine-tuning pipeline: `CaptureProvider` wrapper captures all LLM calls to `state/training-capture.jsonl`; export and review scripts added
-- **2026-03-24** — iOS theater battles fixed; Settings tab added; health check-in expanded
-- **2026-03-22** — Trading account growth tracking; Phase 2 gamification: auto-prestige, streak multiplier SSE, rank-up overlay; security hardening: CORS preflight, timing-safe PIN
-- **Earlier** — Virtual paper trader, backtester, market-scan, trading-report pipeline; Realm Layer architecture; Mobile PWA theater system
+---
+
+*J_Claw is a personal system. It is not a product, a framework, or a template. It is an ongoing experiment in what a single developer can automate when given enough stubbornness and a decent GPU.*

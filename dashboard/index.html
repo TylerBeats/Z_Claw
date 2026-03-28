@@ -1179,6 +1179,11 @@
       </div>
       <div class="div-row">LAST RUN: <strong id="opportunity-last">—</strong></div>
       <div class="div-row">NEXT: <strong>every 3h</strong></div>
+      <!-- live metrics from packets -->
+      <div id="metrics-opportunity" style="margin:6px 0;display:none;">
+        <div class="div-row">JOBS: <strong id="m-opp-jobs">—</strong> &nbsp;|&nbsp; TIER-A: <strong id="m-opp-tiera">—</strong> &nbsp;|&nbsp; FUNDING: <strong id="m-opp-funding">—</strong></div>
+        <div class="div-row" style="font-size:7px;">SOURCES: <strong id="m-opp-sources">—</strong> &nbsp;|&nbsp; <span id="m-opp-actions" style="color:var(--red);display:none;"></span></div>
+      </div>
       <button class="run-btn" id="run-opportunity" onclick="runSkill('job-intake','opportunity')">▶ RUN</button>
       <div class="agent-list">
         <div class="agent-row"><span class="agent-name">job-intake</span><span class="tag tag-blue" style="font-size:7px;" id="tag-opportunity-job-intake">3h</span><button class="skill-run-btn" onclick="runSkill('job-intake','opportunity',this)">▶</button><div class="toggle on" data-division="opportunity" data-agent="job-intake"></div></div>
@@ -1193,6 +1198,11 @@
       <div style="margin-bottom:8px;"><span class="tag tag-green" id="dev_automation-status">IDLE</span></div>
       <div class="div-row">LAST RUN: <strong id="dev_automation-last">—</strong></div>
       <div class="div-row">NEXT: <strong>every 3h</strong></div>
+      <!-- live metrics from packets -->
+      <div id="metrics-dev_automation" style="margin:6px 0;display:none;">
+        <div class="div-row"><span style="color:var(--red);">HIGH: <strong id="m-dev-high">—</strong></span> &nbsp;|&nbsp; FILES: <strong id="m-dev-files">—</strong> &nbsp;|&nbsp; REPOS: <strong id="m-dev-repos">—</strong></div>
+        <div class="div-row" style="font-size:7px;"><span id="m-dev-actions" style="color:var(--red);display:none;"></span></div>
+      </div>
       <button class="run-btn" id="run-dev_automation" onclick="runSkill('repo-monitor','dev_automation')">▶ RUN</button>
       <div class="agent-list">
         <div class="agent-row"><span class="agent-name">repo-monitor</span><div class="interval-ctrl" id="interval-ctrl-repo-monitor"><button class="interval-btn" onclick="adjustInterval(-1)">−</button><span id="interval-display-repo-monitor">3</span><span style="font-size:6px;color:var(--subtext)">h</span><button class="interval-btn" onclick="adjustInterval(1)">+</button></div><button class="skill-run-btn" onclick="runSkill('repo-monitor','dev_automation',this)">▶</button><div class="toggle on" data-division="dev_automation" data-agent="repo-monitor"></div></div>
@@ -1210,6 +1220,11 @@
       <div style="margin-bottom:8px;"><span class="tag tag-green" id="personal-status">IDLE</span></div>
       <div class="div-row">LAST RUN: <strong id="personal-last">—</strong></div>
       <div class="div-row">NEXT: <strong>18:00 daily</strong></div>
+      <!-- live metrics from packets -->
+      <div id="metrics-personal" style="margin:6px 0;display:none;">
+        <div class="div-row">SLEEP: <strong id="m-pers-sleep">—</strong> &nbsp;|&nbsp; BURNOUT: <strong id="m-pers-burnout">—</strong> &nbsp;|&nbsp; LOGS: <strong id="m-pers-logs">—</strong></div>
+        <div class="div-row" style="font-size:7px;"><span id="m-pers-actions" style="color:var(--red);display:none;"></span></div>
+      </div>
       <button class="run-btn" id="run-personal" onclick="runSkill('health-logger','personal')">▶ RUN</button>
       <div class="agent-list">
         <div class="agent-row"><span class="agent-name">health-logger</span><span class="tag tag-blue" style="font-size:7px;" id="tag-personal-health-logger">18:00</span><div class="toggle on" data-division="personal" data-agent="health-logger"></div></div>
@@ -1235,6 +1250,11 @@
       <div style="margin-bottom:8px;"><span class="tag tag-green" id="op_sec-status">IDLE</span></div>
       <div class="div-row">LAST RUN: <strong id="op_sec-last">—</strong></div>
       <div class="div-row">NEXT: <strong>08:00 daily</strong></div>
+      <!-- live metrics from packets -->
+      <div id="metrics-op_sec" style="margin:6px 0;display:none;">
+        <div class="div-row"><span style="color:var(--red);">ANOMALIES: <strong id="m-opsec-anomalies">—</strong></span> &nbsp;|&nbsp; POSTURE: <strong id="m-opsec-posture">—</strong></div>
+        <div class="div-row" style="font-size:7px;">BREACH: <strong id="m-opsec-breach">—</strong> &nbsp;|&nbsp; <span id="m-opsec-actions" style="color:var(--red);display:none;"></span></div>
+      </div>
       <button class="run-btn" id="run-op_sec" onclick="runSkill('device-posture','op_sec')">▶ RUN</button>
       <div class="agent-list">
         <div class="agent-row"><span class="agent-name">device-posture</span><span class="tag tag-green" style="font-size:7px;" id="tag-op_sec-device-posture">08:00</span><button class="skill-run-btn" onclick="runSkill('device-posture','op_sec',this)">▶</button><div class="toggle on" data-division="op_sec" data-agent="device-posture"></div></div>
@@ -1255,6 +1275,11 @@
       <div class="div-row" style="font-size:7px;color:#f9731680;margin-bottom:6px;">LYKE // The Lykeon Forge</div>
       <div class="div-row">LAST RUN: <strong id="production-last">—</strong></div>
       <div class="div-row">NEXT: <strong>on-demand</strong></div>
+      <!-- live metrics from packets -->
+      <div id="metrics-production" style="margin:6px 0;display:none;">
+        <div class="div-row" style="color:#f97316;">ASSETS: <strong id="m-prod-assets">—</strong> &nbsp;|&nbsp; PENDING: <strong id="m-prod-pending" style="color:var(--yellow);">—</strong> &nbsp;|&nbsp; DELIVERED: <strong id="m-prod-delivered" style="color:var(--green);">—</strong></div>
+        <div class="div-row" style="font-size:7px;"><span id="m-prod-actions" style="color:var(--red);display:none;"></span></div>
+      </div>
       <button class="run-btn" id="run-production" onclick="runSkill('production-digest','production')" style="border-color:#f97316;color:#f97316;">▶ RUN</button>
       <div class="agent-list">
         <div class="agent-row"><span class="agent-name">image-generate</span><span class="tag tag-blue" style="font-size:7px;" id="tag-production-image-generate">ON-DEMAND</span><button class="skill-run-btn" onclick="runSkill('image-generate','production',this)">▶</button><div class="toggle on" data-division="production" data-agent="image-generate"></div></div>
@@ -2573,6 +2598,106 @@ Hit ⚡ GENERATE NOW to compile immediately.
         window._reportData = await res.json();
         buildReportTabs();
         renderReport();
+        renderDivisionMetrics();
+      } catch(e) {}
+    }
+
+    function _setText(id, val) {
+      const el = document.getElementById(id);
+      if (el) el.textContent = String(val);
+    }
+    function _showEl(id, text) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.style.display = '';
+      if (text !== undefined) el.textContent = text;
+    }
+
+    function renderDivisionMetrics() {
+      const d = window._reportData || {};
+
+      // Opportunity
+      try {
+        const ji = (d.opportunity || {})['job-intake']    || {};
+        const ff = (d.opportunity || {})['funding-finder'] || {};
+        const m  = ji.metrics || {};
+        const srcOk    = Object.values(m.source_status || {}).filter(v => v === 'ok').length;
+        const srcTotal = Object.keys(m.source_status  || {}).length;
+        const aiHigh = (ji.action_items||[]).filter(a=>a.priority==='high').length +
+                       (ff.action_items||[]).filter(a=>a.priority==='high').length;
+        _setText('m-opp-jobs',    m.new_jobs_found ?? '—');
+        _setText('m-opp-tiera',   m.tier_a ?? '—');
+        _setText('m-opp-funding', (ff.metrics||{}).funding_opportunities ?? '—');
+        _setText('m-opp-sources', srcTotal ? `${srcOk}/${srcTotal} ok` : '—');
+        if (aiHigh > 0) _showEl('m-opp-actions', `${aiHigh} HIGH ACTION${aiHigh>1?'S':''}`);
+        _showEl('metrics-opportunity');
+      } catch(e) {}
+
+      // Dev Automation
+      try {
+        const rs  = (d.dev_automation || {})['refactor-scan'] || {};
+        const rm  = (d.dev_automation || {})['repo-monitor']  || {};
+        const rsM = rs.metrics || {};
+        const rmM = rm.metrics || {};
+        const aiHigh = (rs.action_items||[]).filter(a=>a.priority==='high').length +
+                       (rm.action_items||[]).filter(a=>a.priority==='high').length;
+        const high  = rsM.high   || rmM.flags_high   || 0;
+        _setText('m-dev-high',  high);
+        _setText('m-dev-files', rsM.files_scanned || '—');
+        _setText('m-dev-repos', rmM.repos_checked || '—');
+        const highEl = document.getElementById('m-dev-high');
+        if (highEl) highEl.style.color = high > 0 ? 'var(--red)' : 'var(--green)';
+        if (aiHigh > 0) _showEl('m-dev-actions', `${aiHigh} HIGH ACTION${aiHigh>1?'S':''}`);
+        _showEl('metrics-dev_automation');
+      } catch(e) {}
+
+      // Personal
+      try {
+        const hl  = (d.personal || {})['health-logger']   || {};
+        const bm  = (d.personal || {})['burnout-monitor'] || {};
+        const hlM = hl.metrics || {};
+        const bmM = bm.metrics || {};
+        const sleep   = hlM.sleep_hours ?? bmM.avg_sleep_hours ?? '—';
+        const burnout = bmM.burnout_level || ((bmM.negative_emotions||0) > 2 ? 'check' : 'normal');
+        const aiHigh  = (hl.action_items||[]).filter(a=>a.priority==='high').length +
+                        (bm.action_items||[]).filter(a=>a.priority==='high').length;
+        _setText('m-pers-sleep',   sleep !== '—' ? sleep + 'h' : '—');
+        _setText('m-pers-burnout', String(burnout).toUpperCase());
+        _setText('m-pers-logs',    bmM.health_entries ?? '—');
+        const burnEl = document.getElementById('m-pers-burnout');
+        if (burnEl) burnEl.style.color = burnout === 'elevated' ? 'var(--red)' : burnout === 'check' ? 'var(--yellow)' : 'var(--green)';
+        if (aiHigh > 0) _showEl('m-pers-actions', `${aiHigh} HIGH ACTION${aiHigh>1?'S':''}`);
+        _showEl('metrics-personal');
+      } catch(e) {}
+
+      // OP-Sec
+      try {
+        const ts  = (d.op_sec || {})['threat-surface'] || {};
+        const dp  = (d.op_sec || {})['device-posture'] || {};
+        const bc  = (d.op_sec || {})['breach-check']   || {};
+        const tsM = ts.metrics || {};
+        const dpM = dp.metrics || {};
+        const anomalies = tsM.anomaly_count || tsM.flagged_hosts || 0;
+        const aiHigh = [ts,dp,bc].reduce((acc,p)=>acc+(p.action_items||[]).filter(a=>a.priority==='high').length,0);
+        _setText('m-opsec-anomalies', anomalies);
+        _setText('m-opsec-posture',   String(dpM.severity || '—').toUpperCase());
+        _setText('m-opsec-breach',    String(bc.status    || '—').toUpperCase());
+        const anomEl = document.getElementById('m-opsec-anomalies');
+        if (anomEl) anomEl.style.color = anomalies > 0 ? 'var(--red)' : 'var(--green)';
+        if (aiHigh > 0) _showEl('m-opsec-actions', `${aiHigh} HIGH ACTION${aiHigh>1?'S':''}`);
+        _showEl('metrics-op_sec');
+      } catch(e) {}
+
+      // Production
+      try {
+        const cat = (d.production || {})['asset-catalog'] || (d.production || {})['image-review'] || {};
+        const m   = cat.metrics || {};
+        const aiHigh = (cat.action_items||[]).filter(a=>a.priority==='high').length;
+        _setText('m-prod-assets',    m.total_assets   ?? m.total   ?? '—');
+        _setText('m-prod-pending',   m.pending_review ?? m.pending ?? '—');
+        _setText('m-prod-delivered', m.delivered      ?? '—');
+        if (aiHigh > 0) _showEl('m-prod-actions', `${aiHigh} HIGH ACTION${aiHigh>1?'S':''}`);
+        _showEl('metrics-production');
       } catch(e) {}
     }
 
