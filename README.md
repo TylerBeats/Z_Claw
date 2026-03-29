@@ -54,11 +54,11 @@ Built for two users: **Tyler** (PC dashboard, port 3000) and **Matthew** (mobile
 | Division | Commander | Order | Cron Schedule |
 |---|---|---|---|
 | **Trading** | SEREN | Auric Veil | market-scan (2h), virtual-trader (18:00), backtester (18:05), trading-report (18:10) |
-| **Opportunity** | VAEL | Dawnhunt | job-intake (3h), hard-filter (auto), funding-finder (14:00) |
+| **Opportunity** | VAEL | Dawnhunt | job-intake (3h), hard-filter (auto inside job-intake), funding-finder (14:00), application-tracker (auto) |
 | **Dev Automation** | KAELEN | Iron Codex | repo-monitor (02:00), refactor-scan (02:30), security-scan (11:00), doc-update (13:00), artifact-manager (03:00), dev-digest (15:00) |
 | **Personal** | LYRIN | Ember Covenant | health-logger (18:00), perf-correlation (20:00), burnout-monitor (21:00), personal-digest (21:30) |
-| **OP-Sec** | ZETH | Nullward | device-posture (08:00), breach-check (14:00), threat-surface (19:00), cred-audit (15:00), privacy-scan (16:00), opsec-digest (16:30), mobile-audit-review (23:00) |
-| **Production** | LYKE | Lykeon Forge | prompt-craft, image-generate, sprite-generate, video-generate (on-demand), asset-deliver (6h) |
+| **OP-Sec** | ZETH | Nullward | device-posture (08:00), breach-check (14:00), threat-surface (19:00), cred-audit (15:00), privacy-scan (16:00), network-monitor (16:15), opsec-digest (16:30), mobile-audit-review (23:00) |
+| **Production** | LYKE | Lykeon Forge | prompt-craft, image-generate, sprite-generate, video-generate (on-demand / manual), asset-deliver (6h), production-digest (daily) |
 | **Sentinel** | VEIL | Sentinel Watch | provider-health (2h), queue-monitor (continuous) |
 
 Each skill outputs a standardized **Executive Packet**:
@@ -85,12 +85,22 @@ Each skill outputs a standardized **Executive Packet**:
 
 ### PC Dashboard (`dashboard/index.html`)
 - Pixel-art Catppuccin theme
-- 7 division cards with live packet data, XP, and rank
+- 7 division cards with live packet metrics pulled via `/api/packets`
+- **Opportunity**: JOBS / TIER-A / TIER-B / TIER-C / TIER-D / FUNDING / SOURCES breakdown
+- **Personal**: SLEEP / BURNOUT / LOGS / CORR-PTS / CORR-STATUS from perf-correlation
+- **OP-Sec**: ANML / POST / BRCH / NET / PRIV metrics
+- **Production**: HOT / COLD asset lifecycle counts
+- **Sentinel bar**: QUEUE depth / provider health pills / FAILED count
 - Real-time SSE: gamification events, alerts, rank-up cinematics
+- All state reads go through proper `/api/*` endpoints — no direct `../state/` fetches
 
 ### Mobile PWA (`mobile/index.html`)
 - Biometric (WebAuthn) + PIN auth (server-side timing-safe hash)
 - 5 tabs: **Home** (division cards), **Intel** (full packets), **J_Claw** (rank/XP), **Command** (tasks/approvals), **Log** (chronicle)
+- All 7 division cards with live metrics including Sentinel (VEIL)
+- Opportunity card: Tier A/B/C/D counts + application tracker APPS/WAITING
+- OP-Sec card: 5 metrics (ANML, POST, BRCH, NET, PRIV)
+- Red action-item badge on cards with high-priority items
 - Realm Layer: commanders as RPG characters with battle history
 - Coding chat: Claude CLI agent mode with commit approval gate
 - PM2 restart button in Settings
@@ -99,14 +109,44 @@ Each skill outputs a standardized **Executive Packet**:
 
 ---
 
+## API Surface
+
+All state is served through `/api/*` endpoints. No client reads state files directly.
+
+| Endpoint | Method | Description |
+|---|---|---|
+| `/api/packets` | GET | All division Executive Packets |
+| `/api/orchestrator-state` | GET | Division run status and last_run timestamps |
+| `/api/agent-overrides` | GET | Agent enable/disable state |
+| `/api/applications` | GET | Full applications pipeline + stats |
+| `/api/jobs-seen` | GET | Total job listings seen counter |
+| `/api/trade-log` | GET | Trade stats (total, win rate, avg-R) |
+| `/api/health-log` | GET | Health check-in log |
+| `/api/activity` | GET | Activity log feed |
+| `/api/chat-history` | GET | Mission Control chat history |
+| `/api/control` | GET | Task control queue status |
+| `/api/queue` | GET | Sentinel task queue depth/running/failed |
+| `/api/briefing` | GET/POST | Daily AI briefing |
+| `/api/jobs` | GET | Pending/applied job pipeline |
+| `/api/grants` | GET | Grant opportunities |
+| `/api/trading/cycle` | GET | Active trading cycle data |
+| `/api/trading/accounts` | GET | Trading account balances |
+| `/api/stats/summary` | GET | Gamification XP/rank summary |
+| `/api/skill` | POST | Trigger a division skill |
+| `/api/agents/toggle` | POST | Enable/disable an agent |
+| `/api/gamif/stream` | GET (SSE) | Real-time gamification events |
+
+---
+
 ## Gamification
 
 - **XP** earned per skill run, per division
 - **5-tier ranks** per division (Rank 1–5)
-- **Streaks** with weekly shields
-- **8 achievements**: `first_hunt`, `market_watcher`, `code_warden`, `healthy_habits`, and more
+- **Streaks** with weekly shields — per-division daily tracking
+- **8 achievements**: `rulers_blessing`, `first_hunt`, `market_watcher`, `code_warden`, `healthy_habits`, `division_master`, `realm_commander`, `eternal`
 - **Prestige**: all 5 divisions at Rank 5 unlocks +5% permanent XP multiplier (stackable)
 - **Rank-up cinematic**: CSS overlay + Web Audio API
+- **XP telemetry**: every event appended to `state/xp-history.jsonl`
 
 ---
 
@@ -122,7 +162,7 @@ All media generated entirely on-device via the AMD RX 9070 XT.
 | Music | HuggingFace MusicGen + torch-directml | 8 track types, WAV output |
 | Voice | Coqui XTTS v2 (CPU) | Per-commander voice cloning from reference WAVs |
 
-Assets follow a **hot/cold TTL lifecycle**: `divisions/production/packets/` tracks total, pending, approved, delivered, hot, and cold counts.
+Assets follow a **hot/cold TTL lifecycle**: `divisions/production/packets/` tracks total, pending, approved, delivered, hot (recent), and cold (stale) counts. Production skills are manually triggered via `/api/tasks` — they require prompt/spec inputs and are not auto-scheduled.
 
 ---
 
@@ -183,7 +223,7 @@ Mobile access via Tailscale: `http://<tailscale-ip>:3000/mobile`.
 - Mobile: server-side PIN (timing-safe) + optional WebAuthn biometric
 - Windows Firewall scoped to local subnet + Tailscale
 - Health and credential data never sent to cloud providers
-- Sensitive state files gitignored
+- Sensitive state files gitignored (`state/mobile-pin.json`, `state/jclaw-stats.json`, `state/chat-history.json`, `state/health-log.json`, `state/applications.json`, `state/trade-log.json`)
 
 ---
 
@@ -191,11 +231,11 @@ Mobile access via Tailscale: `http://<tailscale-ip>:3000/mobile`.
 
 - **Streak XP multiplier** — +10% per 7-day milestone, stacks to +50%
 - **Stats screen** — longest streak, XP rate/day, prestige stars
-- **Rank-up overlay** — enhanced sound design
+- **jclaw-stats.json API endpoint** — last two direct state file reads (`/api/stats` for rank card data)
+- **BitNet Phase 2** — training review + first fine-tune run (Trading domain)
 - **WebAuthn Face ID** — registration flow for Matthew's iPhone
 - **Agent-network expansion** — live P&L streaming integration
 - **Voice clone status** — Production division UI integration
-- **BitNet Phase 2** — training review + first fine-tune run (Trading domain)
 
 ---
 
