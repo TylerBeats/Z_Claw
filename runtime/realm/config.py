@@ -340,6 +340,12 @@ DIVISIONS = {
             "continuity-check":   {"xp":  8, "soldier": "The Warden",         "icon": "⚖",  "anim": "balance",  "label": "Hold the Continuity"},
             "asset-deliver":      {"xp":  5, "soldier": "The Herald",         "icon": "📦", "anim": "deliver",  "label": "Deliver the Artifact"},
             "production-digest":  {"xp": 10, "soldier": "LYKE",               "icon": "⬡",  "anim": "forge",    "label": "The Forge Report"},
+            "game-design":        {"xp": 15, "soldier": "The Game Architect",  "icon": "📐", "anim": "draft",    "label": "Blueprint the World"},
+            "narrative-write":    {"xp": 12, "soldier": "The Loresmith",       "icon": "📖", "anim": "scroll",   "label": "Write the Chronicle"},
+            "code-generate":      {"xp": 20, "soldier": "The Engine Caster",   "icon": "⌨",  "anim": "circuit",  "label": "Cast the Code"},
+            "sfx-generate":       {"xp": 12, "soldier": "The Sound Forger",    "icon": "🔊", "anim": "wave",     "label": "Forge the Sound"},
+            "vfx-compose":        {"xp": 10, "soldier": "The Particle Weaver", "icon": "✨", "anim": "sparkle",  "label": "Weave the Effect"},
+            "level-design":       {"xp": 15, "soldier": "The World Architect", "icon": "🗺",  "anim": "compose",  "label": "Draft the World"},
         },
         "vocabulary": {
             "quest":       "in production",

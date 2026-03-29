@@ -82,7 +82,7 @@ def add_to_pipeline(state: dict, jobs: list) -> dict:
             idx = existing[job["id"]]
             state["pipeline"][idx].update({
                 k: v for k, v in job.items()
-                if k in ("tier", "score", "composite_score", "scores", "resume", "fit_reason")
+                if k in ("tier", "score", "score_composite", "composite_score", "scores", "resume", "fit_reason", "filtered", "scoring_notes")
                 and v is not None
             })
         else:

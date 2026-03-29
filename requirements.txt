@@ -1,4 +1,4 @@
-# OpenClaw Python runtime dependencies
+# ── Core runtime (always required) ───────────────────────────────────────────
 anthropic>=0.84.0
 ollama>=0.6.0
 pydantic>=2.12.0
@@ -6,12 +6,34 @@ pydantic-settings>=2.13.0
 python-dotenv>=1.2.0
 requests>=2.32.0
 
-# Trading — real market data (no broker, no KYC)
+# ── Trading division ──────────────────────────────────────────────────────────
 yfinance>=0.2.50
 pandas>=2.0.0
 
-# Optional — only needed if Gemini provider is used
-# google-generativeai>=0.8.0
+# ── Production division — image QA / style check ─────────────────────────────
+Pillow>=10.0.0
 
-# Dev / testing
+# ── Production division — voice reference bootstrap ──────────────────────────
+# Used by scripts/generate_voice_refs.py to create placeholder WAVs.
+# Windows only (uses SAPI). Not needed after real voice recordings are in place.
+pyttsx3>=2.90
+
+# ── Optional ML backends (install as needed) ──────────────────────────────────
+#
+# Voice cloning — voice_generate.py (Coqui XTTS v2, CPU inference)
+#   pip install TTS
+#
+# Music generation — music_compose.py (Meta MusicGen ~1.5 GB)
+#   pip install transformers accelerate scipy
+#
+# SFX generation — sfx_generate.py (Meta AudioGen ~1.5 GB)
+#   pip install audiocraft scipy
+#
+# AMD GPU acceleration — DirectML for transformers / audiocraft on RX 9070 XT
+#   pip install torch-directml
+#
+# Gemini provider — only if routing to Gemini
+#   pip install google-generativeai>=0.8.0
+
+# ── Dev / testing ─────────────────────────────────────────────────────────────
 pytest>=9.0.0

@@ -32,6 +32,12 @@ Usage:
   python run_division.py production continuity-check vael
   python run_division.py production asset-deliver
   python run_division.py production production-digest
+  python run_division.py production game-design mechanics "inventory system"
+  python run_division.py production narrative-write lore "The Dawnhunt Order"
+  python run_division.py production code-generate godot "player movement controller"
+  python run_division.py production sfx-generate attack
+  python run_division.py production vfx-compose particle_system "fire aura" fire godot
+  python run_division.py production level-design dungeon "ancient tomb"
   python run_division.py sentinel provider-health
   python run_division.py sentinel queue-monitor
   python run_division.py sentinel sentinel-digest
@@ -233,6 +239,31 @@ def run(division: str, task: str, args: list) -> dict:
                                       text=args[3] if len(args) > 3 else ""),
             "asset-deliver":      lambda: prod_orch.run_asset_deliver(),
             "production-digest":  lambda: prod_orch.run_production_digest(),
+            "game-design":        lambda: prod_orch.run_game_design(
+                                      design_type=args[0] if args else "mechanics",
+                                      topic=args[1] if len(args) > 1 else "",
+                                      context=args[2] if len(args) > 2 else ""),
+            "narrative-write":    lambda: prod_orch.run_narrative_write(
+                                      content_type=args[0] if args else "lore",
+                                      subject=args[1] if len(args) > 1 else "",
+                                      context=args[2] if len(args) > 2 else ""),
+            "code-generate":      lambda: prod_orch.run_code_generate(
+                                      engine=args[0] if args else "godot",
+                                      feature=args[1] if len(args) > 1 else "",
+                                      spec=args[2] if len(args) > 2 else ""),
+            "sfx-generate":       lambda: prod_orch.run_sfx_generate(
+                                      sfx_type=args[0] if args else "ui_click",
+                                      description=args[1] if len(args) > 1 else "",
+                                      duration_s=float(args[2]) if len(args) > 2 else 0.0),
+            "vfx-compose":        lambda: prod_orch.run_vfx_compose(
+                                      vfx_type=args[0] if args else "particle_system",
+                                      effect=args[1] if len(args) > 1 else "",
+                                      style=args[2] if len(args) > 2 else "",
+                                      engine=args[3] if len(args) > 3 else "godot"),
+            "level-design":       lambda: prod_orch.run_level_design(
+                                      level_type=args[0] if args else "dungeon",
+                                      theme=args[1] if len(args) > 1 else "",
+                                      constraints=args[2] if len(args) > 2 else ""),
         }
         runner = task_map.get(task)
         if not runner:

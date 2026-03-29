@@ -4556,6 +4556,11 @@ async function loadStatsTab() {
       </div>`;
 
     // ── Battle stats row ──
+    const _bestDays = d.best_streak_days || 0;
+    const _bestMult = d.best_streak_mult || 1.0;
+    const _daysNext = d.days_to_next_mult || 0;
+    const _multDisp = _bestMult > 1.0 ? `×${_bestMult}` : '—';
+    const _nextDisp = _bestMult >= 1.5 ? 'MAX' : (_bestDays > 0 ? `${_daysNext}d` : '—');
     html += `
       <div class="jclaw-stats-row">
         <div class="jclaw-stat-box">
@@ -4567,8 +4572,12 @@ async function loadStatsTab() {
           <div class="jclaw-stat-lbl">TROPHIES</div>
         </div>
         <div class="jclaw-stat-box">
-          <div class="jclaw-stat-val">${s.total_xp_earned || 0}</div>
-          <div class="jclaw-stat-lbl">TOTAL XP</div>
+          <div class="jclaw-stat-val" style="color:var(--purple, #a855f7);">${_multDisp}</div>
+          <div class="jclaw-stat-lbl">STREAK BONUS</div>
+        </div>
+        <div class="jclaw-stat-box">
+          <div class="jclaw-stat-val" style="font-size:13px;">${_nextDisp}</div>
+          <div class="jclaw-stat-lbl">TO NEXT ×</div>
         </div>
       </div>`;
 

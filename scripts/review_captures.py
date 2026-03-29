@@ -14,11 +14,12 @@ CAPTURE_FILE = PROJECT_ROOT / "state" / "training-capture.jsonl"
 APPROVED_FILE = PROJECT_ROOT / "state" / "training-approved.jsonl"
 
 DOMAIN_TASKS = {
-    "trading":  ["market-scan", "trading-report"],
-    "coding":   ["repo-monitor", "debug-agent", "refactor-scan", "doc-update", "dev-generate", "dev-review", "dev-digest", "dev-summarize", "dev-finalize", "dev-test"],
-    "chat":     ["chat-operator"],
-    "opsec":    ["threat-surface", "cred-audit", "privacy-scan", "security-scan", "opsec-scan", "opsec-digest", "device-posture", "breach-check"],
-    "personal": ["health-logger", "perf-correlation", "burnout-monitor", "personal-digest"],
+    "trading":     ["market-scan", "trading-report"],
+    "coding":      ["repo-monitor", "debug-agent", "refactor-scan", "doc-update", "dev-generate", "dev-review", "dev-digest", "dev-summarize", "dev-finalize", "dev-test"],
+    "chat":        ["chat-operator"],
+    "opsec":       ["threat-surface", "cred-audit", "privacy-scan", "security-scan", "opsec-scan", "opsec-digest", "device-posture", "breach-check"],
+    "personal":    ["health-logger", "perf-correlation", "burnout-monitor", "personal-digest"],
+    "opportunity": ["hard-filter", "funding-finder", "job-intake"],
 }
 
 TRUNC_SYSTEM = 300

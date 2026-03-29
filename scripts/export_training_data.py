@@ -29,15 +29,16 @@ DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "state" / "training-exports"
 # Domain mapping
 # ---------------------------------------------------------------------------
 DOMAINS = {
-    "trading":  ["market-scan", "trading-report"],
-    "coding":   ["repo-monitor", "debug-agent", "refactor-scan", "doc-update",
-                 "dev-generate", "dev-review", "dev-digest", "dev-summarize",
-                 "dev-finalize", "dev-test"],
-    "chat":     ["chat-operator"],
-    "opsec":    ["threat-surface", "cred-audit", "privacy-scan", "security-scan",
-                 "opsec-scan", "opsec-digest", "device-posture", "breach-check"],
-    "personal": ["health-logger", "perf-correlation", "burnout-monitor", "personal-digest"],
-    "other":    [],  # catch-all
+    "trading":     ["market-scan", "trading-report"],
+    "coding":      ["repo-monitor", "debug-agent", "refactor-scan", "doc-update",
+                    "dev-generate", "dev-review", "dev-digest", "dev-summarize",
+                    "dev-finalize", "dev-test"],
+    "chat":        ["chat-operator"],
+    "opsec":       ["threat-surface", "cred-audit", "privacy-scan", "security-scan",
+                    "opsec-scan", "opsec-digest", "device-posture", "breach-check"],
+    "personal":    ["health-logger", "perf-correlation", "burnout-monitor", "personal-digest"],
+    "opportunity": ["hard-filter", "funding-finder", "job-intake"],
+    "other":       [],  # catch-all
 }
 
 # Build reverse lookup: task_type -> domain

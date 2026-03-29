@@ -328,6 +328,12 @@ const SKILL_XP = {
   'continuity-check':   { division: 'production',     amount:  8 },
   'asset-deliver':      { division: 'production',     amount:  5 },
   'production-digest':  { division: 'production',     amount: 10 },
+  'game-design':        { division: 'production',     amount: 15 },
+  'narrative-write':    { division: 'production',     amount: 12 },
+  'code-generate':      { division: 'production',     amount: 20 },
+  'sfx-generate':       { division: 'production',     amount: 12 },
+  'vfx-compose':        { division: 'production',     amount: 10 },
+  'level-design':       { division: 'production',     amount: 15 },
 };
 
 const PYTHON_EXE = 'C:/Users/Tyler/AppData/Local/Microsoft/WindowsApps/PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0/python.exe';
@@ -381,6 +387,12 @@ const SKILL_TASK_MAP = {
   'voice-generate':     { divState: 'production', division: 'production', task: 'voice-generate'     },
   'asset-deliver':      { divState: 'production', division: 'production', task: 'asset-deliver'      },
   'production-digest':  { divState: 'production', division: 'production', task: 'production-digest'  },
+  'game-design':        { divState: 'production', division: 'production', task: 'game-design'        },
+  'narrative-write':    { divState: 'production', division: 'production', task: 'narrative-write'    },
+  'code-generate':      { divState: 'production', division: 'production', task: 'code-generate'      },
+  'sfx-generate':       { divState: 'production', division: 'production', task: 'sfx-generate'       },
+  'vfx-compose':        { divState: 'production', division: 'production', task: 'vfx-compose'        },
+  'level-design':       { divState: 'production', division: 'production', task: 'level-design'       },
 };
 
 function rankForLevel(level) {
@@ -718,9 +730,15 @@ function handleStatsSummary(res) {
     } catch(e) {}
 
     const longestStreaks = {};
+    const currentStreaks = {};
     for (const [div, s] of Object.entries(stats.streaks || {})) {
       longestStreaks[div] = s.longest || 0;
+      currentStreaks[div] = s.current || 0;
     }
+    const bestStreak     = Math.max(0, ...Object.values(currentStreaks));
+    const bestMultiplier = Math.round(Math.min(1.5, 1.0 + Math.floor(bestStreak / 7) * 0.1) * 100) / 100;
+    const nextMilestone  = (Math.floor(bestStreak / 7) + 1) * 7;
+    const daysToNext     = bestMultiplier < 1.5 ? nextMilestone - bestStreak : 0;
 
     jsonOk(res, {
       total_xp_earned:     stats.total_xp_earned    || 0,
@@ -729,6 +747,10 @@ function handleStatsSummary(res) {
       prestige:            stats.prestige            || 0,
       prestige_multiplier: stats.prestige_multiplier || 1.0,
       longest_streaks:     longestStreaks,
+      current_streaks:     currentStreaks,
+      best_streak_days:    bestStreak,
+      best_streak_mult:    bestMultiplier,
+      days_to_next_mult:   daysToNext,
       achievements_earned: (stats.achievements || []).length,
       achievements_total:  14,
       xp_per_day_7d:       xpPerDay7d,
@@ -2955,6 +2977,12 @@ function handleMobileBattlesToday(res) {
       'music-compose':       { label: 'Forge the Anthem',     soldier: 'The Composer',          icon: '◉', anim: 'sparkle' },
       'voice-generate':      { label: 'Speak for the Realm',  soldier: 'The Voice Director',    icon: '◈', anim: 'sparkle' },
       'production-digest':   { label: 'The Forge Report',     soldier: 'The Forge Herald',      icon: '⬢', anim: 'circuit' },
+      'game-design':         { label: 'Blueprint the World',  soldier: 'The Game Architect',    icon: '📐', anim: 'draft'   },
+      'narrative-write':     { label: 'Write the Chronicle',  soldier: 'The Loresmith',         icon: '📖', anim: 'scroll'  },
+      'code-generate':       { label: 'Cast the Code',        soldier: 'The Engine Caster',     icon: '⌨',  anim: 'circuit' },
+      'sfx-generate':        { label: 'Forge the Sound',      soldier: 'The Sound Forger',      icon: '🔊', anim: 'wave'    },
+      'vfx-compose':         { label: 'Weave the Effect',     soldier: 'The Particle Weaver',   icon: '✨', anim: 'sparkle' },
+      'level-design':        { label: 'Draft the World',      soldier: 'The World Architect',   icon: '🗺',  anim: 'compose' },
       // Sentinel (non-division utility)
       'provider-health':     { label: 'Provider Watch',       soldier: 'The Provider Scout',    icon: '◈', anim: 'scan'    },
       'queue-monitor':       { label: 'Queue Watch',          soldier: 'The Queue Warden',      icon: '◈', anim: 'scan'    },
@@ -4489,6 +4517,9 @@ async function processControlQueue() {
       'opsec-digest':       'OP_SEC',
       'network-monitor':    'OP_SEC',
       'application-tracker': 'OPPORTUNITY',
+      'asset-deliver':      'PRODUCTION',
+      'asset-catalog':      'PRODUCTION',
+      'production-digest':  'PRODUCTION',
       'daily-briefing':     'SYS',
     };
 
@@ -4765,6 +4796,11 @@ cron.schedule('0 10 * * *', async () => {
 // asset-deliver every 6 hours
 cron.schedule('0 */6 * * *', async () => {
   await runSkillViaPython('asset-deliver', 'PRODUCTION');
+}, { timezone: TZ });
+
+// production-digest daily at 5:00 PM (after asset-catalog + storyboard runs during the day)
+cron.schedule('0 17 * * *', async () => {
+  await runSkillViaPython('production-digest', 'PRODUCTION');
 }, { timezone: TZ });
 
 // ── Briefings ──────────────────────────────────────────────────────────────

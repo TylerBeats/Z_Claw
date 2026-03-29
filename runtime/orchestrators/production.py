@@ -26,6 +26,12 @@ from runtime.skills import (
     asset_deliver,
     music_compose,
     voice_generate,
+    game_design,
+    narrative_write,
+    code_generate,
+    sfx_generate,
+    vfx_compose,
+    level_design,
 )
 
 log = logging.getLogger(__name__)
@@ -207,6 +213,68 @@ def run_voice_generate(
     if result.get("status") in ("success", "partial"):
         grant_skill_xp("voice-generate")
     log.info("LYKE: voice-generate → %s [%s/%s]", result.get("status"), commander, line_type)
+    return pkt
+
+
+# ── Game Dev Team skills ──────────────────────────────────────────────────────
+
+def run_game_design(design_type: str = "mechanics", topic: str = "", context: str = "") -> dict:
+    result = game_design.run(design_type=design_type, topic=topic, context=context)
+    pkt    = _build_packet("game-design", result)
+    packet.write(pkt)
+    if result.get("status") in ("success", "partial"):
+        grant_skill_xp("game-design")
+    log.info("LYKE: game-design %s/%s → %s", design_type, topic, result.get("status"))
+    return pkt
+
+
+def run_narrative_write(content_type: str = "lore", subject: str = "", context: str = "") -> dict:
+    result = narrative_write.run(content_type=content_type, subject=subject, context=context)
+    pkt    = _build_packet("narrative-write", result)
+    packet.write(pkt)
+    if result.get("status") in ("success", "partial"):
+        grant_skill_xp("narrative-write")
+    log.info("LYKE: narrative-write %s/%s → %s", content_type, subject, result.get("status"))
+    return pkt
+
+
+def run_code_generate(engine: str = "godot", feature: str = "", spec: str = "") -> dict:
+    result = code_generate.run(engine=engine, feature=feature, spec=spec)
+    pkt    = _build_packet("code-generate", result)
+    packet.write(pkt)
+    if result.get("status") in ("success", "partial"):
+        grant_skill_xp("code-generate")
+    log.info("LYKE: code-generate %s/%s → %s", engine, feature, result.get("status"))
+    return pkt
+
+
+def run_sfx_generate(sfx_type: str = "ui_click", description: str = "", duration_s: float = 0.0) -> dict:
+    result = sfx_generate.run(sfx_type=sfx_type, description=description, duration_s=duration_s)
+    pkt    = _build_packet("sfx-generate", result)
+    packet.write(pkt)
+    if result.get("status") in ("success", "partial"):
+        grant_skill_xp("sfx-generate")
+    log.info("LYKE: sfx-generate %s → %s", sfx_type, result.get("status"))
+    return pkt
+
+
+def run_vfx_compose(vfx_type: str = "particle_system", effect: str = "", style: str = "", engine: str = "godot") -> dict:
+    result = vfx_compose.run(vfx_type=vfx_type, effect=effect, style=style, engine=engine)
+    pkt    = _build_packet("vfx-compose", result)
+    packet.write(pkt)
+    if result.get("status") in ("success", "partial"):
+        grant_skill_xp("vfx-compose")
+    log.info("LYKE: vfx-compose %s/%s → %s", vfx_type, effect, result.get("status"))
+    return pkt
+
+
+def run_level_design(level_type: str = "dungeon", theme: str = "", constraints: str = "") -> dict:
+    result = level_design.run(level_type=level_type, theme=theme, constraints=constraints)
+    pkt    = _build_packet("level-design", result)
+    packet.write(pkt)
+    if result.get("status") in ("success", "partial"):
+        grant_skill_xp("level-design")
+    log.info("LYKE: level-design %s/%s → %s", level_type, theme, result.get("status"))
     return pkt
 
 

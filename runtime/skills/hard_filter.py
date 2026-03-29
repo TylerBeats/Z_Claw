@@ -177,6 +177,7 @@ def _apply_scores(job: dict, score: dict) -> dict:
     job["tier"]             = score.get("tier", "D")
     job["resume"]           = score.get("resume", "technical")
     job["score_composite"]  = score.get("score_composite", 0.0)
+    job["score"]            = job["score_composite"]   # normalised field read by dashboard
     job["scores"]           = score.get("scores", {})
     job["scoring_notes"]    = score.get("scoring_notes", "")
     if score.get("hard_rejected"):
