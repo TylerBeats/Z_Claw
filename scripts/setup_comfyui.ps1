@@ -140,7 +140,10 @@ print('Downloaded to', path)
 # Step 6 - Write run_amd_gpu.bat
 Write-Host "[6/6] Writing run_amd_gpu.bat..." -ForegroundColor Green
 
+$savedPref2 = $ErrorActionPreference
+$ErrorActionPreference = "Continue"
 $hasDirectml = & $PY -c "import torch_directml; print('yes')" 2>&1
+$ErrorActionPreference = $savedPref2
 if ($hasDirectml -match "yes") {
     $gpuFlag = "--directml"
     Write-Host "  GPU mode: DirectML" -ForegroundColor Green
