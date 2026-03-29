@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 
 # ── Paths ────────────────────────────────────────────────────────────────────
 ROOT = Path(__file__).resolve().parent.parent          # OpenClaw-Orchestrator/
+BASE_DIR = ROOT  # alias used by production skills
 STATE_DIR = ROOT / "state"
 LOGS_DIR = ROOT / "logs"
 DIVISIONS_DIR = ROOT / "divisions"
