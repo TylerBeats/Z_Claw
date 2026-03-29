@@ -1301,6 +1301,8 @@
         <div class="agent-row"><span class="agent-name">continuity-check</span><span class="tag tag-yellow" style="font-size:7px;" id="tag-production-continuity-check">QA</span><button class="skill-run-btn" onclick="runSkill('continuity-check','production',this)">▶</button><div class="toggle on" data-division="production" data-agent="continuity-check"></div></div>
         <div class="agent-row"><span class="agent-name">asset-catalog</span><span class="tag tag-blue" style="font-size:7px;" id="tag-production-asset-catalog">ON-DEMAND</span><button class="skill-run-btn" onclick="runSkill('asset-catalog','production',this)">▶</button><div class="toggle on" data-division="production" data-agent="asset-catalog"></div></div>
         <div class="agent-row"><span class="agent-name">asset-deliver</span><span class="tag tag-blue" style="font-size:7px;" id="tag-production-asset-deliver">ON-DEMAND</span><button class="skill-run-btn" onclick="runSkill('asset-deliver','production',this)">▶</button><div class="toggle on" data-division="production" data-agent="asset-deliver"></div></div>
+        <div class="agent-row"><span class="agent-name">music-compose</span><span class="tag tag-blue" style="font-size:7px;" id="tag-production-music-compose">ON-DEMAND</span><button class="skill-run-btn" onclick="runSkill('music-compose','production',this)">▶</button><div class="toggle on" data-division="production" data-agent="music-compose"></div></div>
+        <div class="agent-row"><span class="agent-name">voice-generate</span><span class="tag tag-blue" style="font-size:7px;" id="tag-production-voice-generate">ON-DEMAND</span><button class="skill-run-btn" onclick="runSkill('voice-generate','production',this)">▶</button><div class="toggle on" data-division="production" data-agent="voice-generate"></div></div>
         <div class="agent-row"><span class="agent-name">production-digest</span><span class="tag tag-blue" style="font-size:7px;" id="tag-production-production-digest">ON-DEMAND</span><button class="skill-run-btn" onclick="runSkill('production-digest','production',this)">▶</button><div class="toggle on" data-division="production" data-agent="production-digest"></div></div>
       </div>
     </div>
@@ -1506,6 +1508,8 @@ Hit ⚡ GENERATE NOW to compile immediately.
         <li class="intel-agent-item"><span class="intel-agent-name">continuity-check</span><span class="intel-agent-desc">Validates visual consistency across all tiers of a character's evolution — same palette, same pose language.</span></li>
         <li class="intel-agent-item"><span class="intel-agent-name">asset-catalog</span><span class="intel-agent-desc">Indexes every generated asset by type, commander, tier, and approval status in state/asset-catalog.json.</span></li>
         <li class="intel-agent-item"><span class="intel-agent-name">asset-deliver</span><span class="intel-agent-desc">Routes approved assets to the correct game directories under mobile/assets/ and updates catalog entries.</span></li>
+        <li class="intel-agent-item"><span class="intel-agent-name">music-compose</span><span class="intel-agent-desc">Generates music tracks via HuggingFace MusicGen + torch-directml on the AMD GPU. 8 track types, WAV output. Queues to state/music-queue.json if backend unavailable.</span></li>
+        <li class="intel-agent-item"><span class="intel-agent-name">voice-generate</span><span class="intel-agent-desc">Synthesizes commander voice lines via Coqui XTTS v2 (CPU). Clones voice from per-commander reference WAVs in divisions/production/voice_references/. Queues to state/voice-queue.json.</span></li>
         <li class="intel-agent-item"><span class="intel-agent-name">production-digest</span><span class="intel-agent-desc">The Forge Report — synthesizes full pipeline status, asset counts, pending QA, and delivery metrics for J_Claw.</span></li>
       </ul>
       <div class="intel-orch-note">LYKE monitors the production pipeline. Any blocked pipeline (ComfyUI down, QA backlog &gt;10) escalates to J_Claw with delivery ETAs.</div>
@@ -2162,7 +2166,7 @@ Hit ⚡ GENERATE NOW to compile immediately.
       const el = document.getElementById('jclaw-game-content');
       if (!el) return;
       try {
-        const s = await fetch('../state/jclaw-stats.json?t=' + Date.now()).then(r => r.json());
+        const s = await fetch('/api/stats?t=' + Date.now()).then(r => r.json());
         const divColors = { trading:'#06b6d4', opportunity:'#f59e0b', dev_automation:'#a78bfa', personal:'#10b981', op_sec:'#ef4444', production:'#f97316' };
         const divNames  = { trading:'SEREN', opportunity:'VAEL', dev_automation:'KAELEN', personal:'LYRIN', op_sec:'ZETH', production:'LYKE' };
         const divOrders = { trading:'Iron Codex', opportunity:'Dawnhunt', dev_automation:'Veilkeepers', personal:'Thornward', op_sec:'Null Breach', production:'Lykeon Forge' };
@@ -2438,6 +2442,8 @@ Hit ⚡ GENERATE NOW to compile immediately.
       'continuity-check':   'production',
       'asset-catalog':      'production',
       'asset-deliver':      'production',
+      'music-compose':      'production',
+      'voice-generate':     'production',
       'production-digest':  'production',
     };
 
@@ -2448,7 +2454,7 @@ Hit ⚡ GENERATE NOW to compile immediately.
       'dev-automation': { label: 'DEV',       agents: ['repo-monitor', 'refactor-scan', 'doc-update', 'artifact-manager', 'dev-digest'] },
       'personal':       { label: 'PERSONAL',  agents: ['health-logger', 'perf-correlation', 'burnout-monitor', 'personal-digest'] },
       'op-sec':         { label: 'OP-SEC',    agents: ['device-posture', 'threat-surface', 'breach-check', 'cred-audit', 'privacy-scan', 'security-scan', 'opsec-digest'] },
-      'production':     { label: 'FORGE',     agents: ['image-generate', 'sprite-generate', 'graphic-design', 'prompt-craft', 'style-check', 'image-review', 'audio-test', 'video-review', 'storyboard-compose', 'continuity-check', 'asset-catalog', 'asset-deliver', 'production-digest'] },
+      'production':     { label: 'FORGE',     agents: ['image-generate', 'sprite-generate', 'graphic-design', 'prompt-craft', 'style-check', 'image-review', 'audio-test', 'video-review', 'storyboard-compose', 'continuity-check', 'asset-catalog', 'asset-deliver', 'music-compose', 'voice-generate', 'production-digest'] },
       'sentinel':       { label: 'SENTINEL',  agents: ['provider-health', 'queue-monitor'] },
     };
 
@@ -3128,7 +3134,7 @@ Hit ⚡ GENERATE NOW to compile immediately.
 
     async function loadRankCard() {
       try {
-        const res = await fetch('../state/jclaw-stats.json?t=' + Date.now());
+        const res = await fetch('/api/stats?t=' + Date.now());
         if (!res.ok) return;
         const s = await res.json();
 

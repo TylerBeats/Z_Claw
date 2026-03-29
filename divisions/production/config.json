@@ -111,6 +111,22 @@
       "last_run": null,
       "status": "idle"
     },
+    "music-compose": {
+      "schedule": "on_demand",
+      "skill": "music-compose",
+      "enabled": true,
+      "last_run": null,
+      "status": "idle",
+      "note": "MusicGen via HuggingFace Transformers + torch-directml (AMD). Queues to state/music-queue.json if backend unavailable."
+    },
+    "voice-generate": {
+      "schedule": "on_demand",
+      "skill": "voice-generate",
+      "enabled": true,
+      "last_run": null,
+      "status": "idle",
+      "note": "Coqui XTTS v2 (CPU). Voice-clones from divisions/production/voice_references/{commander}.wav. Queues to state/voice-queue.json."
+    },
     "production-digest": {
       "schedule": "daily",
       "skill": "production-digest",

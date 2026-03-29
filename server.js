@@ -2875,6 +2875,7 @@ function handleMobileBattlesToday(res) {
       'threat-surface':      { label: 'Map the Dark',         soldier: 'The Surface Warden',    icon: '◈', anim: 'shield'  },
       'cred-audit':          { label: 'Credential Sweep',     soldier: 'The Credential Keeper', icon: '◫', anim: 'shield'  },
       'privacy-scan':        { label: 'Privacy Ward',         soldier: 'The Privacy Warden',    icon: '⬡', anim: 'shield'  },
+      'network-monitor':     { label: 'Monitor the Network',  soldier: 'The Network Warden',    icon: '⟁', anim: 'scan'    },
       'opsec-digest':        { label: 'Null Report',          soldier: 'The Brief',             icon: '◉', anim: 'shield'  },
       'mobile-audit-review': { label: 'Audit the Mobile Veil',soldier: 'The Mobile Warden',     icon: '◈', anim: 'shield'  },
       'sentinel-health':     { label: 'Sentinel Watch',       soldier: 'The Sentinel',          icon: '⬢', anim: 'shield'  },
@@ -2884,6 +2885,23 @@ function handleMobileBattlesToday(res) {
       'perf-correlation':    { label: 'Inner Sight',          soldier: 'The Lens',              icon: '◈', anim: 'sparkle' },
       'burnout-monitor':     { label: 'Read the Ashes',       soldier: 'The Watchfire',         icon: '⟁', anim: 'sparkle' },
       'personal-digest':     { label: "The Covenant's Voice", soldier: 'The Voice',             icon: '◫', anim: 'sparkle' },
+      // Lykeon Forge (production)
+      'image-generate':      { label: 'Forge the Image',      soldier: 'The Image Smith',       icon: '⬢', anim: 'sparkle' },
+      'sprite-generate':     { label: 'Forge the Sprite',     soldier: 'The Sprite Smith',      icon: '⬡', anim: 'sparkle' },
+      'video-generate':      { label: 'Animate the Realm',    soldier: 'The Motion Smith',      icon: '◫', anim: 'sparkle' },
+      'graphic-design':      { label: 'Design the Blueprint', soldier: 'The Design Warden',     icon: '◈', anim: 'circuit' },
+      'prompt-craft':        { label: 'Craft the Words',      soldier: 'The Wordsmith',         icon: '◉', anim: 'circuit' },
+      'style-check':         { label: 'Inspect the Vision',   soldier: 'The Style Warden',      icon: '⟁', anim: 'scan'    },
+      'image-review':        { label: 'Judge the Image',      soldier: 'The Image Judge',       icon: '⬡', anim: 'scan'    },
+      'audio-test':          { label: 'Test the Sound',       soldier: 'The Sound Warden',      icon: '◈', anim: 'scan'    },
+      'video-review':        { label: 'Judge the Motion',     soldier: 'The Motion Judge',      icon: '⟁', anim: 'scan'    },
+      'storyboard-compose':  { label: 'Write the Shot List',  soldier: 'The Storywright',       icon: '◫', anim: 'circuit' },
+      'continuity-check':    { label: 'Hold the Line',        soldier: 'The Continuity Guard',  icon: '⬢', anim: 'shield'  },
+      'asset-catalog':       { label: 'Index the Vault',      soldier: 'The Vault Keeper',      icon: '⬡', anim: 'circuit' },
+      'asset-deliver':       { label: 'Deliver to the Realm', soldier: 'The Courier',           icon: '⟁', anim: 'arrow'   },
+      'music-compose':       { label: 'Forge the Anthem',     soldier: 'The Composer',          icon: '◉', anim: 'sparkle' },
+      'voice-generate':      { label: 'Speak for the Realm',  soldier: 'The Voice Director',    icon: '◈', anim: 'sparkle' },
+      'production-digest':   { label: 'The Forge Report',     soldier: 'The Forge Herald',      icon: '⬢', anim: 'circuit' },
       // Sentinel (non-division utility)
       'provider-health':     { label: 'Provider Watch',       soldier: 'The Provider Scout',    icon: '◈', anim: 'scan'    },
       'queue-monitor':       { label: 'Queue Watch',          soldier: 'The Queue Warden',      icon: '◈', anim: 'scan'    },
@@ -3645,6 +3663,9 @@ const server = http.createServer(async (req, res) => {
       }
       if (method === 'GET' && reqPath === '/api/chat-history') {
         return jsonOk(res, readState('chat-history.json') || { messages: [] });
+      }
+      if (method === 'GET' && reqPath === '/api/stats') {
+        return jsonOk(res, readState('jclaw-stats.json') || {});
       }
       // ── Task Queue depth (used by Sentinel bar) ──────────────────────────
       if (method === 'GET' && reqPath === '/api/queue') {
