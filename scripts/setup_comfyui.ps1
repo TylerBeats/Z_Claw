@@ -44,8 +44,12 @@ Write-Host "[3/6] Installing torch + ComfyUI requirements..." -ForegroundColor G
 & $PIP install -r "$ROOT\requirements.txt" --quiet
 
 Write-Host "  Attempting torch-directml (Python 3.13 may not be supported yet)..." -ForegroundColor Yellow
+$savedPref = $ErrorActionPreference
+$ErrorActionPreference = "Continue"
 & $PIP install torch-directml 2>&1 | Out-Null
-if ($LASTEXITCODE -eq 0) {
+$directmlExit = $LASTEXITCODE
+$ErrorActionPreference = $savedPref
+if ($directmlExit -eq 0) {
     Write-Host "  [OK] torch-directml installed" -ForegroundColor Green
 } else {
     Write-Host "  [WARN] torch-directml not available for this Python version - will use CPU mode" -ForegroundColor Yellow
