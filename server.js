@@ -730,7 +730,7 @@ function handleStatsSummary(res) {
       prestige_multiplier: stats.prestige_multiplier || 1.0,
       longest_streaks:     longestStreaks,
       achievements_earned: (stats.achievements || []).length,
-      achievements_total:  11,
+      achievements_total:  14,
       xp_per_day_7d:       xpPerDay7d,
     });
   } catch(e) { jsonError(res, 500, 'stats summary error'); }
@@ -892,6 +892,20 @@ async function handleBestowViaPython(body, res) {
   }
 }
 
+// Shared stats rebuild — keeps applications.json stats consistent across handlers
+function rebuildAppStats(pipeline) {
+  const counts = { pending_review: 0, applied: 0, interviews: 0, rejected: 0, skipped: 0, deferred: 0 };
+  pipeline.forEach(j => {
+    if (j.status === 'pending_review') counts.pending_review++;
+    else if (j.status === 'applied')   counts.applied++;
+    else if (j.status === 'interview') counts.interviews++;
+    else if (j.status === 'rejected')  counts.rejected++;
+    else if (j.status === 'skipped')   counts.skipped++;
+    else if (j.status === 'deferred')  counts.deferred++;
+  });
+  return counts;
+}
+
 // POST /api/applications/:id/status  { status: "applied|skipped|archived" }
 function handleAppStatus(jobId, body, res) {
   const { status } = body;
@@ -906,15 +920,7 @@ function handleAppStatus(jobId, body, res) {
 
   job.status = status;
   job.actioned_at = new Date().toISOString();
-
-  const counts = { applied: 0, interviews: 0, rejected: 0, pending_review: 0 };
-  apps.pipeline.forEach(j => {
-    if (j.status === 'pending_review') counts.pending_review++;
-    if (j.status === 'applied')        counts.applied++;
-    if (j.status === 'interview')      counts.interviews++;
-    if (j.status === 'rejected')       counts.rejected++;
-  });
-  apps.stats = counts;
+  apps.stats = rebuildAppStats(apps.pipeline);
   writeState('applications.json', apps);
 
   jsonOk(res, { ok: true, id: jobId, status });
@@ -953,6 +959,53 @@ function handleGetJobs(res) {
   const pending = apps.pipeline.filter(j => j.status === 'pending_review');
   const applied = apps.pipeline.filter(j => ['applied','interview','rejected'].includes(j.status));
   jsonOk(res, { pending, applied, stats: apps.stats });
+}
+
+// GET /api/jobs/backlog  — returns pending_review jobs for job review panel
+function handleGetJobBacklog(res, queryStr) {
+  const apps = readState('applications.json') || { pipeline: [], stats: {} };
+  const params = new url.URLSearchParams(queryStr || '');
+  const tierFilter = params.get('tiers'); // e.g. "AB" or "all"
+  const pending = apps.pipeline.filter(j => j.status === 'pending_review');
+  const totalPending = pending.length; // capture before tier filtering
+  let jobs = pending;
+  if (!tierFilter || tierFilter === 'AB') {
+    jobs = pending.filter(j => j.tier === 'A' || j.tier === 'B');
+  } else if (tierFilter !== 'all') {
+    const allowed = tierFilter.split(',').map(t => t.trim().toUpperCase());
+    jobs = pending.filter(j => allowed.includes(j.tier));
+  }
+  // Sort: A first, then B, then others; within tier by score desc
+  const tierOrder = { A: 0, B: 1, C: 2, D: 3 };
+  jobs.sort((a, b) => {
+    const ta = tierOrder[a.tier] ?? 4;
+    const tb = tierOrder[b.tier] ?? 4;
+    if (ta !== tb) return ta - tb;
+    return (b.score || 0) - (a.score || 0);
+  });
+  jsonOk(res, { jobs, total_pending: totalPending, stats: apps.stats });
+}
+
+// POST /api/jobs/:id/action  { action: "apply" | "pass" | "defer" }
+function handleJobReviewAction(jobId, body, res) {
+  const { action } = body;
+  const valid = ['apply', 'pass', 'defer'];
+  if (!valid.includes(action)) return jsonError(res, 400, 'invalid action — must be apply, pass, or defer');
+
+  const apps = readState('applications.json');
+  if (!apps) return jsonError(res, 500, 'applications.json not found');
+
+  const job = apps.pipeline.find(j => j.id === jobId);
+  if (!job) return jsonError(res, 404, 'job not found');
+
+  const statusMap = { apply: 'applied', pass: 'skipped', defer: 'deferred' };
+  job.status      = statusMap[action];
+  job.actioned_at = new Date().toISOString();
+  job.actioned_by = 'dashboard';
+  apps.stats = rebuildAppStats(apps.pipeline);
+  writeState('applications.json', apps);
+
+  jsonOk(res, { ok: true, id: jobId, action, status: job.status });
 }
 
 // GET /api/grants  — returns pending grants for dashboard
@@ -3122,6 +3175,7 @@ function handleAchievements(res) {
     { id: 'oracle_speaks', name: 'Oracle Speaks', icon: '🔮', desc: 'Generate a trading strategy', lore: 'ORACLE spoke truth. The market had no secrets left.' },
     { id: 'iron_forged', name: 'Iron Forged', icon: '⚙️', desc: 'Complete 5 dev automation tasks', lore: 'The forge ran hot. Code became stronger.' },
     { id: 'sovereign_path', name: 'Sovereign Path', icon: '🌟', desc: 'Reach level 5 overall', lore: 'J_Claw ascended. The realm trembled with power.' },
+    { id: 'forge_lit', name: 'Forge Lit', icon: '🔨', desc: 'Complete your first production task', lore: 'The forge fires ignited. The production line awakened.' },
   ];
   const result = ALL_ACHIEVEMENTS.map(a => ({ ...a, unlocked: earned.includes(a.id), unlock_date: null }));
   jsonOk(res, { achievements: result, earned_count: earned.length, total: result.length });
@@ -3513,6 +3567,18 @@ const server = http.createServer(async (req, res) => {
       if (method === 'GET' && reqPath === '/api/stats/summary') { return handleStatsSummary(res); }
       if (method === 'POST' && reqPath === '/api/prestige') { return await handlePrestigeViaPython(res); }
       if (method === 'GET' && reqPath === '/api/jobs') { return handleGetJobs(res); }
+      if (method === 'GET' && reqPath === '/api/jobs/backlog') {
+        const qs = req.url.includes('?') ? req.url.split('?')[1] : '';
+        return handleGetJobBacklog(res, qs);
+      }
+      {
+        let _m2;
+        if (method === 'POST' && (_m2 = reqPath.match(/^\/api\/jobs\/(.+)\/action$/))) {
+          const jobId = decodeURIComponent(_m2[1]);
+          const body  = await parseBody(req);
+          return handleJobReviewAction(jobId, body, res);
+        }
+      }
       if (method === 'GET' && reqPath === '/api/grants') { return handleGetGrants(res); }
       if (method === 'GET' && reqPath === '/api/packets') { return handleGetPackets(res); }
       if (method === 'GET' && reqPath === '/api/trading/cycle') { return handleGetTradingCycle(res); }
@@ -4608,8 +4674,8 @@ cron.schedule('0 20 * * *', async () => {
   await runSkillViaPython('perf-correlation', 'PERSONAL');
 }, { timezone: TZ });
 
-// Burnout monitor daily at 9:00 PM
-cron.schedule('0 21 * * *', async () => {
+// Burnout monitor daily at 9:00 AM (SOUL.md: morning check)
+cron.schedule('0 9 * * *', async () => {
   await runSkillViaPython('burnout-monitor', 'PERSONAL');
 }, { timezone: TZ });
 
