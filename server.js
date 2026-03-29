@@ -3639,6 +3639,9 @@ const server = http.createServer(async (req, res) => {
       if (method === 'GET' && reqPath === '/api/activity') {
         return jsonOk(res, readState('activity-log.json') || { entries: [] });
       }
+      if (method === 'GET' && reqPath === '/api/chat-history') {
+        return jsonOk(res, readState('chat-history.json') || { messages: [] });
+      }
       // ── Task Queue depth (used by Sentinel bar) ──────────────────────────
       if (method === 'GET' && reqPath === '/api/queue') {
         try {
