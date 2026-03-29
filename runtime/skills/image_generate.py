@@ -155,7 +155,7 @@ def run(
         workflow    = _build_workflow(prompt_data, client_id)
 
         log.info("Submitting image generation: %s / %s", asset_type, commander)
-        result = _submit_and_wait(workflow, timeout_s=300)
+        result = _submit_and_wait(workflow, timeout_s=1800)
 
         # Ensure output directory exists
         out_dir = OUTPUT_BASE / commander / asset_type
