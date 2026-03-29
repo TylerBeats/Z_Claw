@@ -42,6 +42,7 @@ Write-Host "[3/6] Installing torch + ComfyUI requirements..." -ForegroundColor G
 & $PY -m pip install --upgrade pip --quiet
 & $PIP install torch torchvision torchaudio --quiet
 & $PIP install -r "$ROOT\requirements.txt" --quiet
+& $PIP install "huggingface-hub[cli]" --quiet
 
 Write-Host "  Attempting torch-directml (Python 3.13 may not be supported yet)..." -ForegroundColor Yellow
 $savedPref = $ErrorActionPreference
