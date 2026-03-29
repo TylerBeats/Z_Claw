@@ -86,16 +86,26 @@ Write-Host "[5/6] Downloading models..." -ForegroundColor Green
 New-Item -ItemType Directory -Force -Path $SDXL_DIR | Out-Null
 New-Item -ItemType Directory -Force -Path $ANIMDIFF  | Out-Null
 
-if ($env:HF_TOKEN) {
-    & $HF login --token $env:HF_TOKEN 2>&1 | Out-Null
-}
+$token = if ($env:HF_TOKEN) { $env:HF_TOKEN } else { "" }
 
 $ANIMAGINE = "$SDXL_DIR\animagine-xl-3.1.safetensors"
 if (Test-Path $ANIMAGINE) {
     Write-Host "  [SKIP] animagine-xl-3.1.safetensors already present" -ForegroundColor Yellow
 } else {
     Write-Host "  Downloading animagine-xl-3.1.safetensors (~6.5 GB)..." -ForegroundColor Cyan
-    & $HF download cagliostrolab/animagine-xl-3.1 animagine-xl-3.1.safetensors --local-dir $SDXL_DIR
+    $pyScript = @"
+from huggingface_hub import hf_hub_download
+import shutil, os
+token = '$token' or None
+path = hf_hub_download(
+    repo_id='cagliostrolab/animagine-xl-3.1',
+    filename='animagine-xl-3.1.safetensors',
+    token=token,
+    local_dir=r'$SDXL_DIR'
+)
+print('Downloaded to', path)
+"@
+    python -c $pyScript
     if ($LASTEXITCODE -ne 0) {
         Write-Host "  [WARN] Download failed. Get it from:" -ForegroundColor Red
         Write-Host "         https://huggingface.co/cagliostrolab/animagine-xl-3.1" -ForegroundColor Red
@@ -108,7 +118,18 @@ if (Test-Path $MOTIONMOD) {
     Write-Host "  [SKIP] mm_sdxl_v10_beta.ckpt already present" -ForegroundColor Yellow
 } else {
     Write-Host "  Downloading mm_sdxl_v10_beta.ckpt (~1.7 GB)..." -ForegroundColor Cyan
-    & $HF download guoyww/animatediff mm_sdxl_v10_beta.ckpt --local-dir $ANIMDIFF
+    $pyScript2 = @"
+from huggingface_hub import hf_hub_download
+token = '$token' or None
+path = hf_hub_download(
+    repo_id='guoyww/animatediff',
+    filename='mm_sdxl_v10_beta.ckpt',
+    token=token,
+    local_dir=r'$ANIMDIFF'
+)
+print('Downloaded to', path)
+"@
+    python -c $pyScript2
     if ($LASTEXITCODE -ne 0) {
         Write-Host "  [WARN] Download failed. Get it from:" -ForegroundColor Red
         Write-Host "         https://huggingface.co/guoyww/animatediff" -ForegroundColor Red
