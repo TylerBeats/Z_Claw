@@ -316,6 +316,8 @@ const SKILL_XP = {
   'sprite-generate':    { division: 'production',     amount: 20 },
   'video-generate':     { division: 'production',     amount: 20 },
   'graphic-design':     { division: 'production',     amount: 15 },
+  'music-compose':      { division: 'production',     amount: 20 },
+  'voice-generate':     { division: 'production',     amount: 15 },
   'prompt-craft':       { division: 'production',     amount:  5 },
   'style-check':        { division: 'production',     amount:  8 },
   'image-review':       { division: 'production',     amount:  8 },
@@ -375,6 +377,8 @@ const SKILL_TASK_MAP = {
   'asset-catalog':      { divState: 'production', division: 'production', task: 'asset-catalog'      },
   'storyboard-compose': { divState: 'production', division: 'production', task: 'storyboard-compose' },
   'continuity-check':   { divState: 'production', division: 'production', task: 'continuity-check'   },
+  'music-compose':      { divState: 'production', division: 'production', task: 'music-compose'      },
+  'voice-generate':     { divState: 'production', division: 'production', task: 'voice-generate'     },
   'asset-deliver':      { divState: 'production', division: 'production', task: 'asset-deliver'      },
   'production-digest':  { divState: 'production', division: 'production', task: 'production-digest'  },
 };

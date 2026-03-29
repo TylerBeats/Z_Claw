@@ -220,6 +220,17 @@ def run(division: str, task: str, args: list) -> dict:
             "storyboard-compose": lambda: prod_orch.run_storyboard_compose(),
             "continuity-check":   lambda: prod_orch.run_continuity_check(
                                       commander=args[0] if args else ""),
+            "music-compose":      lambda: prod_orch.run_music_compose(
+                                      track_type=args[0] if args else "main_theme",
+                                      division=args[1] if len(args) > 1 else "production",
+                                      mood=args[2] if len(args) > 2 else "epic",
+                                      tempo_bpm=int(args[3]) if len(args) > 3 else 120,
+                                      duration_seconds=int(args[4]) if len(args) > 4 else 60),
+            "voice-generate":     lambda: prod_orch.run_voice_generate(
+                                      commander=args[0] if args else "vael",
+                                      line_type=args[1] if len(args) > 1 else "greeting",
+                                      emotion=args[2] if len(args) > 2 else "confident",
+                                      text=args[3] if len(args) > 3 else ""),
             "asset-deliver":      lambda: prod_orch.run_asset_deliver(),
             "production-digest":  lambda: prod_orch.run_production_digest(),
         }

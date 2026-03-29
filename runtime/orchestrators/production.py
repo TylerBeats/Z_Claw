@@ -24,6 +24,8 @@ from runtime.skills import (
     storyboard_compose,
     continuity_check,
     asset_deliver,
+    music_compose,
+    voice_generate,
 )
 
 log = logging.getLogger(__name__)
@@ -163,6 +165,48 @@ def run_asset_deliver() -> dict:
     packet.write(pkt)
     grant_skill_xp("asset-deliver")
     log.info("LYKE: asset-deliver → %d delivered", result.get("metrics", {}).get("delivered", 0))
+    return pkt
+
+
+def run_music_compose(
+    track_type: str = "main_theme",
+    division: str = "production",
+    mood: str = "epic",
+    tempo_bpm: int = 120,
+    duration_seconds: int = 60,
+) -> dict:
+    result = music_compose.run(
+        track_type=track_type,
+        division=division,
+        mood=mood,
+        tempo_bpm=tempo_bpm,
+        duration_seconds=duration_seconds,
+    )
+    pkt = _build_packet("music-compose", result)
+    packet.write(pkt)
+    if result.get("status") in ("success", "partial"):
+        grant_skill_xp("music-compose")
+    log.info("LYKE: music-compose → %s [%s/%s]", result.get("status"), division, track_type)
+    return pkt
+
+
+def run_voice_generate(
+    commander: str = "vael",
+    line_type: str = "greeting",
+    emotion: str = "confident",
+    text: str = "",
+) -> dict:
+    result = voice_generate.run(
+        commander=commander,
+        line_type=line_type,
+        emotion=emotion,
+        text=text,
+    )
+    pkt = _build_packet("voice-generate", result)
+    packet.write(pkt)
+    if result.get("status") in ("success", "partial"):
+        grant_skill_xp("voice-generate")
+    log.info("LYKE: voice-generate → %s [%s/%s]", result.get("status"), commander, line_type)
     return pkt
 
 
