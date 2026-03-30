@@ -405,12 +405,12 @@ const SKILL_TASK_MAP = {
   'voice-generate':     { divState: 'production', division: 'production', task: 'voice-generate'     },
   'asset-deliver':      { divState: 'production', division: 'production', task: 'asset-deliver'      },
   'production-digest':  { divState: 'production', division: 'production', task: 'production-digest'  },
-  'game-design':        { divState: 'production', division: 'production', task: 'game-design'        },
+  'game-design':        { divState: 'gamedev',    division: 'gamedev',    task: 'game-design'        },
   'narrative-write':    { divState: 'production', division: 'production', task: 'narrative-write'    },
   'code-generate':      { divState: 'production', division: 'production', task: 'code-generate'      },
   'sfx-generate':       { divState: 'production', division: 'production', task: 'sfx-generate'       },
   'vfx-compose':        { divState: 'production', division: 'production', task: 'vfx-compose'        },
-  'level-design':       { divState: 'production', division: 'production', task: 'level-design'       },
+  'level-design':       { divState: 'gamedev',    division: 'gamedev',    task: 'level-design'       },
   'model-trainer':      { divState: 'production', division: 'production', task: 'model-trainer'      },
   'adapter-manager':    { divState: 'production', division: 'production', task: 'adapter-manager'    },
   'mechanic-prototype': { divState: 'gamedev',    division: 'gamedev',    task: 'mechanic-prototype' },
@@ -576,7 +576,7 @@ function _getWeekKey(date) {
   return `${d.getFullYear()}-${String(week + 1).padStart(2, '0')}`;
 }
 
-const ALL_DIVISION_KEYS = ['opportunity', 'trading', 'dev_automation', 'personal', 'op_sec', 'production'];
+const ALL_DIVISION_KEYS = ['opportunity', 'trading', 'dev_automation', 'personal', 'op_sec', 'production', 'gamedev'];
 
 function _ensureStreaks(stats) {
   if (!stats.streaks) stats.streaks = {};
@@ -1132,7 +1132,7 @@ function handleGetTradingCycle(res) {
 
     if (!cycleData) return jsonOk(res, { available: false });
 
-    const strat = cycleData.active_strategy || {};
+    const strat = cycleData.active_strategy || null;
     const recentTrades = (cycleData.trade_log || []).slice(-50).reverse();
     const weekly = (cycleData.weekly_reviews || []);
     const lastWeekly = weekly[weekly.length - 1] || {};
@@ -1153,7 +1153,9 @@ function handleGetTradingCycle(res) {
     // Helper to normalise a raw strategy object (active or history entry)
     function normStrat(h) {
       return {
+        strategy_id:      h.strategy_id || null,
         name:             h.strategy_name || 'None',
+        score:            h.score != null ? Math.round(h.score * 1000) / 1000 : null,
         sharpe:           h.sharpe,
         sortino:          h.sortino,
         win_rate:         h.win_rate != null ? Math.round(h.win_rate * 100) : null,
@@ -1176,6 +1178,7 @@ function handleGetTradingCycle(res) {
         total_pnl_pct:    h.total_pnl_pct != null ? Math.round(h.total_pnl_pct * 1000) / 10 : null,
         total_pnl_usd:    h.total_pnl_usd != null ? Math.round(h.total_pnl_usd * 100) / 100 : null,
         annualised_return_pct: h.annualised_return_pct != null ? Math.round(h.annualised_return_pct * 100) / 100 : null,
+        oos_total_pnl_pct: h.oos_total_pnl_pct != null ? Math.round(h.oos_total_pnl_pct * 1000) / 10 : null,
         projected_monthly_pnl_pct: h.projected_monthly_pnl_pct != null ? Math.round(h.projected_monthly_pnl_pct * 10000) / 100 : null,
         return_projections: h.return_projections || null,
         mc_p95_dd:        h.mc_p95_dd != null ? Math.round(h.mc_p95_dd * 1000) / 10 : null,
@@ -1195,6 +1198,11 @@ function handleGetTradingCycle(res) {
       ...normStrat(h),
       label: i === 0 ? 'Current' : `−${i}`,
     }));
+    const rankedStrategies = (cycleData.performance_history || [])
+      .slice()
+      .sort((a, b) => (b?.score || 0) - (a?.score || 0))
+      .slice(0, 100)
+      .map(normStrat);
 
     jsonOk(res, {
       available: true,
@@ -1203,9 +1211,9 @@ function handleGetTradingCycle(res) {
       stale,
       hours_since_update: Math.round(hoursSince * 10) / 10,
       last_modified: new Date(mtimeMs).toISOString(),
-      active_strategy: normStrat(strat),
-      equity_curve:    strat.equity_curve || null,
-      oos_validation:  strat.oos_sharpe != null ? {
+      active_strategy: strat ? normStrat(strat) : null,
+      equity_curve:    strat?.equity_curve || null,
+      oos_validation:  strat?.oos_sharpe != null ? {
         sharpe:      strat.oos_sharpe,
         win_rate:    strat.oos_win_rate != null ? Math.round(strat.oos_win_rate * 100) : null,
         trade_count: strat.oos_trade_count,
@@ -1219,9 +1227,10 @@ function handleGetTradingCycle(res) {
         open_positions:  virtualAccount.open_positions || [],
       } : null,
       performance_history: perfHistory,
+      ranked_strategies: rankedStrategies,
       agents: {
         strategy_builder: { role: 'Generates 100 strategies/cycle',      last_output: `Cycle ${cycleData.cycle_number}` },
-        backtester:       { role: 'Evaluates & selects top 3 strategies', last_output: strat.strategy_name || '—' },
+        backtester:       { role: 'Evaluates & selects top 3 strategies', last_output: strat?.strategy_name || '—' },
         trader:           { role: 'Executes trades with risk controls',   last_output: `${todayTrades.length} trade(s) today` },
         trading_coach:    { role: 'Reviews performance, adjusts risk',    last_output: lastWeekly.health_tier ? `Health: ${lastWeekly.health_tier}` : 'No review yet' },
       },
@@ -2352,11 +2361,15 @@ function mobileAckAlert(alertId, division) {
 }
 
 function _broadcastCodingEvent(payload) {
-  if (_mobileAlertSubscribers.size === 0) return;
-  const msg = JSON.stringify(payload);
-  for (const r of _mobileAlertSubscribers) {
-    try { r.write(`data: ${msg}\n\n`); } catch(e) { _mobileAlertSubscribers.delete(r); }
+  // SSE → mobile alert subscribers
+  if (_mobileAlertSubscribers.size > 0) {
+    const msg = JSON.stringify(payload);
+    for (const r of _mobileAlertSubscribers) {
+      try { r.write(`data: ${msg}\n\n`); } catch(e) { _mobileAlertSubscribers.delete(r); }
+    }
   }
+  // WS → PC dashboard (and any other WS clients)
+  broadcastWS(payload.type, payload);
 }
 
 function mobileApproveCoding(sessionId) {
@@ -2481,27 +2494,46 @@ async function mobileLaunchComfyUI() {
 }
 
 async function mobileStartAgentNetwork() {
-  // Check if agent-network is already running on port 8000
+  const zenithUrl = 'http://127.0.0.1:8000/health';
+  const agentBase = 'C:\\Users\\Tyler\\agent-network';
+  const ecosystemPath = path.join(agentBase, 'pm2.config.js');
+  const pm2Cmd = path.join(process.env.APPDATA || 'C:\\Users\\Tyler\\AppData\\Roaming', 'npm', 'pm2.cmd');
+
   try {
-    const http = require('http');
     await new Promise((resolve, reject) => {
-      const req = http.get('http://127.0.0.1:8000', { timeout: 2000 }, res => resolve(res));
+      const req = http.get(zenithUrl, { timeout: 2000 }, (res) => {
+        res.resume();
+        if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) return resolve();
+        reject(new Error(`health returned ${res.statusCode || 'unknown'}`));
+      });
       req.on('error', reject);
       req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
     });
     return { ok: true, message: 'Agent-network already running', already_running: true };
   } catch(_) { /* not running — proceed to start */ }
 
+  if (!fs.existsSync(ecosystemPath)) {
+    return { ok: false, message: `Agent-network PM2 config not found at ${ecosystemPath}` };
+  }
+  if (!fs.existsSync(pm2Cmd)) {
+    return { ok: false, message: `pm2.cmd not found at ${pm2Cmd}` };
+  }
+
   try {
     const proc = spawn(
-      'powershell.exe',
-      ['-NoProfile', '-Command', 'pm2 start C:/Users/Tyler/agent-network/pm2.config.js --no-daemon'],
-      { detached: true, stdio: 'ignore' }
+      'cmd.exe',
+      ['/c', `"${pm2Cmd}" start "${ecosystemPath}"`],
+      { detached: true, stdio: 'ignore', windowsHide: true, cwd: agentBase }
     );
     proc.unref();
-    logActivity('SYS', '[MOBILE] Agent-network start initiated via mobile dashboard', 'yellow');
-    mobileAuditLog({ action: 'start_agent_network', actor: 'mobile-operator', result: 'succeeded' });
-    return { ok: true, message: 'Agent-network start initiated' };
+    logActivity('SYS', '[MOBILE] Agent-network PM2 ecosystem start triggered via mobile dashboard', 'yellow');
+    mobileAuditLog({
+      action: 'start_agent_network',
+      actor: 'mobile-operator',
+      result: 'succeeded',
+      detail: ecosystemPath
+    });
+    return { ok: true, message: 'Agent-network start initiated — Zenith should come online in 10-30 seconds' };
   } catch(e) {
     return { ok: false, message: 'Failed to start agent-network: ' + e.message };
   }
@@ -2721,6 +2753,16 @@ function handleMobileDivisions(res) {
           cold_count: dirCount(coldDir),
         };
       })(),
+      gamedev: {
+        mechanic_prototype: readPkt('gamedev', 'mechanic-prototype'),
+        balance_audit:      readPkt('gamedev', 'balance-audit'),
+        game_design:        readPkt('gamedev', 'game-design'),
+        level_design:       readPkt('gamedev', 'level-design'),
+        tech_spec:          readPkt('gamedev', 'tech-spec'),
+        playtest_report:    readPkt('gamedev', 'playtest-report'),
+        asset_integration:  readPkt('gamedev', 'asset-integration'),
+        gamedev_digest:     readPkt('gamedev', 'gamedev-digest'),
+      },
     });
   } catch(e) {
     return jsonError(res, 500, e.message);
@@ -2730,7 +2772,7 @@ function handleMobileDivisions(res) {
 function _collectMobileAlerts() {
   const alerts = [];
   const dismissed = _loadDismissedAlerts();
-  const packetDirs = ['op-sec', 'trading', 'opportunity', 'dev-automation', 'personal', 'production', 'sentinel'];
+  const packetDirs = ['op-sec', 'trading', 'opportunity', 'dev-automation', 'personal', 'production', 'gamedev', 'sentinel'];
   for (const div of packetDirs) {
     const pktDir = path.join(ROOT, 'divisions', div, 'packets');
     if (!fs.existsSync(pktDir)) continue;
@@ -3230,7 +3272,7 @@ function handleAchievements(res) {
   if (fs.existsSync(f)) { try { const s = JSON.parse(fs.readFileSync(f, 'utf8')); earned = s.achievements || []; } catch(e) {} }
   const ALL_ACHIEVEMENTS = [
     { id: 'first_blood', name: 'First Blood', icon: '⚔️', desc: 'Complete your first skill run', lore: 'The blade was drawn. The hunt began.' },
-    { id: 'five_orders', name: 'Six Orders', icon: '🏰', desc: 'Have all six divisions active', lore: 'The realm stands complete. All orders march.' },
+    { id: 'five_orders', name: 'Seven Orders', icon: '🏰', desc: 'Have all seven divisions active', lore: 'The realm stands complete. All orders march.' },
     { id: 'market_watcher', name: 'Market Watcher', icon: '📈', desc: 'Run market-scan 10 times', lore: 'The runes have been read. Patterns emerge from chaos.' },
     { id: 'first_hunt', name: 'First Hunt', icon: '🎯', desc: 'Find your first job opportunity', lore: 'VANCE drew the map. The first target was marked.' },
     { id: 'covenant_keeper', name: 'Covenant Keeper', icon: '🔥', desc: 'Maintain a 7-day streak', lore: 'The flame was kept alive. The pact holds.' },
@@ -3799,6 +3841,10 @@ const server = http.createServer(async (req, res) => {
       }
       if (method === 'GET' && reqPath === '/api/stats') {
         return jsonOk(res, readState('jclaw-stats.json') || {});
+      }
+      // ── Story state (unauthenticated proxy for PC dashboard) ──────────────
+      if (method === 'GET' && reqPath === '/api/story/state') {
+        return handleStoryState(res);
       }
       // ── Task Queue depth (used by Sentinel bar) ──────────────────────────
       if (method === 'GET' && reqPath === '/api/queue') {
@@ -4561,10 +4607,39 @@ async function processControlQueue() {
       'opsec-digest':       'OP_SEC',
       'network-monitor':    'OP_SEC',
       'application-tracker': 'OPPORTUNITY',
-      'asset-deliver':      'PRODUCTION',
-      'asset-catalog':      'PRODUCTION',
-      'production-digest':  'PRODUCTION',
-      'daily-briefing':     'SYS',
+      'asset-deliver':        'PRODUCTION',
+      'asset-catalog':        'PRODUCTION',
+      'production-digest':    'PRODUCTION',
+      'image-generate':       'PRODUCTION',
+      'sprite-generate':      'PRODUCTION',
+      'video-generate':       'PRODUCTION',
+      'graphic-design':       'PRODUCTION',
+      'prompt-craft':         'PRODUCTION',
+      'style-check':          'PRODUCTION',
+      'image-review':         'PRODUCTION',
+      'audio-test':           'PRODUCTION',
+      'video-review':         'PRODUCTION',
+      'storyboard-compose':   'PRODUCTION',
+      'continuity-check':     'PRODUCTION',
+      'game-design':          'GAMEDEV',
+      'narrative-write':      'PRODUCTION',
+      'code-generate':        'PRODUCTION',
+      'sfx-generate':         'PRODUCTION',
+      'vfx-compose':          'PRODUCTION',
+      'level-design':         'GAMEDEV',
+      'model-trainer':        'PRODUCTION',
+      'adapter-manager':      'PRODUCTION',
+      'mechanic-prototype':   'GAMEDEV',
+      'balance-audit':        'GAMEDEV',
+      'tech-spec':            'GAMEDEV',
+      'playtest-report':      'GAMEDEV',
+      'asset-integration':    'GAMEDEV',
+      'gamedev-digest':       'GAMEDEV',
+      'weekly-retrospective': 'PERSONAL',
+      'dev-pipeline':         'DEV',
+      'sentinel-health':      'OP_SEC',
+      'agent-network-monitor': 'OP_SEC',
+      'daily-briefing':       'SYS',
     };
 
     for (const entry of queued) {

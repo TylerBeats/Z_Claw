@@ -2048,6 +2048,7 @@
         <button class="pill-tab active" onclick="switchTradingPill('overview',this)">Overview</button>
         <button class="pill-tab" onclick="switchTradingPill('signals',this)">Signals</button>
         <button class="pill-tab" onclick="switchTradingPill('history',this)">History</button>
+        <button class="pill-tab" onclick="switchTradingPill('ranked',this)">Ranked</button>
         <button class="pill-tab" onclick="switchTradingPill('lab',this)">Strategy Lab</button>
       </div>
       <div id="trading-pill-overview">
@@ -2058,6 +2059,9 @@
       </div>
       <div id="trading-pill-history" style="display:none;">
         <div id="trading-history-content"><div class="loading">Loading...</div></div>
+      </div>
+      <div id="trading-pill-ranked" style="display:none;">
+        <div id="trading-ranked-content"><div class="loading">Loading...</div></div>
       </div>
       <div id="trading-pill-lab" style="display:none;">
         <div id="trading-lab-content"></div>
@@ -3183,6 +3187,8 @@ async function loadOpsReportsRendered(silent = false) {
     html += _renderDivisionPacket('op_sec', d.op_sec || {});
     html += '<div class="divider"></div>';
     html += _renderDivisionPacket('production', d.production || {});
+    html += '<div class="divider"></div>';
+    html += _renderDivisionPacket('gamedev', d.gamedev || {});
     el.innerHTML = html;
   } catch(e) {
     renderError(el, e.message, () => loadOpsReportsRendered());
@@ -3548,9 +3554,11 @@ function switchTradingPill(pill, btnEl) {
   document.getElementById('trading-pill-overview').style.display = pill === 'overview' ? '' : 'none';
   document.getElementById('trading-pill-signals').style.display  = pill === 'signals'  ? '' : 'none';
   document.getElementById('trading-pill-history').style.display  = pill === 'history'  ? '' : 'none';
+  document.getElementById('trading-pill-ranked').style.display   = pill === 'ranked'   ? '' : 'none';
   document.getElementById('trading-pill-lab').style.display      = pill === 'lab'      ? '' : 'none';
   if (pill === 'signals') loadTradingSignals();
   if (pill === 'history') loadTradingHistory();
+  if (pill === 'ranked')  loadTradingRanked();
   if (pill === 'lab')     loadTradingLab();
 }
 
@@ -3700,6 +3708,66 @@ async function loadTradingHistory() {
   }
 }
 
+function _tradingMoney(v) {
+  if (v == null || Number.isNaN(Number(v))) return '—';
+  const n = Number(v);
+  return `${n >= 0 ? '+' : '-'}$${Math.abs(n).toFixed(2)}`;
+}
+
+function _tradingPct(v) {
+  if (v == null || Number.isNaN(Number(v))) return '—';
+  const n = Number(v);
+  return `${n >= 0 ? '+' : ''}${n.toFixed(1)}%`;
+}
+
+function _tradingAnnualUsd(totalPnlUsd, years) {
+  if (totalPnlUsd == null || years == null || Number.isNaN(Number(totalPnlUsd)) || Number.isNaN(Number(years)) || Number(years) <= 0) return '—';
+  return _tradingMoney(Number(totalPnlUsd) / Number(years));
+}
+
+async function loadTradingRanked() {
+  const el = document.getElementById('trading-ranked-content');
+  if (!el) return;
+  el.innerHTML = '<div class="loading">Loading...</div>';
+  try {
+    const d = await api('/mobile/api/trading');
+    const ranked = d.ranked_strategies || [];
+    if (!ranked.length) {
+      el.innerHTML = '<div class="empty-state"><div class="empty-icon">📚</div><p>No ranked strategies yet.</p></div>';
+      return;
+    }
+    el.innerHTML = '<div class="card" style="padding:0;">' + ranked.slice(0, 25).map((w, i) => {
+      const border = i < ranked.length - 1 ? 'border-bottom:1px solid var(--border);' : '';
+      const profitColor = (w.total_pnl_usd || 0) >= 0 ? 'var(--green)' : 'var(--red)';
+      const annColor = (w.annualised_return_pct || 0) >= 0 ? 'var(--green)' : 'var(--red)';
+      return `<div style="padding:12px 14px;${border}">` +
+        `<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;">` +
+          `<div style="flex:1;min-width:0;">` +
+            `<div style="font-size:13px;font-weight:700;">#${i + 1} ${escHtml(w.name || 'Unnamed Strategy')}</div>` +
+            `<div style="font-size:10px;color:var(--subtext);margin-top:2px;">${escHtml(w.strategy_id || 'n/a')} · Score ${w.score != null ? Number(w.score).toFixed(1) : '—'} · ${escHtml(w.confidence_rating || '—')}</div>` +
+          `</div>` +
+        `</div>` +
+        `<div style="font-size:11px;color:var(--subtext);line-height:1.55;margin-top:8px;">` +
+          `Profit <strong style="color:${profitColor};">${_tradingMoney(w.total_pnl_usd)}</strong> | ` +
+          `Return <strong style="color:${profitColor};">${_tradingPct(w.total_pnl_pct)}</strong> | ` +
+          `Years <strong>${w.backtest_years != null ? Number(w.backtest_years).toFixed(1) : '—'}</strong><br>` +
+          `Ann/Yr <strong style="color:${annColor};">${_tradingAnnualUsd(w.total_pnl_usd, w.backtest_years)}</strong> | ` +
+          `Ann % <strong style="color:${annColor};">${_tradingPct(w.annualised_return_pct)}</strong> | ` +
+          `Sharpe <strong>${w.sharpe != null ? Number(w.sharpe).toFixed(2) : '—'}</strong> | ` +
+          `OOS <strong>${w.oos_sharpe != null ? Number(w.oos_sharpe).toFixed(2) : '—'}</strong><br>` +
+          `PF <strong>${w.profit_factor != null ? Number(w.profit_factor).toFixed(2) : '—'}</strong> | ` +
+          `EV <strong>${w.empirical_ev_r != null ? Number(w.empirical_ev_r).toFixed(2) + 'R' : '—'}</strong> | ` +
+          `WR <strong>${w.win_rate != null ? w.win_rate + '%' : '—'}</strong> | ` +
+          `OOS Trades <strong>${w.oos_trade_count || 0}</strong> | ` +
+          `DD <strong>${w.max_drawdown_pct != null ? Number(w.max_drawdown_pct).toFixed(1) + '%' : '—'}</strong>` +
+        `</div>` +
+      `</div>`;
+    }).join('') + '</div>';
+  } catch(e) {
+    el.innerHTML = '<div class="empty-state"><p style="color:var(--red);">' + escHtml(e.message) + '</p></div>';
+  }
+}
+
 // ── Story / Choice Modal ───────────────────────────────────────────────────────
 // Legacy story modal retired in favor of theater queue choices.
 // ── Chat history persistence ──────────────────────────────────────────────────
@@ -3823,6 +3891,7 @@ const _COMMANDER_DEF = {
   personal:       { name:'LYRIN',  order:'The Ember Covenant',    color:'#10b981' },
   op_sec:         { name:'ZETH',   order:'The Nullward Circle',   color:'#ef4444' },
   production:     { name:'LYKE',   order:'The Lykeon Forge',       color:'#f97316' },
+  gamedev:        { name:'ARDENT', order:'The Ardent Studio',      color:'#8b5cf6' },
   base:           { name:'J_CLAW', order:'Realm Command',         color:'#3b82f6' },
 };
 
@@ -4288,7 +4357,7 @@ async function loadStatsTab() {
       { id: 'forge_lit',        icon: '⬡',  name: 'The Forge Ignites',    desc: 'LYKE struck the first spark — the Lykeon Forge is open' },
       { id: 'loyal_flame',      icon: '🔥', name: 'Loyal Flame',          desc: 'Any order held a 7-day streak — Elite morale reached' },
       { id: 'division_master',  icon: '⚔',  name: 'Division Master',      desc: 'An order reached the third ascension — mastery approaches' },
-      { id: 'five_orders',      icon: '✦',  name: 'Six Orders Stand',    desc: 'All six orders have opened their ledgers' },
+      { id: 'five_orders',      icon: '✦',  name: 'Seven Orders Stand',  desc: 'All seven orders have opened their ledgers' },
       { id: 'realm_commander',  icon: '🌟', name: 'Realm Commander',      desc: 'J_Claw reached Level 10 — command authority established' },
       { id: 'eternal',          icon: '♾',  name: 'Eternal',              desc: 'J_Claw reached Level 50 — the Eternal Orchestrator ascends' },
     ];
@@ -4299,6 +4368,7 @@ async function loadStatsTab() {
       { key: 'opportunity',    icon: '🏹', label: 'Opps'     },
       { key: 'personal',       icon: '🌿', label: 'Personal' },
       { key: 'production',     icon: '⬡',  label: 'Forge'    },
+      { key: 'gamedev',        icon: '🎮', label: 'Studio'   },
     ];
 
     const earned   = new Set((s.achievements || []).map(a => typeof a === 'string' ? a : a.id));
@@ -4320,6 +4390,7 @@ async function loadStatsTab() {
       personal:       ['Covenant Initiate','Flame Tender','Guardian of Vitality','Covenant Warden','Eternal Keeper'],
       op_sec:         ['Circle Watchman','Veil Scout','Shadow Warden','Grand Sentinel','Sovereign of the Null'],
       production:     ['Apprentice of the Forge','Craftwright Adept','Lykeon Architect','Master of the Forge','Lyke, Architect of the Lykeon Forge'],
+      gamedev:        ['Studio Recruit','Junior Designer','Senior Game Designer','Lead Designer','Ardent, Director'],
     };
     const DIV_THRESHOLDS = [0, 51, 151, 301, 500];
 
@@ -4446,6 +4517,28 @@ async function loadStatsTab() {
           {name:'The Archivist',     desc:'Indexes every asset by type, commander, tier, and approval status'},
           {name:'The Inspector',     desc:'Validates images are free from artifacts and generation errors'},
           {name:'The Warden',        desc:'Ensures visual consistency across all tiers of a character\'s evolution'},
+        ],
+      },
+      gamedev: {
+        name:'ARDENT', order:'The Ardent Studio', color:'#8b5cf6', glow:'#8b5cf640',
+        element:'⚡ Lightning', element_desc:'Precise and explosive — turns design intent into executable reality at speed',
+        strengths:['Blueprint discipline','Mechanic prototyping speed','Balance analysis rigor'],
+        weaknesses:['Requires clear design spec before acting','May over-engineer before playtesting'],
+        lore:"Where imagination meets executable code. ARDENT does not dream — ARDENT ships. The Studio turns raw concepts into mechanics, documents, and playable reality. No feature enters the build without ARDENT's blueprint.",
+        classes:['Studio Recruit','Junior Designer','Senior Game Designer','Lead Designer','Ardent, Director'],
+        abilities:[
+          {name:'Blueprint Lock',  desc:'Locks down the design doc before a single line of code is written.'},
+          {name:'Balance Hammer',  desc:'Analyzes XP curves and economy in real time to catch inflation before it ships.'},
+          {name:'Playtest Loop',   desc:'Every mechanic is tested before it becomes permanent.'},
+          {name:'Tech Bridge',     desc:'Converts design intent into engine-ready specifications.'},
+          {name:'Asset Handoff',   desc:'Coordinates the handoff from Lykeon Forge assets to game integration.'},
+        ],
+        soldiers:[
+          {name:'The Prototypist', desc:'Rapidly mocks up new mechanics for feasibility testing'},
+          {name:'The Balancer',    desc:'Audits XP curves and economy systems for parity issues'},
+          {name:'The World Builder',desc:'Crafts level layouts and progression flow documents'},
+          {name:'The Tech Scribe', desc:'Writes engine-ready tech specs for every approved mechanic'},
+          {name:'The Analyst',     desc:'Runs playtest simulations and surfaces actionable balance data'},
         ],
       },
     };
@@ -4584,7 +4677,7 @@ async function loadStatsTab() {
     // ── Party Members ──
     html += `<div class="jclaw-section-title">⚔ THE PARTY</div>`;
     html += `<div class="party-grid">`;
-    const PARTY_ORDER = ['opportunity', 'trading', 'dev_automation', 'op_sec', 'personal', 'production'];
+    const PARTY_ORDER = ['opportunity', 'trading', 'dev_automation', 'op_sec', 'personal', 'production', 'gamedev'];
     for (const key of PARTY_ORDER) {
       const char   = PARTY[key];
       const div    = divs[key] || { xp: 0 };
@@ -4653,7 +4746,7 @@ async function loadStatsTab() {
     const longestStreaks = d.longest_streaks || {};
     const streakEntries  = Object.entries(longestStreaks).filter(([,v]) => v > 0);
     if (streakEntries.length) {
-      const sl = { opportunity:'Opps', trading:'Trading', dev_automation:'Dev', personal:'Personal', op_sec:'Op-Sec', production:'Forge' };
+      const sl = { opportunity:'Opps', trading:'Trading', dev_automation:'Dev', personal:'Personal', op_sec:'Op-Sec', production:'Forge', gamedev:'Studio' };
       html += `<div class="jclaw-section-title">🔥 Longest Streaks</div>`;
       html += `<div class="card"><div class="card-body" style="padding:4px 0;">`;
       for (const [k, v] of streakEntries) {
@@ -5420,7 +5513,7 @@ async function loadOverview(silent = false) {
       const pct       = Math.min(100, Math.round((xpInLevel / Math.max(1, xpNeeded)) * 100));
       const divs     = s.divisions || {};
       const streaks  = s.streaks   || {};
-      const divOrder = [['op_sec','OP-Sec'],['dev_automation','Dev'],['trading','Trading'],['opportunity','Opps'],['personal','Personal'],['production','Forge']];
+      const divOrder = [['op_sec','OP-Sec'],['dev_automation','Dev'],['trading','Trading'],['opportunity','Opps'],['personal','Personal'],['production','Forge'],['gamedev','Studio']];
       html += '<div class="xp-card">';
       html += '<div class="xp-rank-row">';
       html += `<div class="xp-rank-title">${escHtml(rank)}</div>`;
@@ -5441,7 +5534,7 @@ async function loadOverview(silent = false) {
         html += '</div>';
       }
       if (atRiskStreaks.length) {
-        const sl = {opportunity:'Opps',trading:'Trade',dev_automation:'Dev',personal:'Pers',op_sec:'OpSec',production:'Forge'};
+        const sl = {opportunity:'Opps',trading:'Trade',dev_automation:'Dev',personal:'Pers',op_sec:'OpSec',production:'Forge',gamedev:'Studio'};
         html += `<div style="font-size:9px;color:var(--yellow);margin-bottom:6px;">⚠ ${atRiskStreaks.map(([k])=>sl[k]||k).join(', ')} streak${atRiskStreaks.length>1?'s':''} at risk today</div>`;
       }
       html += '<div class="xp-divs">';
@@ -5531,6 +5624,13 @@ async function loadOverview(silent = false) {
           <span class="dm-item"><span class="dm-val">${m.delivered ?? '—'}</span><span class="dm-lbl">DELIV</span></span>
         </div>`;
 
+      } else if (key === 'gamedev') {
+        metricsHtml = `<div class="div-metrics">
+          <span class="dm-item"><span class="dm-val" style="color:#8b5cf6;">${m.mechanics_prototyped ?? m.designs_completed ?? '—'}</span><span class="dm-lbl">MECHS</span></span>
+          <span class="dm-item"><span class="dm-val" ${(m.balance_issues || 0) > 0 ? 'style="color:var(--yellow)"' : ''}>${m.balance_issues ?? '—'}</span><span class="dm-lbl">FLAGS</span></span>
+          <span class="dm-item"><span class="dm-val">${m.specs_written ?? m.docs_completed ?? '—'}</span><span class="dm-lbl">SPECS</span></span>
+        </div>`;
+
       } else if (key === 'sentinel') {
         const isCrit    = m.urgency === 'critical';
         const isWarn    = m.urgency === 'high';
@@ -5551,8 +5651,8 @@ async function loadOverview(silent = false) {
       }
 
       const divLabel = key.replace(/_/g, '-');
-      const divColor = {trading:'#06b6d4',opportunity:'#f59e0b',personal:'#10b981',dev_automation:'#a78bfa',op_sec:'#ef4444',production:'#f97316',sentinel:'#94a3b8'}[key] || '';
-      const _charMap = {opportunity:{name:'VAEL',sub:'Dawnhunt'},trading:{name:'SEREN',sub:'Auric Veil'},dev_automation:{name:'KAELEN',sub:'Iron Codex'},personal:{name:'LYRIN',sub:'Ember Cov.'},op_sec:{name:'ZETH',sub:'Nullward'},production:{name:'LYKE',sub:'Lykeon Forge'},sentinel:{name:'VEIL',sub:'Sentinel Watch'}};
+      const divColor = {trading:'#06b6d4',opportunity:'#f59e0b',personal:'#10b981',dev_automation:'#a78bfa',op_sec:'#ef4444',production:'#f97316',gamedev:'#8b5cf6',sentinel:'#94a3b8'}[key] || '';
+      const _charMap = {opportunity:{name:'VAEL',sub:'Dawnhunt'},trading:{name:'SEREN',sub:'Auric Veil'},dev_automation:{name:'KAELEN',sub:'Iron Codex'},personal:{name:'LYRIN',sub:'Ember Cov.'},op_sec:{name:'ZETH',sub:'Nullward'},production:{name:'LYKE',sub:'Lykeon Forge'},gamedev:{name:'ARDENT',sub:'Ardent Studio'},sentinel:{name:'VEIL',sub:'Sentinel Watch'}};
       const char = _charMap[key] || {name: divLabel.toUpperCase(), sub: ''};
       const statusRaw = (div.status || 'idle').toLowerCase();
       const questLabel = statusRaw === 'running' ? 'ON QUEST' : statusRaw === 'error' ? 'WOUNDED' : 'RESTING';
@@ -6925,12 +7025,22 @@ const DIVISION_AGENTS = {
     { skill: 'asset-deliver',     label: 'Deliver Assets',   schedule: 'demand' },
     { skill: 'production-digest', label: 'Forge Digest',     schedule: 'demand' },
   ],
+  gamedev:        [
+    { skill: 'mechanic-prototype',label: 'Mechanic Prototype', schedule: 'demand' },
+    { skill: 'balance-audit',     label: 'Balance Audit',      schedule: 'demand' },
+    { skill: 'game-design',       label: 'Game Design',        schedule: 'demand' },
+    { skill: 'level-design',      label: 'Level Design',       schedule: 'demand' },
+    { skill: 'tech-spec',         label: 'Tech Spec',          schedule: 'demand' },
+    { skill: 'playtest-report',   label: 'Playtest Report',    schedule: 'demand' },
+    { skill: 'asset-integration', label: 'Asset Integration',  schedule: 'demand' },
+    { skill: 'gamedev-digest',    label: 'Studio Digest',      schedule: 'demand' },
+  ],
 };
 
 // Primary skill per division (for home card quick-run)
 const DIV_PRIMARY_SKILL = {
   trading: 'trading-report', opportunity: 'job-intake', personal: 'health-logger',
-  dev_automation: 'repo-monitor', op_sec: 'device-posture', production: 'production-digest',
+  dev_automation: 'repo-monitor', op_sec: 'device-posture', production: 'production-digest', gamedev: 'gamedev-digest',
 };
 
 // ── Run a skill from mobile UI ───────────────────────────────────────────────
@@ -6972,7 +7082,7 @@ function _divQuickActions(key) {
 function openDivisionDetail(key) {
   haptic('light');
   _detailDivKey = key;
-  const labels = { trading: 'Trading', opportunity: 'Opportunity', personal: 'Personal', dev_automation: 'Dev Automation', op_sec: 'OP-Sec', production: 'Lykeon Forge', sentinel: 'Sentinel' };
+  const labels = { trading: 'Trading', opportunity: 'Opportunity', personal: 'Personal', dev_automation: 'Dev Automation', op_sec: 'OP-Sec', production: 'Lykeon Forge', gamedev: 'Ardent Studio', sentinel: 'Sentinel' };
   document.getElementById('div-detail-title').textContent = labels[key] || key.replace(/_/g, ' ');
   document.getElementById('div-detail-body').innerHTML = '<div class="loading">Loading...</div>';
   document.getElementById('div-detail-backdrop').classList.add('open');
@@ -7077,6 +7187,7 @@ function _renderDivisionPackets(key, divData) {
     dev_automation: { repo_monitor: 'Repo Monitor', refactor_scan: 'Refactor Scan', doc_update: 'Doc Update', dev_digest: 'Dev Digest', artifact_manager: 'Artifact Manager' },
     op_sec:         { device_posture: 'Device Posture', threat_surface: 'Threat Surface', breach_check: 'Breach Check', cred_audit: 'Cred Audit', security_scan: 'Security Scan', privacy_scan: 'Privacy Scan', opsec_digest: 'OpSec Digest' },
     production:     { image_generate: 'Image Generate', sprite_generate: 'Sprite Generate', graphic_design: 'Graphic Design', prompt_craft: 'Prompt Craft', style_check: 'Style Check', image_review: 'Image Review', audio_test: 'Audio Test', video_review: 'Video Review', storyboard_compose: 'Storyboard', continuity_check: 'Continuity', asset_catalog: 'Asset Catalog', asset_deliver: 'Asset Deliver', production_digest: 'Forge Digest' },
+    gamedev:        { mechanic_prototype: 'Mechanic Prototype', balance_audit: 'Balance Audit', game_design: 'Game Design', level_design: 'Level Design', tech_spec: 'Tech Spec', playtest_report: 'Playtest Report', asset_integration: 'Asset Integration', gamedev_digest: 'Studio Digest' },
     sentinel:       {},
   };
   // Schedule hints for packets that only run on specific triggers / cadences
@@ -9365,6 +9476,22 @@ function _renderDivisionPacket(key, divData) {
     }
     html += '</div>';
     if (ai.summary) html += `<div style="font-size:11px;color:var(--subtext);">${escHtml(ai.summary)}</div>`;
+    html += '</div>';
+
+  } else if (key === 'gamedev') {
+    const gd = divData.gamedev_digest || divData.mechanic_prototype || divData.balance_audit || {};
+    const m  = gd.metrics || {};
+    html += '<div class="card"><div class="card-title" style="color:#8b5cf6;">ARDENT · Ardent Studio</div>';
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;">';
+    html += `<div class="cs-stat"><div class="cs-stat-val" style="color:#8b5cf6;">${m.mechanics_prototyped ?? m.designs_completed ?? '—'}</div><div class="cs-stat-lbl">MECHANICS</div></div>`;
+    html += `<div class="cs-stat"><div class="cs-stat-val" style="color:var(--yellow);">${m.balance_issues ?? m.issues_found ?? '—'}</div><div class="cs-stat-lbl">BALANCE FLAGS</div></div>`;
+    html += `<div class="cs-stat"><div class="cs-stat-val" style="color:var(--green);">${m.specs_written ?? m.docs_completed ?? '—'}</div><div class="cs-stat-lbl">SPECS</div></div>`;
+    html += '</div>';
+    if (gd.summary) html += `<div style="font-size:11px;color:var(--subtext);line-height:1.5;">${escHtml(gd.summary)}</div>`;
+    const digest = divData.gamedev_digest;
+    if (!digest?.generated_at) {
+      html += `<div style="margin-top:6px;"><span class="stat-placeholder">Studio digest — first run pending</span></div>`;
+    }
     html += '</div>';
   }
 
