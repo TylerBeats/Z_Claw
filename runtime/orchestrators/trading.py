@@ -9,7 +9,7 @@ import logging
 
 from runtime.config import SKILL_MODELS, OLLAMA_HOST
 from runtime.ollama_client import chat, is_available
-from runtime.skills import trading_report, market_scan, virtual_trader, backtester
+from runtime.skills import trading_report, market_scan, virtual_trader, backtester, strategy_builder, strategy_tester, strategy_search
 from runtime import packet
 from runtime.tools.xp import grant_skill_xp
 from runtime.tools.trading import load_cycle_state, load_active_strategy
@@ -276,4 +276,47 @@ def run_market_scan() -> dict:
         "Market-scan packet written. Signals=%d High=%d",
         len(signals), result["counts"].get("high", 0),
     )
+    return pkt
+
+
+def _build_packet(skill: str, result: dict) -> dict:
+    return packet.build(
+        division      = "trading",
+        skill         = skill,
+        status        = result.get("status", "failed"),
+        summary       = result.get("summary", ""),
+        action_items  = result.get("action_items", []),
+        metrics       = result.get("metrics", {}),
+        escalate      = result.get("escalate", False),
+        urgency       = "high" if result.get("escalate") else "normal",
+    )
+
+
+def run_strategy_builder(strategy_type: str = "trend_following", instruments: str = "SPX500,Gold", timeframe: str = "1d", context: str = "") -> dict:
+    result = strategy_builder.run(strategy_type=strategy_type, instruments=instruments, timeframe=timeframe, context=context)
+    pkt    = _build_packet("strategy-builder", result)
+    packet.write(pkt)
+    if result.get("status") in ("success", "partial"):
+        grant_skill_xp("strategy-builder")
+    log.info("Trading: strategy-builder %s/%s → %s", strategy_type, timeframe, result.get("status"))
+    return pkt
+
+
+def run_strategy_tester(strategy_name: str = "", strategy_json: str = "") -> dict:
+    result = strategy_tester.run(strategy_name=strategy_name, strategy_json=strategy_json)
+    pkt    = _build_packet("strategy-tester", result)
+    packet.write(pkt)
+    if result.get("status") in ("success", "partial"):
+        grant_skill_xp("strategy-tester")
+    log.info("Trading: strategy-tester '%s' → %s", strategy_name, result.get("status"))
+    return pkt
+
+
+def run_strategy_search(market_context: str = "", auto_activate: bool = False) -> dict:
+    result = strategy_search.run(market_context=market_context, auto_activate=auto_activate)
+    pkt    = _build_packet("strategy-search", result)
+    packet.write(pkt)
+    if result.get("status") in ("success", "partial"):
+        grant_skill_xp("strategy-search")
+    log.info("Trading: strategy-search → %s (best=%s)", result.get("status"), result.get("metrics", {}).get("best_strategy", ""))
     return pkt

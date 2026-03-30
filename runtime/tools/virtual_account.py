@@ -44,8 +44,9 @@ DEFAULT_BALANCE    = 10_000.0
 RISK_PER_TRADE_PCT = 1.0   # 1% of account per trade
 STOP_PCT           = 0.01  # 1% stop loss distance
 SLIPPAGE_BPS       = 5     # 5 basis points per fill (0.05%)
-DAILY_LOSS_HALT_PCT = 3.0  # halt if daily PnL < -3% of account
-STREAK_HALT_COUNT   = 5    # halt after N consecutive losses
+DAILY_LOSS_HALT_PCT     = 3.0   # halt if daily PnL < -3% of account
+STREAK_HALT_COUNT       = 5     # halt after N consecutive losses
+TRAILING_DRAWDOWN_PCT   = 10.0  # halt permanently if balance drops >10% from equity peak
 
 # Known pairwise correlations (approximate, based on historical data)
 # High correlation = potential double-exposure risk
@@ -419,6 +420,12 @@ def run_virtual_account(cycle_state: Optional[dict] = None) -> dict:
         account["loss_streak"]     = account.get("loss_streak", 0)  # keep streak across days
         account["trading_halted"]  = False  # reset halt at start of new day
 
+    # ── Trailing drawdown: update equity peak ────────────────────────────────
+    equity_peak = account.get("equity_peak", balance)
+    if balance > equity_peak:
+        account["equity_peak"] = balance
+        equity_peak = balance
+
     daily_pnl      = account.get("daily_pnl", 0.0)
     loss_streak    = account.get("loss_streak", 0)
     trading_halted = account.get("trading_halted", False)
@@ -444,6 +451,13 @@ def run_virtual_account(cycle_state: Optional[dict] = None) -> dict:
             account["trading_halted"] = True
             account["halt_resume_time"] = (datetime.now(timezone.utc).timestamp() + 1800)  # 30 min cooldown
             log.warning("CIRCUIT BREAKER: %d consecutive losses", loss_streak)
+        elif equity_peak > 0 and (equity_peak - balance) / equity_peak * 100 >= TRAILING_DRAWDOWN_PCT:
+            trading_halted = True
+            account["trading_halted"] = True
+            log.warning(
+                "CIRCUIT BREAKER: trailing drawdown %.1f%% from peak $%.2f — trading halted",
+                (equity_peak - balance) / equity_peak * 100, equity_peak,
+            )
 
     risk_usd    = balance * (account.get("risk_per_trade_pct", RISK_PER_TRADE_PCT) / 100) * risk_multiplier
     if post_cooldown_half:

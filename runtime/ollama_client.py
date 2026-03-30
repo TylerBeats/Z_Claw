@@ -56,10 +56,15 @@ def chat_json(
     host: str = OLLAMA_HOST,
     temperature: float = 0.05,
     max_tokens: int = 2048,
+    _capture_skill: str = "",
+    _capture_division: str = "",
 ) -> Any:
     """
     Run a chat completion expecting JSON output.
     Returns parsed dict/list. Raises ValueError if response is not valid JSON.
+
+    Optional _capture_skill / _capture_division tag the record in the QVAC
+    capture log for later fine-tuning export.
     """
     resp = _client(host).chat(
         model=model,
@@ -69,14 +74,30 @@ def chat_json(
     )
     text = resp.message.content.strip()
     try:
-        return json.loads(text)
+        parsed = json.loads(text)
     except json.JSONDecodeError as e:
         # Try to extract JSON from response if model added surrounding text
         import re
         match = re.search(r"\{.*\}", text, re.DOTALL)
         if match:
-            return json.loads(match.group())
-        raise ValueError(f"Model did not return valid JSON: {text[:200]}") from e
+            parsed = json.loads(match.group())
+        else:
+            raise ValueError(f"Model did not return valid JSON: {text[:200]}") from e
+
+    # ── QVAC capture hook ─────────────────────────────────────────────────────
+    try:
+        from runtime.tools.capture import record as _qvac_record
+        _qvac_record(
+            model=model,
+            messages=messages,
+            response=parsed,
+            skill=_capture_skill,
+            division=_capture_division,
+        )
+    except Exception:
+        pass  # capture is best-effort; never break the caller
+
+    return parsed
 
 
 def pull_if_missing(model: str, host: str = OLLAMA_HOST) -> bool:

@@ -139,9 +139,12 @@ DIVISIONS = {
         ],
         "skills": {
             "trading-report":  {"xp": 15, "soldier": "The Seer's Voice",    "icon": "◉", "anim": "slash",   "label": "The Oracle's Edict"},
-            "market-scan":     {"xp":  5, "soldier": "The Signal Keeper",   "icon": "◈", "anim": "scan",    "label": "Read the Runes"},
-            "virtual-trader":  {"xp":  8, "soldier": "The Shadow Runner",   "icon": "⟁", "anim": "slash",   "label": "Shadow Run"},
-            "backtester":      {"xp":  5, "soldier": "The Pattern Keeper",  "icon": "◫", "anim": "circuit", "label": "Pattern Lock"},
+            "market-scan":      {"xp":  5, "soldier": "The Signal Keeper",    "icon": "◈",  "anim": "scan",    "label": "Read the Runes"},
+            "virtual-trader":   {"xp":  8, "soldier": "The Shadow Runner",    "icon": "⟁",  "anim": "slash",   "label": "Shadow Run"},
+            "backtester":       {"xp":  5, "soldier": "The Pattern Keeper",   "icon": "◫",  "anim": "circuit", "label": "Pattern Lock"},
+            "strategy-builder": {"xp": 15, "soldier": "The Strategy Forger",  "icon": "⚒",  "anim": "forge",   "label": "Forge the Strategy"},
+            "strategy-tester":  {"xp": 12, "soldier": "The Strategy Analyst", "icon": "🔬", "anim": "scan",    "label": "Test the Strategy"},
+            "strategy-search":  {"xp": 10, "soldier": "The Strategy Scout",   "icon": "🔭", "anim": "scan",    "label": "Scout the Strategies"},
         },
         "vocabulary": {
             "quest":       "reading the veil",
@@ -230,10 +233,11 @@ DIVISIONS = {
             {"name": "The Covenant's Voice", "desc": "Delivers the weekly personal health and vitality digest"},
         ],
         "skills": {
-            "health-logger":    {"xp": 15, "soldier": "The Tender",   "icon": "◉", "anim": "sparkle", "label": "Tend the Flame"},
-            "perf-correlation": {"xp": 10, "soldier": "The Lens",     "icon": "◈", "anim": "sparkle", "label": "Inner Sight"},
-            "burnout-monitor":  {"xp":  5, "soldier": "The Watchfire","icon": "⟁", "anim": "sparkle", "label": "Read the Ashes"},
-            "personal-digest":  {"xp":  5, "soldier": "The Voice",    "icon": "◫", "anim": "sparkle", "label": "The Covenant's Voice"},
+            "health-logger":         {"xp": 15, "soldier": "The Tender",         "icon": "◉", "anim": "sparkle", "label": "Tend the Flame"},
+            "perf-correlation":      {"xp": 10, "soldier": "The Lens",           "icon": "◈", "anim": "sparkle", "label": "Inner Sight"},
+            "burnout-monitor":       {"xp":  5, "soldier": "The Watchfire",      "icon": "⟁", "anim": "sparkle", "label": "Read the Ashes"},
+            "personal-digest":       {"xp":  5, "soldier": "The Voice",          "icon": "◫", "anim": "sparkle", "label": "The Covenant's Voice"},
+            "weekly-retrospective":  {"xp": 15, "soldier": "The Retrospective",  "icon": "📅", "anim": "scroll",  "label": "The Week in Review"},
         },
         "vocabulary": {
             "quest":       "tending the flame",
@@ -276,15 +280,17 @@ DIVISIONS = {
             {"name": "Null Report",       "desc": "Delivers the weekly threat assessment and security posture brief"},
         ],
         "skills": {
-            "device-posture":     {"xp": 10, "soldier": "The Posture Guard",       "icon": "⬡", "anim": "shield", "label": "Inspect the Veil"},
-            "breach-check":       {"xp": 10, "soldier": "The Breach Scout",        "icon": "⟁", "anim": "shield", "label": "Breach Watch"},
-            "threat-surface":     {"xp":  8, "soldier": "The Surface Warden",      "icon": "◈", "anim": "shield", "label": "Map the Dark"},
-            "cred-audit":         {"xp":  8, "soldier": "The Credential Keeper",   "icon": "◫", "anim": "shield", "label": "Credential Sweep"},
-            "privacy-scan":       {"xp":  5, "soldier": "The Privacy Warden",      "icon": "⬡", "anim": "shield", "label": "Privacy Ward"},
-            "opsec-digest":       {"xp":  5, "soldier": "The Brief",               "icon": "◉", "anim": "shield", "label": "Null Report"},
-            "mobile-audit-review":{"xp":  5, "soldier": "The Mobile Warden",       "icon": "◈", "anim": "shield", "label": "Audit the Mobile Veil"},
-            "sentinel-health":    {"xp":  5, "soldier": "The Sentinel",            "icon": "⬢", "anim": "shield", "label": "Sentinel Watch"},
-            "security-scan":      {"xp": 10, "soldier": "The Code Sentinel",       "icon": "⬡", "anim": "shield", "label": "Audit the Veil"},
+            "device-posture":        {"xp": 10, "soldier": "The Posture Guard",       "icon": "⬡", "anim": "shield", "label": "Inspect the Veil"},
+            "breach-check":          {"xp": 10, "soldier": "The Breach Scout",        "icon": "⟁", "anim": "shield", "label": "Breach Watch"},
+            "threat-surface":        {"xp":  8, "soldier": "The Surface Warden",      "icon": "◈", "anim": "shield", "label": "Map the Dark"},
+            "cred-audit":            {"xp":  8, "soldier": "The Credential Keeper",   "icon": "◫", "anim": "shield", "label": "Credential Sweep"},
+            "privacy-scan":          {"xp":  5, "soldier": "The Privacy Warden",      "icon": "⬡", "anim": "shield", "label": "Privacy Ward"},
+            "opsec-digest":          {"xp":  5, "soldier": "The Brief",               "icon": "◉", "anim": "shield", "label": "Null Report"},
+            "mobile-audit-review":   {"xp":  5, "soldier": "The Mobile Warden",       "icon": "◈", "anim": "shield", "label": "Audit the Mobile Veil"},
+            "sentinel-health":       {"xp":  5, "soldier": "The Sentinel",            "icon": "⬢", "anim": "shield", "label": "Sentinel Watch"},
+            "security-scan":         {"xp": 10, "soldier": "The Code Sentinel",       "icon": "⬡", "anim": "shield", "label": "Audit the Veil"},
+            "agent-network-monitor": {"xp":  8, "soldier": "The Network Warden",      "icon": "🌐", "anim": "scan",   "label": "Watch the Agent Network"},
+            "network-monitor":       {"xp":  8, "soldier": "The Network Warden",      "icon": "⟁", "anim": "scan",   "label": "Monitor the Network"},
         },
         "vocabulary": {
             "quest":       "watching the veil",
@@ -346,6 +352,8 @@ DIVISIONS = {
             "sfx-generate":       {"xp": 12, "soldier": "The Sound Forger",    "icon": "🔊", "anim": "wave",     "label": "Forge the Sound"},
             "vfx-compose":        {"xp": 10, "soldier": "The Particle Weaver", "icon": "✨", "anim": "sparkle",  "label": "Weave the Effect"},
             "level-design":       {"xp": 15, "soldier": "The World Architect", "icon": "🗺",  "anim": "compose",  "label": "Draft the World"},
+            "model-trainer":      {"xp": 20, "soldier": "QVAC",               "icon": "🧠", "anim": "circuit",  "label": "Train the Mind"},
+            "adapter-manager":    {"xp": 15, "soldier": "QVAC",               "icon": "🔧", "anim": "forge",    "label": "Manage the Adapters"},
         },
         "vocabulary": {
             "quest":       "in production",
@@ -358,6 +366,55 @@ DIVISIONS = {
             "streak_lost": "the forge has gone cold",
         },
         "sprite_theme": "Armored architect in deep orange plate, glowing blueprint scrolls, forge-fire amber eyes, structural hexagonal motifs on armor. Confident builder stance.",
+    },
+
+    "gamedev": {
+        "key":       "gamedev",
+        "commander": "ARDENT",
+        "title":     "Ardent, Director of the Ardent Studio",
+        "order":     "The Ardent Studio",
+        "color":     "#8b5cf6",
+        "glow":      "#8b5cf640",
+        "lore": (
+            "Where imagination meets executable code. ARDENT does not dream — ARDENT ships. "
+            "The Studio turns raw concepts into mechanics, documents, and playable reality. "
+            "No feature enters the build without ARDENT's blueprint."
+        ),
+        "ranks": [
+            "Studio Recruit",           # 0   XP
+            "Junior Designer",           # 51  XP
+            "Senior Game Designer",      # 151 XP
+            "Lead Designer",             # 301 XP
+            "Ardent, Director",          # 500 XP
+        ],
+        "abilities": [
+            {"name": "Blueprint Lock",   "desc": "Locks down the design doc before a single line of code is written."},
+            {"name": "Balance Hammer",   "desc": "Analyzes XP curves and economy in real time to catch inflation before it ships."},
+            {"name": "Playtest Loop",    "desc": "Every mechanic is tested before it becomes permanent."},
+            {"name": "Tech Bridge",      "desc": "Converts design intent into engine-ready specifications."},
+            {"name": "Asset Handoff",    "desc": "Coordinates the handoff from Lykeon Forge assets to game integration."},
+        ],
+        "skills": {
+            "mechanic-prototype": {"xp": 15, "soldier": "The Prototypist",   "icon": "⚙",  "anim": "circuit",  "label": "Prototype the Mechanic"},
+            "balance-audit":      {"xp": 12, "soldier": "The Balancer",      "icon": "⚖",  "anim": "balance",  "label": "Audit the Balance"},
+            "game-design":        {"xp": 15, "soldier": "The Architect",     "icon": "📐", "anim": "draft",    "label": "Blueprint the Design"},
+            "level-design":       {"xp": 15, "soldier": "The World Builder", "icon": "🗺",  "anim": "compose",  "label": "Build the World"},
+            "tech-spec":          {"xp": 15, "soldier": "The Tech Scribe",   "icon": "📋", "anim": "circuit",  "label": "Write the Spec"},
+            "playtest-report":    {"xp": 12, "soldier": "The Analyst",       "icon": "🎮", "anim": "scan",     "label": "Run the Playtest"},
+            "asset-integration":  {"xp": 10, "soldier": "The Integrator",    "icon": "🔗", "anim": "deliver",  "label": "Integrate the Asset"},
+            "gamedev-digest":     {"xp": 10, "soldier": "ARDENT",            "icon": "🎯", "anim": "forge",    "label": "The Studio Report"},
+        },
+        "vocabulary": {
+            "quest":       "in development",
+            "rest":        "design freeze",
+            "standby":     "awaiting spec",
+            "wound":       "regression",
+            "hydrate":     "sprint reset",
+            "rank_up":     "ARDENT promotes the studio",
+            "streak_hold": "the studio ships daily",
+            "streak_lost": "the build has gone dark",
+        },
+        "sprite_theme": "Purple-armored game director. Holographic design docs floating around hands. Dice motif on shoulder pauldrons. Intense focused expression.",
     },
 }
 

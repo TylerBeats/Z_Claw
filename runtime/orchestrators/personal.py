@@ -9,7 +9,7 @@ import logging
 
 from runtime.config import SKILL_MODELS, OLLAMA_HOST
 from runtime.ollama_client import chat, is_available
-from runtime.skills import health_logger, perf_correlation, burnout_monitor
+from runtime.skills import health_logger, perf_correlation, burnout_monitor, weekly_retrospective
 from runtime import packet
 from runtime.tools.xp import grant_skill_xp
 
@@ -170,6 +170,34 @@ def run_burnout_monitor() -> dict:
     return pkt
 
 
+def run_weekly_retrospective() -> dict:
+    """Sunday 20:00 — synthesize the past 7 days of health, performance, and XP data."""
+    log.info("=== Personal Division: weekly-retrospective run ===")
+
+    result = weekly_retrospective.run()
+
+    action_items = [
+        packet.action_item(item, priority="normal", requires_matthew=False)
+        for item in result.get("action_items", [])
+    ]
+
+    pkt = packet.build(
+        division="personal",
+        skill="weekly-retrospective",
+        status=result["status"],
+        summary=result.get("summary", "Weekly retrospective complete."),
+        action_items=action_items,
+        metrics=result.get("metrics", {}),
+        escalate=result.get("escalate", False),
+        escalation_reason=result.get("escalation_reason", ""),
+    )
+
+    packet.write(pkt)
+    grant_skill_xp("weekly-retrospective")
+    log.info("Weekly-retrospective packet written. Escalate=%s", result.get("escalate"))
+    return pkt
+
+
 def run_personal_digest() -> dict:
     """
     Daily 21:30 — orchestrator synthesizes across ALL personal division skills.
@@ -182,31 +210,41 @@ def run_personal_digest() -> dict:
     health_pkt  = packet.read("personal", "health-logger")
     perf_pkt    = packet.read("personal", "perf-correlation")
     burnout_pkt = packet.read("personal", "burnout-monitor")
+    retro_pkt   = packet.read("personal", "weekly-retrospective")
 
     synthesis = _synthesize_personal_state(health_pkt, perf_pkt, burnout_pkt)
 
     # Aggregate escalation signals
+    all_pkts = [health_pkt, perf_pkt, burnout_pkt, retro_pkt]
     escalate = any(
         p.get("escalate", False)
-        for p in [health_pkt, perf_pkt, burnout_pkt]
+        for p in all_pkts
         if p
     )
     escalation_reasons = [
         p.get("escalation_reason", "")
-        for p in [health_pkt, perf_pkt, burnout_pkt]
+        for p in all_pkts
         if p and p.get("escalation_reason")
     ]
+
+    # Append weekly retrospective note if available
+    retro_note = ""
+    if retro_pkt and retro_pkt.get("metrics", {}).get("xp_earned") is not None:
+        xp = retro_pkt["metrics"].get("xp_earned", 0)
+        risk = retro_pkt["metrics"].get("burnout_risk", "")
+        retro_note = f" | Weekly: {xp} XP earned, burnout risk {risk}." if xp else ""
 
     pkt = packet.build(
         division="personal",
         skill="personal-digest",
         status="success",
-        summary=synthesis,
+        summary=synthesis + retro_note if retro_note else synthesis,
         metrics={
             "health_logged":     bool(health_pkt and not health_pkt.get("metrics", {}).get("skipped")),
             "patterns_found":    bool(perf_pkt and "no patterns" not in perf_pkt.get("summary", "").lower()),
             "burnout_level":     burnout_pkt.get("summary", "ok") if burnout_pkt else "unknown",
-            "data_sources":      sum(1 for p in [health_pkt, perf_pkt, burnout_pkt] if p),
+            "data_sources":      sum(1 for p in all_pkts if p),
+            "weekly_retro":      bool(retro_pkt),
         },
         escalate=escalate,
         escalation_reason=" | ".join(escalation_reasons) if escalation_reasons else "",

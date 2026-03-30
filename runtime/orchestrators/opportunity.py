@@ -8,7 +8,7 @@ import logging
 
 from providers.router import ProviderRouter
 from providers.base import ProviderError
-from runtime.skills import job_intake, hard_filter, funding_finder
+from runtime.skills import job_intake, hard_filter, funding_finder, application_tracker
 from runtime import packet
 from runtime.tools.xp import grant_skill_xp
 from runtime.tools.state import load_applications, save_applications, add_to_pipeline
@@ -245,4 +245,93 @@ def run_funding_finder() -> dict:
     packet.write(pkt)
     grant_skill_xp("funding-finder")
     log.info("Funding-finder packet written. Found=%d", counts["opportunities_found"])
+    return pkt
+
+
+def run_application_tracker() -> dict:
+    """Daily 10:00 — analyze application pipeline, flag stale apps, write packet."""
+    log.info("=== Opportunity Division: application-tracker run ===")
+
+    try:
+        result = application_tracker.run()
+    except Exception as e:
+        log.error("application-tracker skill raised: %s", e)
+        pkt = packet.build(
+            division="opportunity",
+            skill="application-tracker",
+            status="failed",
+            summary=f"application-tracker failed with an unexpected error: {e}",
+            escalate=False,
+        )
+        packet.write(pkt)
+        return pkt
+
+    counts   = result["counts"]
+    insights = result["insights"]
+
+    # No data yet — return partial packet
+    if result.get("no_data"):
+        pkt = packet.build(
+            division="opportunity",
+            skill="application-tracker",
+            status="partial",
+            summary="No applications tracked yet. Run job-intake first to populate the pipeline.",
+            metrics={"total": 0},
+            urgency="normal",
+            confidence=1.0,
+            provider_used="deterministic",
+        )
+        packet.write(pkt)
+        return pkt
+
+    # Build action items from LLM insights
+    action_items = [
+        packet.action_item(
+            item["description"],
+            priority=item.get("priority", "normal"),
+            requires_matthew=(item.get("priority") == "high"),
+        )
+        for item in insights.get("action_items", [])
+    ]
+
+    # Escalate if interviewing or many stale applications
+    escalate = counts["interviewing"] > 0 or counts["stale"] > 3
+    escalation_reason = ""
+    if counts["interviewing"] > 0:
+        escalation_reason += f"{counts['interviewing']} active interview(s) require attention. "
+    if counts["stale"] > 3:
+        escalation_reason += f"{counts['stale']} stale applications need follow-up."
+
+    status = "success" if result["model_available"] else "partial"
+    provider_used = "ollama" if result["model_available"] else "deterministic"
+
+    pkt = packet.build(
+        division="opportunity",
+        skill="application-tracker",
+        status=status,
+        summary=insights.get("summary", "Application pipeline analyzed."),
+        action_items=action_items,
+        metrics={
+            "total":        counts["total"],
+            "pending":      counts.get("pending_review", 0) + counts.get("pending", 0),
+            "applied":      counts["applied"],
+            "waiting":      counts["waiting"],
+            "interviewing": counts["interviewing"],
+            "rejected":     counts["rejected"],
+            "stale":        counts["stale"],
+            "model_available": result["model_available"],
+        },
+        escalate=escalate,
+        escalation_reason=escalation_reason.strip(),
+        urgency=insights.get("urgency", "normal"),
+        confidence=insights.get("confidence", 0.8),
+        provider_used=provider_used,
+    )
+
+    packet.write(pkt)
+    grant_skill_xp("application-tracker")
+    log.info(
+        "Application-tracker packet written. Status=%s Total=%d Stale=%d Interviewing=%d",
+        status, counts["total"], counts["stale"], counts["interviewing"],
+    )
     return pkt

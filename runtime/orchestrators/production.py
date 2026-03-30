@@ -32,6 +32,8 @@ from runtime.skills import (
     sfx_generate,
     vfx_compose,
     level_design,
+    model_trainer,
+    adapter_manager,
 )
 
 log = logging.getLogger(__name__)
@@ -275,6 +277,28 @@ def run_level_design(level_type: str = "dungeon", theme: str = "", constraints: 
     if result.get("status") in ("success", "partial"):
         grant_skill_xp("level-design")
     log.info("LYKE: level-design %s/%s → %s", level_type, theme, result.get("status"))
+    return pkt
+
+
+# ── QVAC Pipeline ────────────────────────────────────────────────────────────
+
+def run_model_trainer(mode: str = "review", min_captures: int = 50, export_limit: int = 500) -> dict:
+    result = model_trainer.run(mode=mode, min_captures=min_captures, export_limit=export_limit)
+    pkt    = _build_packet("model-trainer", result)
+    packet.write(pkt)
+    if result.get("status") in ("success", "partial"):
+        grant_skill_xp("model-trainer")
+    log.info("LYKE: model-trainer mode=%s → %s", mode, result.get("status"))
+    return pkt
+
+
+def run_adapter_manager(action: str = "status", adapter_name: str = "", task_context: str = "") -> dict:
+    result = adapter_manager.run(action=action, adapter_name=adapter_name, task_context=task_context)
+    pkt    = _build_packet("adapter-manager", result)
+    packet.write(pkt)
+    if result.get("status") in ("success", "partial"):
+        grant_skill_xp("adapter-manager")
+    log.info("LYKE: adapter-manager action=%s → %s", action, result.get("status"))
     return pkt
 
 

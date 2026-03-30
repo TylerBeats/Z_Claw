@@ -10,7 +10,8 @@ from runtime.config import SKILL_MODELS, OLLAMA_HOST
 from runtime.ollama_client import chat, is_available
 from runtime.skills import (
     device_posture, breach_check, threat_surface,
-    cred_audit, privacy_scan, security_scan,
+    cred_audit, privacy_scan, security_scan, agent_network_monitor,
+    network_monitor,
 )
 from runtime import packet
 from runtime.tools.xp import grant_skill_xp
@@ -223,6 +224,69 @@ def run_security_scan() -> dict:
     packet.write(pkt)
     grant_skill_xp("security-scan")
     log.info("Security-scan packet written. Real=%s High=%s FalsePositives=%s", len(real), high_count, fp_count)
+    return pkt
+
+
+def run_agent_network_monitor() -> dict:
+    log.info("=== OP-Sec Division: agent-network-monitor run ===")
+    result = agent_network_monitor.run()
+    unknown = result.get("unknown_domains", [])
+    action_items = [
+        packet.action_item(item, priority="high", requires_matthew=True)
+        for item in result.get("action_items", [])
+    ]
+    pkt = packet.build(
+        division="op-sec",
+        skill="agent-network-monitor",
+        status=result["status"],
+        summary=result["summary"],
+        action_items=action_items,
+        escalate=result.get("escalate", False),
+        escalation_reason=result.get("escalation_reason", ""),
+        metrics={
+            "external_calls_24h": result.get("metrics", {}).get("external_calls_24h", 0),
+            "known_domains":      result.get("metrics", {}).get("known_domains", 0),
+            "unknown_domains":    result.get("metrics", {}).get("unknown_domains", 0),
+            "files_scanned":      result.get("metrics", {}).get("files_scanned", 0),
+        },
+    )
+    packet.write(pkt)
+    grant_skill_xp("agent-network-monitor")
+    log.info("Agent-network-monitor packet written. Unknown=%s", len(unknown))
+    return pkt
+
+
+def run_network_monitor() -> dict:
+    log.info("=== OP-Sec Division: network-monitor run ===")
+    result      = network_monitor.run()
+    suspicious  = result.get("metrics", {}).get("suspicious", 0)
+    action_items = [
+        packet.action_item(
+            item["description"],
+            priority=item.get("priority", "normal"),
+            requires_matthew=item.get("priority") == "high",
+        )
+        for item in result.get("action_items", [])
+    ]
+    pkt = packet.build(
+        division="op-sec",
+        skill="network-monitor",
+        status=result["status"],
+        summary=result["summary"],
+        action_items=action_items,
+        escalate=result.get("escalate", False),
+        escalation_reason=(
+            f"{suspicious} suspicious connection(s) detected" if result.get("escalate") else ""
+        ),
+        metrics=result.get("metrics", {}),
+    )
+    packet.write(pkt)
+    grant_skill_xp("network-monitor")
+    log.info(
+        "Network-monitor packet written. Connections=%s Suspicious=%s",
+        result.get("metrics", {}).get("connections", 0),
+        suspicious,
+    )
     return pkt
 
 

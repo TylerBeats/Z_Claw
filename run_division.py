@@ -11,6 +11,7 @@ Usage:
   python run_division.py personal perf-correlation
   python run_division.py personal burnout-monitor
   python run_division.py personal personal-digest
+  python run_division.py personal weekly-retrospective
   python run_division.py dev-automation repo-monitor
   python run_division.py dev-automation debug-agent <error_text> [context_file ...]
   python run_division.py dev-automation refactor-scan
@@ -19,6 +20,7 @@ Usage:
   python run_division.py dev-automation artifact-manager
   python run_division.py dev-automation dev-digest
   python run_division.py dev pipeline '<json_spec>'
+  python run_division.py op-sec agent-network-monitor
   python run_division.py op-sec mobile-audit-review
   python run_division.py production image-generate portrait_bust vael
   python run_division.py production sprite-generate vael chibi_sprite
@@ -70,16 +72,18 @@ def run(division: str, task: str, args: list) -> dict:
 
     # ── Opportunity ───────────────────────────────────────────────────────────
     if division == "opportunity":
-        from runtime.orchestrators.opportunity import run_job_intake, run_funding_finder
+        from runtime.orchestrators.opportunity import run_job_intake, run_funding_finder, run_application_tracker
         if task == "job-intake":
             return run_job_intake()
         if task == "funding-finder":
             return run_funding_finder()
+        if task == "application-tracker":
+            return run_application_tracker()
         raise ValueError(f"Unknown task for opportunity: {task}")
 
     # ── Trading ───────────────────────────────────────────────────────────────
     elif division == "trading":
-        from runtime.orchestrators.trading import run_trading_report, run_market_scan, run_virtual_trader, run_backtester
+        from runtime.orchestrators.trading import run_trading_report, run_market_scan, run_virtual_trader, run_backtester, run_strategy_builder, run_strategy_tester, run_strategy_search
         if task == "trading-report":
             return run_trading_report()
         if task == "market-scan":
@@ -88,11 +92,28 @@ def run(division: str, task: str, args: list) -> dict:
             return run_virtual_trader()
         if task == "backtester":
             return run_backtester()
+        if task == "strategy-builder":
+            return run_strategy_builder(
+                strategy_type=args[0] if args else "trend_following",
+                instruments=args[1] if len(args) > 1 else "SPX500,Gold",
+                timeframe=args[2] if len(args) > 2 else "1d",
+                context=args[3] if len(args) > 3 else "",
+            )
+        if task == "strategy-tester":
+            return run_strategy_tester(
+                strategy_name=args[0] if args else "",
+                strategy_json=args[1] if len(args) > 1 else "",
+            )
+        if task == "strategy-search":
+            return run_strategy_search(
+                market_context=args[0] if args else "",
+                auto_activate=(args[1].lower() == "true") if len(args) > 1 else False,
+            )
         raise ValueError(f"Unknown task for trading: {task}")
 
     # ── Personal ──────────────────────────────────────────────────────────────
     elif division == "personal":
-        from runtime.orchestrators.personal import run_health_logger, run_perf_correlation, run_burnout_monitor, run_personal_digest
+        from runtime.orchestrators.personal import run_health_logger, run_perf_correlation, run_burnout_monitor, run_personal_digest, run_weekly_retrospective
         if task == "health-logger":
             reply_text = args[0] if args else ""
             if not reply_text:
@@ -109,6 +130,8 @@ def run(division: str, task: str, args: list) -> dict:
             return run_burnout_monitor()
         if task == "personal-digest":
             return run_personal_digest()
+        if task == "weekly-retrospective":
+            return run_weekly_retrospective()
         raise ValueError(f"Unknown task for personal: {task}")
 
     # ── OP-Sec ────────────────────────────────────────────────────────────────
@@ -116,6 +139,7 @@ def run(division: str, task: str, args: list) -> dict:
         from runtime.orchestrators.op_sec import (
             run_device_posture, run_breach_check, run_threat_surface,
             run_cred_audit, run_privacy_scan, run_security_scan, run_opsec_digest,
+            run_agent_network_monitor, run_network_monitor,
         )
         if task == "device-posture":
             return run_device_posture()
@@ -131,6 +155,10 @@ def run(division: str, task: str, args: list) -> dict:
             return run_security_scan()
         if task == "opsec-digest":
             return run_opsec_digest()
+        if task == "agent-network-monitor":
+            return run_agent_network_monitor()
+        if task == "network-monitor":
+            return run_network_monitor()
         if task == "mobile-audit-review":
             from runtime.skills.mobile_audit_review import run as run_mobile_audit
             return run_mobile_audit()
@@ -264,10 +292,57 @@ def run(division: str, task: str, args: list) -> dict:
                                       level_type=args[0] if args else "dungeon",
                                       theme=args[1] if len(args) > 1 else "",
                                       constraints=args[2] if len(args) > 2 else ""),
+            "model-trainer":      lambda: prod_orch.run_model_trainer(
+                                      mode=args[0] if args else "review",
+                                      min_captures=int(args[1]) if len(args) > 1 else 50,
+                                      export_limit=int(args[2]) if len(args) > 2 else 500),
+            "adapter-manager":    lambda: prod_orch.run_adapter_manager(
+                                      action=args[0] if args else "status",
+                                      adapter_name=args[1] if len(args) > 1 else "",
+                                      task_context=args[2] if len(args) > 2 else ""),
         }
         runner = task_map.get(task)
         if not runner:
             raise ValueError(f"Unknown task for production: {task}")
+        return runner()
+
+    # ── Gamedev (ARDENT, Director of the Ardent Studio) ───────────────────────
+    elif division == "gamedev":
+        from runtime.orchestrators import gamedev as gamedev_orch
+        task_map = {
+            "mechanic-prototype": lambda: gamedev_orch.run_mechanic_prototype(
+                                      mechanic_type=args[0] if args else "combat",
+                                      name=args[1] if len(args) > 1 else "",
+                                      description=args[2] if len(args) > 2 else ""),
+            "balance-audit":      lambda: gamedev_orch.run_balance_audit(
+                                      audit_type=args[0] if args else "xp_curve",
+                                      target=args[1] if len(args) > 1 else "",
+                                      data_file=args[2] if len(args) > 2 else ""),
+            "game-design":        lambda: gamedev_orch.run_game_design(
+                                      design_type=args[0] if args else "mechanics",
+                                      topic=args[1] if len(args) > 1 else "",
+                                      context=args[2] if len(args) > 2 else ""),
+            "level-design":       lambda: gamedev_orch.run_level_design(
+                                      level_type=args[0] if args else "dungeon",
+                                      theme=args[1] if len(args) > 1 else "",
+                                      constraints=args[2] if len(args) > 2 else ""),
+            "tech-spec":          lambda: gamedev_orch.run_tech_spec(
+                                      spec_type=args[0] if args else "class_design",
+                                      feature=args[1] if len(args) > 1 else "",
+                                      engine=args[2] if len(args) > 2 else "godot"),
+            "playtest-report":    lambda: gamedev_orch.run_playtest_report(
+                                      session_type=args[0] if args else "full_playthrough",
+                                      focus_area=args[1] if len(args) > 1 else "",
+                                      notes=args[2] if len(args) > 2 else ""),
+            "asset-integration":  lambda: gamedev_orch.run_asset_integration(
+                                      asset_type=args[0] if args else "character_sprite",
+                                      asset_path=args[1] if len(args) > 1 else "",
+                                      engine=args[2] if len(args) > 2 else "godot"),
+            "gamedev-digest":     lambda: gamedev_orch.run_gamedev_digest(),
+        }
+        runner = task_map.get(task)
+        if not runner:
+            raise ValueError(f"Unknown task for gamedev: {task}")
         return runner()
 
     # ── Realm Keeper (cross-division, pure Python) ────────────────────────────

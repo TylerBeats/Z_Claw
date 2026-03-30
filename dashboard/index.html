@@ -2179,13 +2179,11 @@ Hit ⚡ GENERATE NOW to compile immediately.
         const d = await res.json();
         const block = document.getElementById('agent-network-block');
         if (!d.available) {
-          block.style.display = 'block';
-          const startBtn = document.getElementById('an-btn-start');
-          if (startBtn) startBtn.style.display = 'inline-block';
-          document.getElementById('an-btn-run').style.display = 'none';
-          document.getElementById('an-btn-stop').style.display = 'none';
-          document.getElementById('an-run-status').textContent = 'OFFLINE';
-          document.getElementById('an-run-status').style.color = 'var(--red)';
+          // Agent-network (Zenith) is offline — hide the entire block so the
+          // "⚡ START SERVER" button doesn't appear and confuse users who only
+          // want to run standard trading skills (market-scan, virtual-trader,
+          // etc.) which run via Python directly and don't need Zenith at all.
+          block.style.display = 'none';
           return;
         }
         block.style.display = 'block';

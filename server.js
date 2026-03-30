@@ -287,6 +287,9 @@ const SKILL_XP = {
   'market-scan':        { division: 'trading',        amount:  5 },
   'virtual-trader':     { division: 'trading',        amount:  8 },
   'backtester':         { division: 'trading',        amount:  5 },
+  'strategy-builder':   { division: 'trading',        amount: 15 },
+  'strategy-tester':    { division: 'trading',        amount: 12 },
+  'strategy-search':    { division: 'trading',        amount: 10 },
   // Dev Automation — The Iron Codex
   'repo-monitor':       { division: 'dev_automation', amount: 10 },
   'refactor-scan':      { division: 'dev_automation', amount:  5 },
@@ -296,21 +299,23 @@ const SKILL_XP = {
   'dev-digest':         { division: 'dev_automation', amount:  5 },
   'dev-pipeline':       { division: 'dev_automation', amount: 10 },
   // Personal — The Ember Covenant
-  'health-logger':      { division: 'personal',       amount: 15 },
-  'perf-correlation':   { division: 'personal',       amount: 10 },
-  'burnout-monitor':    { division: 'personal',       amount:  5 },
-  'personal-digest':    { division: 'personal',       amount:  5 },
+  'health-logger':          { division: 'personal',       amount: 15 },
+  'perf-correlation':       { division: 'personal',       amount: 10 },
+  'burnout-monitor':        { division: 'personal',       amount:  5 },
+  'personal-digest':        { division: 'personal',       amount:  5 },
+  'weekly-retrospective':   { division: 'personal',       amount: 15 },
   // Op-Sec — The Nullward Circle
-  'device-posture':     { division: 'op_sec',         amount: 10 },
-  'breach-check':       { division: 'op_sec',         amount: 10 },
-  'threat-surface':     { division: 'op_sec',         amount:  8 },
-  'cred-audit':         { division: 'op_sec',         amount:  8 },
-  'privacy-scan':       { division: 'op_sec',         amount:  5 },
-  'opsec-digest':       { division: 'op_sec',         amount:  5 },
-  'network-monitor':    { division: 'op_sec',         amount:  8 },
-  'mobile-audit-review':{ division: 'op_sec',         amount:  5 },
-  'sentinel-health':    { division: 'op_sec',         amount:  5 },
-  'security-scan':      { division: 'op_sec',         amount: 10 },
+  'device-posture':          { division: 'op_sec',         amount: 10 },
+  'breach-check':            { division: 'op_sec',         amount: 10 },
+  'threat-surface':          { division: 'op_sec',         amount:  8 },
+  'cred-audit':              { division: 'op_sec',         amount:  8 },
+  'privacy-scan':            { division: 'op_sec',         amount:  5 },
+  'opsec-digest':            { division: 'op_sec',         amount:  5 },
+  'network-monitor':         { division: 'op_sec',         amount:  8 },
+  'mobile-audit-review':     { division: 'op_sec',         amount:  5 },
+  'sentinel-health':         { division: 'op_sec',         amount:  5 },
+  'security-scan':           { division: 'op_sec',         amount: 10 },
+  'agent-network-monitor':   { division: 'op_sec',         amount:  8 },
   // Production — The Lykeon Forge
   'image-generate':     { division: 'production',     amount: 15 },
   'sprite-generate':    { division: 'production',     amount: 20 },
@@ -334,6 +339,14 @@ const SKILL_XP = {
   'sfx-generate':       { division: 'production',     amount: 12 },
   'vfx-compose':        { division: 'production',     amount: 10 },
   'level-design':       { division: 'production',     amount: 15 },
+  'model-trainer':      { division: 'production',     amount: 20 },
+  'adapter-manager':    { division: 'production',     amount: 15 },
+  'mechanic-prototype': { division: 'gamedev',        amount: 15 },
+  'balance-audit':      { division: 'gamedev',        amount: 12 },
+  'tech-spec':          { division: 'gamedev',        amount: 15 },
+  'playtest-report':    { division: 'gamedev',        amount: 12 },
+  'asset-integration':  { division: 'gamedev',        amount: 10 },
+  'gamedev-digest':     { division: 'gamedev',        amount: 10 },
 };
 
 const PYTHON_EXE = 'C:/Users/Tyler/AppData/Local/Microsoft/WindowsApps/PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0/python.exe';
@@ -347,11 +360,15 @@ const SKILL_TASK_MAP = {
   'virtual-trader':   { divState: 'trading',        division: 'trading',        task: 'virtual-trader'   },
   'trading-report':   { divState: 'trading',        division: 'trading',        task: 'trading-report'   },
   'market-scan':      { divState: 'trading',        division: 'trading',        task: 'market-scan'      },
-  'backtester':       { divState: 'trading',        division: 'trading',        task: 'backtester'       },
-  'health-logger':    { divState: 'personal',       division: 'personal',       task: 'health-logger'    },
-  'perf-correlation': { divState: 'personal',       division: 'personal',       task: 'perf-correlation' },
-  'burnout-monitor':  { divState: 'personal',       division: 'personal',       task: 'burnout-monitor'  },
-  'personal-digest':  { divState: 'personal',       division: 'personal',       task: 'personal-digest'  },
+  'backtester':         { divState: 'trading',    division: 'trading',    task: 'backtester'        },
+  'strategy-builder':   { divState: 'trading',    division: 'trading',    task: 'strategy-builder'  },
+  'strategy-tester':    { divState: 'trading',    division: 'trading',    task: 'strategy-tester'   },
+  'strategy-search':    { divState: 'trading',    division: 'trading',    task: 'strategy-search'   },
+  'health-logger':          { divState: 'personal',       division: 'personal',       task: 'health-logger'          },
+  'perf-correlation':       { divState: 'personal',       division: 'personal',       task: 'perf-correlation'       },
+  'burnout-monitor':        { divState: 'personal',       division: 'personal',       task: 'burnout-monitor'        },
+  'personal-digest':        { divState: 'personal',       division: 'personal',       task: 'personal-digest'        },
+  'weekly-retrospective':   { divState: 'personal',       division: 'personal',       task: 'weekly-retrospective'   },
   'repo-monitor':     { divState: 'dev_automation', division: 'dev-automation', task: 'repo-monitor'     },
   'debug-agent':      { divState: 'dev_automation', division: 'dev-automation', task: 'debug-agent'      },
   'dev-pipeline':     { divState: 'dev_automation', division: 'dev',            task: 'pipeline'         },
@@ -360,15 +377,16 @@ const SKILL_TASK_MAP = {
   'artifact-manager': { divState: 'dev_automation', division: 'dev-automation', task: 'artifact-manager' },
   'dev-digest':       { divState: 'dev_automation', division: 'dev-automation', task: 'dev-digest'       },
   // OP-Sec Division
-  'mobile-audit-review': { divState: 'op_sec', division: 'op-sec', task: 'mobile-audit-review' },
-  'device-posture':   { divState: 'op_sec', division: 'op-sec', task: 'device-posture'  },
-  'breach-check':     { divState: 'op_sec', division: 'op-sec', task: 'breach-check'    },
-  'threat-surface':   { divState: 'op_sec', division: 'op-sec', task: 'threat-surface'  },
-  'cred-audit':       { divState: 'op_sec', division: 'op-sec', task: 'cred-audit'      },
-  'privacy-scan':     { divState: 'op_sec', division: 'op-sec', task: 'privacy-scan'    },
-  'security-scan':    { divState: 'op_sec', division: 'op-sec', task: 'security-scan'   },
-  'opsec-digest':     { divState: 'op_sec', division: 'op-sec', task: 'opsec-digest'    },
-  'network-monitor':  { divState: 'op_sec', division: 'op-sec', task: 'network-monitor' },
+  'mobile-audit-review':   { divState: 'op_sec', division: 'op-sec', task: 'mobile-audit-review'   },
+  'device-posture':        { divState: 'op_sec', division: 'op-sec', task: 'device-posture'        },
+  'breach-check':          { divState: 'op_sec', division: 'op-sec', task: 'breach-check'          },
+  'threat-surface':        { divState: 'op_sec', division: 'op-sec', task: 'threat-surface'        },
+  'cred-audit':            { divState: 'op_sec', division: 'op-sec', task: 'cred-audit'            },
+  'privacy-scan':          { divState: 'op_sec', division: 'op-sec', task: 'privacy-scan'          },
+  'security-scan':         { divState: 'op_sec', division: 'op-sec', task: 'security-scan'         },
+  'opsec-digest':          { divState: 'op_sec', division: 'op-sec', task: 'opsec-digest'          },
+  'network-monitor':       { divState: 'op_sec', division: 'op-sec', task: 'network-monitor'       },
+  'agent-network-monitor': { divState: 'op_sec', division: 'op-sec', task: 'agent-network-monitor' },
   'application-tracker': { divState: 'opportunity', division: 'opportunity', task: 'application-tracker' },
   // Production Division — The Lykeon Forge
   'image-generate':     { divState: 'production', division: 'production', task: 'image-generate'     },
@@ -393,6 +411,14 @@ const SKILL_TASK_MAP = {
   'sfx-generate':       { divState: 'production', division: 'production', task: 'sfx-generate'       },
   'vfx-compose':        { divState: 'production', division: 'production', task: 'vfx-compose'        },
   'level-design':       { divState: 'production', division: 'production', task: 'level-design'       },
+  'model-trainer':      { divState: 'production', division: 'production', task: 'model-trainer'      },
+  'adapter-manager':    { divState: 'production', division: 'production', task: 'adapter-manager'    },
+  'mechanic-prototype': { divState: 'gamedev',    division: 'gamedev',    task: 'mechanic-prototype' },
+  'balance-audit':      { divState: 'gamedev',    division: 'gamedev',    task: 'balance-audit'      },
+  'tech-spec':          { divState: 'gamedev',    division: 'gamedev',    task: 'tech-spec'          },
+  'playtest-report':    { divState: 'gamedev',    division: 'gamedev',    task: 'playtest-report'    },
+  'asset-integration':  { divState: 'gamedev',    division: 'gamedev',    task: 'asset-integration'  },
+  'gamedev-digest':     { divState: 'gamedev',    division: 'gamedev',    task: 'gamedev-digest'     },
 };
 
 function rankForLevel(level) {
@@ -2936,6 +2962,9 @@ function handleMobileBattlesToday(res) {
       'market-scan':         { label: 'Read the Runes',       soldier: 'The Signal Keeper',     icon: '◈', anim: 'scan'    },
       'virtual-trader':      { label: 'Shadow Run',           soldier: 'The Shadow Runner',     icon: '⟁', anim: 'slash'   },
       'backtester':          { label: 'Pattern Lock',         soldier: 'The Pattern Keeper',    icon: '◫', anim: 'circuit' },
+      'strategy-builder':    { label: 'Forge the Strategy',   soldier: 'The Strategy Forger',   icon: '⚒', anim: 'forge'   },
+      'strategy-tester':     { label: 'Test the Strategy',    soldier: 'The Strategy Analyst',  icon: '🔬', anim: 'scan'    },
+      'strategy-search':     { label: 'Scout the Strategies', soldier: 'The Strategy Scout',    icon: '🔭', anim: 'scan'    },
       // Iron Codex (dev_automation)
       'repo-monitor':        { label: 'Watch the Forge',      soldier: 'The Warden',            icon: '⬡', anim: 'circuit' },
       'refactor-scan':       { label: 'Reforge',              soldier: 'The Reforger',          icon: '⟁', anim: 'circuit' },
@@ -2954,12 +2983,14 @@ function handleMobileBattlesToday(res) {
       'opsec-digest':        { label: 'Null Report',          soldier: 'The Brief',             icon: '◉', anim: 'shield'  },
       'mobile-audit-review': { label: 'Audit the Mobile Veil',soldier: 'The Mobile Warden',     icon: '◈', anim: 'shield'  },
       'sentinel-health':     { label: 'Sentinel Watch',       soldier: 'The Sentinel',          icon: '⬢', anim: 'shield'  },
-      'security-scan':       { label: 'Audit the Veil',       soldier: 'The Code Sentinel',     icon: '⬡', anim: 'shield'  },
+      'security-scan':          { label: 'Audit the Veil',          soldier: 'The Code Sentinel',     icon: '⬡', anim: 'shield'  },
+      'agent-network-monitor':  { label: 'Watch the Agent Network', soldier: 'The Network Warden',    icon: '🌐', anim: 'scan'    },
       // Ember Covenant (personal)
-      'health-logger':       { label: 'Tend the Flame',       soldier: 'The Tender',            icon: '◉', anim: 'sparkle' },
-      'perf-correlation':    { label: 'Inner Sight',          soldier: 'The Lens',              icon: '◈', anim: 'sparkle' },
-      'burnout-monitor':     { label: 'Read the Ashes',       soldier: 'The Watchfire',         icon: '⟁', anim: 'sparkle' },
-      'personal-digest':     { label: "The Covenant's Voice", soldier: 'The Voice',             icon: '◫', anim: 'sparkle' },
+      'health-logger':          { label: 'Tend the Flame',          soldier: 'The Tender',            icon: '◉', anim: 'sparkle' },
+      'perf-correlation':       { label: 'Inner Sight',             soldier: 'The Lens',              icon: '◈', anim: 'sparkle' },
+      'burnout-monitor':        { label: 'Read the Ashes',          soldier: 'The Watchfire',         icon: '⟁', anim: 'sparkle' },
+      'personal-digest':        { label: "The Covenant's Voice",    soldier: 'The Voice',             icon: '◫', anim: 'sparkle' },
+      'weekly-retrospective':   { label: 'The Week in Review',      soldier: 'The Retrospective',     icon: '📅', anim: 'scroll'  },
       // Lykeon Forge (production)
       'image-generate':      { label: 'Forge the Image',      soldier: 'The Image Smith',       icon: '⬢', anim: 'sparkle' },
       'sprite-generate':     { label: 'Forge the Sprite',     soldier: 'The Sprite Smith',      icon: '⬡', anim: 'sparkle' },
@@ -2983,6 +3014,14 @@ function handleMobileBattlesToday(res) {
       'sfx-generate':        { label: 'Forge the Sound',      soldier: 'The Sound Forger',      icon: '🔊', anim: 'wave'    },
       'vfx-compose':         { label: 'Weave the Effect',     soldier: 'The Particle Weaver',   icon: '✨', anim: 'sparkle' },
       'level-design':        { label: 'Draft the World',      soldier: 'The World Architect',   icon: '🗺',  anim: 'compose' },
+      'model-trainer':       { label: 'Train the Mind',        soldier: 'QVAC',                  icon: '🧠', anim: 'circuit' },
+      'adapter-manager':     { label: 'Manage the Adapters',   soldier: 'QVAC',                  icon: '🔧', anim: 'forge'   },
+      'mechanic-prototype':  { label: 'Prototype the Mechanic', soldier: 'The Prototypist',      icon: '⚙',  anim: 'circuit' },
+      'balance-audit':       { label: 'Audit the Balance',      soldier: 'The Balancer',         icon: '⚖',  anim: 'balance' },
+      'tech-spec':           { label: 'Write the Spec',         soldier: 'The Tech Scribe',      icon: '📋', anim: 'circuit' },
+      'playtest-report':     { label: 'Run the Playtest',       soldier: 'The Analyst',          icon: '🎮', anim: 'scan'    },
+      'asset-integration':   { label: 'Integrate the Asset',    soldier: 'The Integrator',       icon: '🔗', anim: 'deliver' },
+      'gamedev-digest':      { label: 'The Studio Report',      soldier: 'ARDENT',               icon: '🎯', anim: 'forge'   },
       // Sentinel (non-division utility)
       'provider-health':     { label: 'Provider Watch',       soldier: 'The Provider Scout',    icon: '◈', anim: 'scan'    },
       'queue-monitor':       { label: 'Queue Watch',          soldier: 'The Queue Warden',      icon: '◈', anim: 'scan'    },
@@ -4334,7 +4373,7 @@ function runSkillViaPython(skillName, logDiv, extraArgs = []) {
         if (['video-generate'].includes(skillName) && result && result.metrics) {
           const videoPaths = result.metrics.video_paths || result.metrics.copied_paths || [];
           if (videoPaths.length > 0) {
-            broadcastToClients({ type: 'video_generated', skill: skillName, videos: videoPaths, commander: result.metrics.commander || 'generic' });
+            broadcastWS('video_generated', { skill: skillName, videos: videoPaths, commander: result.metrics.commander || 'generic' });
           }
         }
         broadcastWS('task_completed', { skill: skillName, division: mapping.divState, ok: true, images: generatedImages });
@@ -4498,6 +4537,11 @@ async function processControlQueue() {
       'funding-finder':   'OPPS',
       'trading-report':   'TRADING',
       'market-scan':      'TRADING',
+      'virtual-trader':   'TRADING',
+      'backtester':       'TRADING',
+      'strategy-builder': 'TRADING',
+      'strategy-tester':  'TRADING',
+      'strategy-search':  'TRADING',
       'health-logger':    'PERSONAL',
       'perf-correlation': 'PERSONAL',
       'burnout-monitor':  'PERSONAL',
@@ -4713,6 +4757,11 @@ cron.schedule('0 9 * * *', async () => {
 // Personal digest daily at 9:30 PM
 cron.schedule('30 21 * * *', async () => {
   await runSkillViaPython('personal-digest', 'PERSONAL');
+}, { timezone: TZ });
+
+// Weekly retrospective — Sundays at 8:00 PM
+cron.schedule('0 20 * * 0', async () => {
+  await runSkillViaPython('weekly-retrospective', 'PERSONAL');
 }, { timezone: TZ });
 
 // ── Dev Automation Division ────────────────────────────────────────────────
