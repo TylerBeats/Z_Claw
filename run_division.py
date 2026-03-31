@@ -359,6 +359,34 @@ def run(division: str, task: str, args: list) -> dict:
             "data-populate":      lambda: gamedev_orch.run_data_populate(
                                       game_context=args[0] if args else ""),
             "quest-writer":       lambda: gamedev_orch.run_quest_writer(),
+            "project-init":       lambda: gamedev_orch.run_project_init(
+                                      target=args[0] if args else "godot",
+                                      project_name=args[1] if len(args) > 1 else "",
+                                      window_width=int(args[2]) if len(args) > 2 else 1280,
+                                      window_height=int(args[3]) if len(args) > 3 else 720),
+            "character-designer": lambda: gamedev_orch.run_character_designer(
+                                      name=args[0] if args else "",
+                                      role=args[1] if len(args) > 1 else "hero",
+                                      class_type=args[2] if len(args) > 2 else "warrior",
+                                      prompt=args[3] if len(args) > 3 else ""),
+            "enemy-designer":     lambda: gamedev_orch.run_enemy_designer(
+                                      name=args[0] if args else "",
+                                      enemy_type=args[1] if len(args) > 1 else "minion",
+                                      difficulty=args[2] if len(args) > 2 else "medium",
+                                      prompt=args[3] if len(args) > 3 else ""),
+            "item-forge":         lambda: gamedev_orch.run_item_forge(
+                                      item_name=args[0] if args else "",
+                                      item_type=args[1] if len(args) > 1 else "weapon",
+                                      rarity=args[2] if len(args) > 2 else "common",
+                                      prompt=args[3] if len(args) > 3 else ""),
+            "story-writer":       lambda: gamedev_orch.run_story_writer(
+                                      section=args[0] if args else "overview",
+                                      act_number=int(args[1]) if len(args) > 1 else 1,
+                                      prompt=args[2] if len(args) > 2 else ""),
+            "skill-tree-builder": lambda: gamedev_orch.run_skill_tree_builder(
+                                      class_type=args[0] if args else "warrior",
+                                      tree_name=args[1] if len(args) > 1 else "",
+                                      prompt=args[2] if len(args) > 2 else ""),
         }
         runner = task_map.get(task)
         if not runner:

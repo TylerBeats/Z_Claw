@@ -23,6 +23,12 @@ from runtime.skills import (
     code_review,
     data_populate,
     quest_writer,
+    project_init,
+    character_designer,
+    enemy_designer,
+    item_forge,
+    story_writer,
+    skill_tree_builder,
 )
 
 log = logging.getLogger(__name__)
@@ -162,4 +168,64 @@ def run_quest_writer(**kwargs) -> dict:
     if result.get("status") in ("success", "partial"):
         grant_skill_xp("quest-writer")
     log.info("ARDENT: quest-writer → %s", result.get("status"))
+    return pkt
+
+
+def run_project_init(target: str = "godot", project_name: str = "", window_width: int = 1280, window_height: int = 720) -> dict:
+    result = project_init.run(target=target, project_name=project_name, window_width=window_width, window_height=window_height)
+    pkt    = _build_packet("project-init", result)
+    packet.write(pkt)
+    if result.get("status") in ("success", "partial"):
+        grant_skill_xp("project-init")
+    log.info("ARDENT: project-init %s/%s → %s", target, project_name, result.get("status"))
+    return pkt
+
+
+def run_character_designer(name: str = "", role: str = "hero", class_type: str = "warrior", prompt: str = "") -> dict:
+    result = character_designer.run(name=name, role=role, class_type=class_type, prompt=prompt)
+    pkt    = _build_packet("character-designer", result)
+    packet.write(pkt)
+    if result.get("status") in ("success", "partial"):
+        grant_skill_xp("character-designer")
+    log.info("ARDENT: character-designer %s/%s → %s", role, class_type, result.get("status"))
+    return pkt
+
+
+def run_enemy_designer(name: str = "", enemy_type: str = "minion", difficulty: str = "medium", prompt: str = "") -> dict:
+    result = enemy_designer.run(name=name, enemy_type=enemy_type, difficulty=difficulty, prompt=prompt)
+    pkt    = _build_packet("enemy-designer", result)
+    packet.write(pkt)
+    if result.get("status") in ("success", "partial"):
+        grant_skill_xp("enemy-designer")
+    log.info("ARDENT: enemy-designer %s/%s → %s", enemy_type, difficulty, result.get("status"))
+    return pkt
+
+
+def run_item_forge(item_name: str = "", item_type: str = "weapon", rarity: str = "common", prompt: str = "") -> dict:
+    result = item_forge.run(item_name=item_name, item_type=item_type, rarity=rarity, prompt=prompt)
+    pkt    = _build_packet("item-forge", result)
+    packet.write(pkt)
+    if result.get("status") in ("success", "partial"):
+        grant_skill_xp("item-forge")
+    log.info("ARDENT: item-forge %s/%s → %s", item_type, rarity, result.get("status"))
+    return pkt
+
+
+def run_story_writer(section: str = "overview", act_number: int = 1, prompt: str = "") -> dict:
+    result = story_writer.run(section=section, act_number=act_number, prompt=prompt)
+    pkt    = _build_packet("story-writer", result)
+    packet.write(pkt)
+    if result.get("status") in ("success", "partial"):
+        grant_skill_xp("story-writer")
+    log.info("ARDENT: story-writer %s → %s", section, result.get("status"))
+    return pkt
+
+
+def run_skill_tree_builder(class_type: str = "warrior", tree_name: str = "", prompt: str = "") -> dict:
+    result = skill_tree_builder.run(class_type=class_type, tree_name=tree_name, prompt=prompt)
+    pkt    = _build_packet("skill-tree-builder", result)
+    packet.write(pkt)
+    if result.get("status") in ("success", "partial"):
+        grant_skill_xp("skill-tree-builder")
+    log.info("ARDENT: skill-tree-builder %s/%s → %s", class_type, tree_name, result.get("status"))
     return pkt
