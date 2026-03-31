@@ -11,6 +11,7 @@ from pathlib import Path
 
 from runtime.config import SKILL_MODELS, LOGS_DIR, ROOT
 from runtime.ollama_client import chat, is_available
+from runtime.tools.data_provider import fetch_ohlcv
 
 log   = logging.getLogger(__name__)
 MODEL = SKILL_MODELS["market-scan"]
@@ -30,7 +31,7 @@ def _load_assets() -> list[dict]:
 
 def _fetch_markets(instruments: list[dict]) -> tuple[list, list[str]]:
     """
-    Fetch daily OHLCV for all instruments via yfinance.
+    Fetch daily OHLCV for all instruments via the data provider.
     Returns (market_list, errors).
     Each item: {"name", "ticker", "asset_class", "current_price",
                 "price_change_pct_1d", "total_volume",
@@ -38,41 +39,33 @@ def _fetch_markets(instruments: list[dict]) -> tuple[list, list[str]]:
     """
     results = []
     errors  = []
-    try:
-        import yfinance as yf
-        for inst in instruments:
-            name   = inst["name"]
-            ticker = inst["ticker"]
-            try:
-                df = yf.download(ticker, period="5d", interval="1d",
-                                 auto_adjust=False, progress=False)
-                if df.empty or len(df) < 2:
-                    errors.append(f"{name}: no data returned")
-                    continue
-                if hasattr(df.columns, "levels"):
-                    df.columns = df.columns.get_level_values(0)
-                closes  = df["Close"].tolist()
-                volumes = df["Volume"].tolist()
-                current = float(closes[-1])
-                prev    = float(closes[-2])
-                chg_pct = ((current - prev) / prev * 100) if prev else 0.0
-                results.append({
-                    "name":               name,
-                    "ticker":             ticker,
-                    "futures":            inst.get("futures", ""),
-                    "asset_class":        inst.get("asset_class", ""),
-                    "current_price":      round(current, 2),
-                    "price_change_pct_1d": round(chg_pct, 2),
-                    "total_volume":       float(volumes[-1]) if volumes else 0.0,
-                    "notable_move_pct":   inst.get("notable_move_pct", 1.5),
-                    "strong_move_pct":    inst.get("strong_move_pct", 3.0),
-                })
-            except Exception as e:
-                errors.append(f"{name} ({ticker}): {e}")
-    except ImportError:
-        errors.append("yfinance not installed — run: pip install yfinance pandas")
-    except Exception as e:
-        errors.append(f"market fetch error: {e}")
+    for inst in instruments:
+        name   = inst["name"]
+        ticker = inst["ticker"]
+        try:
+            # Standard market scan always uses daily bars — no intraday scanning here.
+            ohlcv = fetch_ohlcv(ticker, "1d")
+            if ohlcv is None or len(ohlcv.get("close", [])) < 2:
+                errors.append(f"{name}: no data returned")
+                continue
+            closes  = ohlcv["close"]
+            volumes = ohlcv["volume"]
+            current = float(closes[-1])
+            prev    = float(closes[-2])
+            chg_pct = ((current - prev) / prev * 100) if prev else 0.0
+            results.append({
+                "name":               name,
+                "ticker":             ticker,
+                "futures":            inst.get("futures", ""),
+                "asset_class":        inst.get("asset_class", ""),
+                "current_price":      round(current, 2),
+                "price_change_pct_1d": round(chg_pct, 2),
+                "total_volume":       float(volumes[-1]) if volumes else 0.0,
+                "notable_move_pct":   inst.get("notable_move_pct", 1.5),
+                "strong_move_pct":    inst.get("strong_move_pct", 3.0),
+            })
+        except Exception as e:
+            errors.append(f"{name} ({ticker}): {e}")
     return results, errors
 
 

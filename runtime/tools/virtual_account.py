@@ -12,6 +12,8 @@ from datetime import datetime, date, timezone
 from pathlib import Path
 from typing import Optional
 
+from runtime.tools.data_provider import fetch_ohlcv
+
 log = logging.getLogger(__name__)
 
 AGENT_NETWORK_STATE = Path("C:/Users/Tyler/agent-network/state")
@@ -32,13 +34,8 @@ def _load_instruments() -> dict[str, str]:
 
 INSTRUMENTS = _load_instruments()
 
-# Timeframe -> (yfinance interval, yfinance period)
-_TF_MAP = {
-    "15m": ("15m", "5d"),    # ~130 intraday 15-min bars
-    "1h":  ("1h",  "30d"),   # ~480 1h bars
-    "4h":  ("1h",  "30d"),   # fetch 1h, resample → ~120 4h bars
-    "1d":  ("1d",  "3mo"),   # daily fallback
-}
+# Valid timeframes accepted from strategy schemas (1m/5m require shorter indicator periods).
+_VALID_TIMEFRAMES = {"1m", "5m", "15m", "1h", "4h", "1d"}
 
 DEFAULT_BALANCE    = 10_000.0
 RISK_PER_TRADE_PCT = 1.0   # 1% of account per trade
@@ -109,66 +106,6 @@ def save_virtual_account(data: dict) -> None:
              data.get("account_balance", 0), len(data.get("open_positions", [])))
 
 
-# ── Price data ─────────────────────────────────────────────────────────────────
-
-def _resample_4h(ohlcv: dict) -> dict:
-    """Aggregate 1h OHLCV dict into 4h candles (every 4 bars)."""
-    dates, opens, highs = ohlcv["date"], ohlcv["open"], ohlcv["high"]
-    lows, closes, volumes = ohlcv["low"], ohlcv["close"], ohlcv["volume"]
-    n = len(dates)
-    r_d, r_o, r_h, r_l, r_c, r_v = [], [], [], [], [], []
-    i = 0
-    while i < n:
-        end = min(i + 4, n)
-        r_d.append(dates[i])
-        r_o.append(opens[i])
-        r_h.append(max(highs[i:end]))
-        r_l.append(min(lows[i:end]))
-        r_c.append(closes[end - 1])
-        r_v.append(sum(volumes[i:end]))
-        i += 4
-    return {"ticker": ohlcv["ticker"], "date": r_d, "open": r_o,
-            "high": r_h, "low": r_l, "close": r_c, "volume": r_v}
-
-
-def fetch_ohlcv(ticker: str, timeframe: str = "1d") -> Optional[dict]:
-    """
-    Fetch OHLCV via yfinance for the given timeframe (15m, 1h, 4h, 1d).
-    4h is fetched as 1h then resampled. Returns dict with lists:
-    date, open, high, low, close, volume.
-    """
-    yf_interval, yf_period = _TF_MAP.get(timeframe, ("1d", "3mo"))
-    try:
-        import yfinance as yf
-        df = yf.download(ticker, period=yf_period, interval=yf_interval,
-                         auto_adjust=False, progress=False)
-        if df.empty:
-            log.warning("No data returned for %s", ticker)
-            return None
-        # Flatten in case yfinance returns MultiIndex columns
-        if hasattr(df.columns, "levels"):
-            df.columns = df.columns.get_level_values(0)
-        ohlcv = {
-            "ticker": ticker,
-            "date":   [str(d) for d in df.index],
-            "open":   [float(v) for v in df["Open"].tolist()],
-            "high":   [float(v) for v in df["High"].tolist()],
-            "low":    [float(v) for v in df["Low"].tolist()],
-            "close":  [float(v) for v in df["Close"].tolist()],
-            "volume": [float(v) for v in df["Volume"].tolist()],
-        }
-        if timeframe == "4h":
-            ohlcv = _resample_4h(ohlcv)
-        log.debug("Fetched %d %s bars for %s", len(ohlcv["close"]), timeframe, ticker)
-        return ohlcv
-    except ImportError:
-        log.error("yfinance not installed — run: pip install yfinance pandas")
-        return None
-    except Exception as e:
-        log.error("yfinance fetch failed for %s: %s", ticker, e)
-        return None
-
-
 # ── Indicator calculations (pure Python, no numpy) ────────────────────────────
 
 def _calc_ema(prices: list, period: int) -> list:
@@ -232,9 +169,15 @@ def _last(values: list) -> Optional[float]:
 
 # ── Signal engine ──────────────────────────────────────────────────────────────
 
-def get_strategy_signals(strategy_id: str, ohlcv: dict) -> dict:
+def get_strategy_signals(strategy_id: str, ohlcv: dict, timeframe: str = "1d") -> dict:
     """
     Generate entry/exit signals based on strategy_id and OHLCV data.
+
+    Args:
+        strategy_id: Name/id of the active strategy (used to select indicator logic).
+        ohlcv:       Dict with lists: close, high, low (from data_provider.fetch_ohlcv).
+        timeframe:   Candle timeframe — affects indicator periods (1m/5m use shorter periods).
+
     Returns:
       {"entry": bool, "exit": bool, "side": "buy"|"sell",
        "reason": str, "current_price": float}
@@ -251,20 +194,32 @@ def get_strategy_signals(strategy_id: str, ohlcv: dict) -> dict:
         "current_price": current_price,
     }
 
-    if not close or len(close) < 40:
-        result["reason"] = "Insufficient price history (<40 bars)"
+    # Intraday: shorter periods to reduce lag on 1m/5m noise.
+    # yfinance 1m data has a hard 7-day rolling limit (~2730 bars max),
+    # so we only require 20+ bars rather than the 40 needed for daily/4h signals.
+    is_intraday = timeframe in ("1m", "5m")
+    min_bars    = 20 if is_intraday else 40
+
+    if not close or len(close) < min_bars:
+        result["reason"] = f"Insufficient price history (<{min_bars} bars)"
         return result
 
-    atr          = _calc_atr(high, low, close)
+    # Use ATR period 7 for 1m/5m scalp frames; 14 for all longer timeframes.
+    atr_period    = 7 if is_intraday else 14
+    atr           = _calc_atr(high, low, close, period=atr_period)
     atr_expanding = _atr_expanding(atr)
 
     # ── EMA + Price Above + ATR Expanding (Long) ──────────────────────────────
     if "ema" in sid and ("above" in sid or "pricabove" in sid or "priceabove" in sid):
-        period = 38
-        for p in [200, 50, 38, 21, 20]:
-            if str(p) in sid:
-                period = p
-                break
+        # Intraday: shorter periods to reduce lag on 1m/5m noise
+        if is_intraday:
+            period = 9
+        else:
+            period = 38
+            for p in [200, 50, 38, 21, 20]:
+                if str(p) in sid:
+                    period = p
+                    break
         ema     = _calc_ema(close, period)
         ema_val = _last(ema)
         if ema_val is None:
@@ -312,21 +267,28 @@ def get_strategy_signals(strategy_id: str, ohlcv: dict) -> dict:
 
     # ── Generic EMA crossover fallback ────────────────────────────────────────
     else:
-        ema20 = _calc_ema(close, 20)
-        ema50 = _calc_ema(close, 50)
-        e20   = _last(ema20)
-        e50   = _last(ema50)
-        if e20 and e50:
-            if e20 > e50 and atr_expanding:
+        # Intraday: shorter periods to reduce lag on 1m/5m noise
+        if is_intraday:
+            fast_period, slow_period = 9, 21
+        else:
+            fast_period, slow_period = 20, 50
+        ema_fast = _calc_ema(close, fast_period)
+        ema_slow = _calc_ema(close, slow_period)
+        e_fast   = _last(ema_fast)
+        e_slow   = _last(ema_slow)
+        if e_fast and e_slow:
+            if e_fast > e_slow and atr_expanding:
                 result["entry"] = True
                 result["side"]  = "buy"
                 result["reason"] = (
-                    f"EMA20 ${e20:.2f} above EMA50 ${e50:.2f} with expanding ATR"
+                    f"EMA{fast_period} ${e_fast:.2f} above EMA{slow_period} "
+                    f"${e_slow:.2f} with expanding ATR"
                 )
-            elif e20 < e50:
+            elif e_fast < e_slow:
                 result["exit"]   = True
                 result["reason"] = (
-                    f"EMA20 ${e20:.2f} crossed below EMA50 ${e50:.2f}"
+                    f"EMA{fast_period} ${e_fast:.2f} crossed below "
+                    f"EMA{slow_period} ${e_slow:.2f}"
                 )
 
     return result
@@ -346,15 +308,9 @@ def _stop_hit(position: dict, current_price: float) -> bool:
 
 def _fetch_vix() -> float:
     """Fetch current VIX level. Returns 20.0 (neutral) on failure."""
-    try:
-        import yfinance as yf
-        df = yf.download("^VIX", period="2d", interval="1d", auto_adjust=False, progress=False)
-        if not df.empty:
-            if hasattr(df.columns, "levels"):
-                df.columns = df.columns.get_level_values(0)
-            return float(df["Close"].iloc[-1])
-    except Exception:
-        pass
+    vix_data = fetch_ohlcv("^VIX", "1d")
+    if vix_data and vix_data.get("close"):
+        return float(vix_data["close"][-1])
     return 20.0
 
 
@@ -380,13 +336,13 @@ def run_virtual_account(cycle_state: Optional[dict] = None) -> dict:
             or strat.get("strategy_id")
             or strategy_id
         )
-        # Read timeframe from the strategy schema (15m, 1h, 4h, 1d)
+        # Read timeframe from the strategy schema (1m, 5m, 15m, 1h, 4h, 1d)
         schema_tf = (
             strat.get("strategy_schema", {})
                  .get("metadata", {})
                  .get("timeframe", "1d")
         )
-        if schema_tf in _TF_MAP:
+        if schema_tf in _VALID_TIMEFRAMES:
             timeframe = schema_tf
     log.info("Virtual trader running on %s timeframe (strategy: %s)", timeframe, strategy_id)
 
@@ -476,7 +432,7 @@ def run_virtual_account(cycle_state: Optional[dict] = None) -> dict:
                 errors.append(f"No OHLCV data for {display_name} ({ticker})")
                 continue
 
-            signals       = get_strategy_signals(strategy_id, ohlcv)
+            signals       = get_strategy_signals(strategy_id, ohlcv, timeframe)
             current_price = signals["current_price"]
 
             open_pos = next(

@@ -39,7 +39,7 @@ Return ONLY valid JSON:
   "strategy_type": "trend_following | mean_reversion | breakout | momentum | carry | hybrid",
   "description": "2-3 sentence description of the approach",
   "metadata": {
-    "timeframe": "15m | 1h | 4h | 1d",
+    "timeframe": "1m | 5m | 15m | 1h | 4h | 1d",
     "instruments": ["SPX500", "Gold", "NAS100"],
     "risk_per_trade_pct": 1.0,
     "max_open_positions": 2,
@@ -76,7 +76,7 @@ def run(
     Args:
         strategy_type: One of the STRATEGY_TYPES keys
         instruments:   Comma-separated instrument list
-        timeframe:     Candle timeframe (15m, 1h, 4h, 1d)
+        timeframe:     Candle timeframe (1m, 5m, 15m, 1h, 4h, 1d)
         context:       Optional extra context (current market regime, etc.)
     """
     if strategy_type not in STRATEGY_TYPES:
@@ -103,10 +103,19 @@ def run(
             "escalate": False,
         }
 
+    intraday_note = (
+        "IMPORTANT: This is a short-term intraday strategy. "
+        "Use shorter EMA periods (e.g. fast=9, slow=21) to reduce lag on noisy 1m/5m bars. "
+        "Use tighter stop loss (0.1–0.3%) to match the smaller intraday price range. "
+        "Do NOT use EMA periods above 50 or stop_loss_pct above 0.003 for this timeframe.\n"
+        if timeframe in ("1m", "5m") else ""
+    )
+
     user_prompt = (
         f"Strategy type: {strategy_type} — {STRATEGY_TYPES.get(strategy_type, '')}\n"
         f"Target instruments: {', '.join(instrument_list)}\n"
         f"Timeframe: {timeframe}\n"
+        + intraday_note
         + (f"Additional context: {context}\n" if context else "")
     )
 
