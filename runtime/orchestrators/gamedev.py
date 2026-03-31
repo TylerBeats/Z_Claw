@@ -19,6 +19,10 @@ from runtime.skills import (
     playtest_report,
     asset_integration,
     gamedev_digest,
+    auto_playtest,
+    code_review,
+    data_populate,
+    quest_writer,
 )
 
 log = logging.getLogger(__name__)
@@ -118,4 +122,44 @@ def run_gamedev_digest() -> dict:
     if result.get("status") in ("success", "partial"):
         grant_skill_xp("gamedev-digest")
     log.info("ARDENT: gamedev-digest → %s", result.get("status"))
+    return pkt
+
+
+def run_auto_playtest(**kwargs) -> dict:
+    result = auto_playtest.run(**kwargs)
+    pkt    = _build_packet("auto-playtest", result)
+    packet.write(pkt)
+    if result.get("status") in ("success", "partial"):
+        grant_skill_xp("auto-playtest")
+    log.info("ARDENT: auto-playtest → %s", result.get("status"))
+    return pkt
+
+
+def run_code_review(code: str = "", filename: str = "", engine: str = "godot") -> dict:
+    result = code_review.run(code=code, filename=filename, engine=engine)
+    pkt    = _build_packet("code-review", result)
+    packet.write(pkt)
+    if result.get("status") in ("success", "partial"):
+        grant_skill_xp("code-review")
+    log.info("ARDENT: code-review %s → %s", filename, result.get("status"))
+    return pkt
+
+
+def run_data_populate(game_context: str = "") -> dict:
+    result = data_populate.run(game_context=game_context)
+    pkt    = _build_packet("data-populate", result)
+    packet.write(pkt)
+    if result.get("status") in ("success", "partial"):
+        grant_skill_xp("data-populate")
+    log.info("ARDENT: data-populate → %s", result.get("status"))
+    return pkt
+
+
+def run_quest_writer(**kwargs) -> dict:
+    result = quest_writer.run(**kwargs)
+    pkt    = _build_packet("quest-writer", result)
+    packet.write(pkt)
+    if result.get("status") in ("success", "partial"):
+        grant_skill_xp("quest-writer")
+    log.info("ARDENT: quest-writer → %s", result.get("status"))
     return pkt

@@ -300,6 +300,8 @@ def run(division: str, task: str, args: list) -> dict:
                                       action=args[0] if args else "status",
                                       adapter_name=args[1] if len(args) > 1 else "",
                                       task_context=args[2] if len(args) > 2 else ""),
+            "qa-pipeline":        lambda: prod_orch.run_qa_pipeline(
+                                      commander=args[0] if args else "generic"),
         }
         runner = task_map.get(task)
         if not runner:
@@ -339,6 +341,14 @@ def run(division: str, task: str, args: list) -> dict:
                                       asset_path=args[1] if len(args) > 1 else "",
                                       engine=args[2] if len(args) > 2 else "godot"),
             "gamedev-digest":     lambda: gamedev_orch.run_gamedev_digest(),
+            "auto-playtest":      lambda: gamedev_orch.run_auto_playtest(),
+            "code-review":        lambda: gamedev_orch.run_code_review(
+                                      code=args[0] if args else "",
+                                      filename=args[1] if len(args) > 1 else "",
+                                      engine=args[2] if len(args) > 2 else "godot"),
+            "data-populate":      lambda: gamedev_orch.run_data_populate(
+                                      game_context=args[0] if args else ""),
+            "quest-writer":       lambda: gamedev_orch.run_quest_writer(),
         }
         runner = task_map.get(task)
         if not runner:

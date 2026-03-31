@@ -34,6 +34,7 @@ from runtime.skills import (
     level_design,
     model_trainer,
     adapter_manager,
+    qa_pipeline,
 )
 
 log = logging.getLogger(__name__)
@@ -299,6 +300,16 @@ def run_adapter_manager(action: str = "status", adapter_name: str = "", task_con
     if result.get("status") in ("success", "partial"):
         grant_skill_xp("adapter-manager")
     log.info("LYKE: adapter-manager action=%s → %s", action, result.get("status"))
+    return pkt
+
+
+def run_qa_pipeline(asset_paths: list = None, commander: str = "generic") -> dict:
+    result = qa_pipeline.run(asset_paths=asset_paths, commander=commander)
+    pkt    = _build_packet("qa-pipeline", result)
+    packet.write(pkt)
+    if result.get("status") in ("success", "partial"):
+        grant_skill_xp("qa-pipeline")
+    log.info("LYKE: qa-pipeline → %s", result.get("status"))
     return pkt
 
 
