@@ -1076,7 +1076,7 @@ function handleGetGrants(res) {
 
 // GET /api/packets  — returns all division executive packets organised by division
 function handleGetPackets(res) {
-  const divisions = ['trading', 'opportunity', 'dev-automation', 'personal', 'op-sec', 'production', 'sentinel'];
+  const divisions = ['trading', 'opportunity', 'dev-automation', 'personal', 'op-sec', 'production', 'sentinel', 'gamedev'];
   const result = {};
   for (const div of divisions) {
     const packetDir = path.join(ROOT, 'divisions', div, 'packets');
@@ -2718,10 +2718,11 @@ function handleMobileDivisions(res) {
         application_tracker: readPkt('opportunity', 'application-tracker'),
       },
       personal: {
-        health_logger:    readPkt('personal', 'health-logger'),
-        burnout_monitor:  readPkt('personal', 'burnout-monitor'),
-        perf_correlation: readPkt('personal', 'perf-correlation'),
-        personal_digest:  readPkt('personal', 'personal-digest'),
+        health_logger:        readPkt('personal', 'health-logger'),
+        burnout_monitor:      readPkt('personal', 'burnout-monitor'),
+        perf_correlation:     readPkt('personal', 'perf-correlation'),
+        personal_digest:      readPkt('personal', 'personal-digest'),
+        weekly_retrospective: readPkt('personal', 'weekly-retrospective'),
       },
       dev_automation: {
         repo_monitor:  readPkt('dev-automation', 'repo-monitor'),
@@ -2772,6 +2773,11 @@ function handleMobileDivisions(res) {
         playtest_report:    readPkt('gamedev', 'playtest-report'),
         asset_integration:  readPkt('gamedev', 'asset-integration'),
         gamedev_digest:     readPkt('gamedev', 'gamedev-digest'),
+        auto_playtest:      readPkt('gamedev', 'auto-playtest'),
+        code_review:        readPkt('gamedev', 'code-review'),
+        data_populate:      readPkt('gamedev', 'data-populate'),
+        quest_writer:       readPkt('gamedev', 'quest-writer'),
+        qa_pipeline:        readPkt('production', 'qa-pipeline'),
       },
     });
   } catch(e) {
