@@ -1,6 +1,6 @@
 # J_Claw — Personal AI Orchestration Platform
 
-A modular, locally-hosted AI automation system running on Windows 11. J_Claw orchestrates 7 specialized agent divisions across trading, security, personal health, dev automation, and media production — all routed through a persistent Node.js Mission Control server with desktop and mobile dashboards.
+A modular, locally-hosted AI automation system running on Windows 11. J_Claw orchestrates 8 specialized agent divisions across trading, security, personal health, dev automation, game development, and media production — all routed through a persistent Node.js Mission Control server with desktop and mobile dashboards.
 
 Built for two users: **Tyler** (PC dashboard, port 3000) and **Matthew** (mobile PWA via Tailscale, iPhone 16 Pro Max).
 
@@ -32,6 +32,8 @@ Built for two users: **Tyler** (PC dashboard, port 3000) and **Matthew** (mobile
 │       ├── OllamaProvider                                │
 │       ├── AnthropicProvider                             │
 │       ├── GeminiProvider                                │
+│       ├── GroqProvider                                  │
+│       ├── DeepSeekProvider                              │
 │       └── DeterministicProvider                         │
 └──────────────────────┬──────────────────────────────────┘
                        │ HTTP / SSE / WebSocket
@@ -39,6 +41,11 @@ Built for two users: **Tyler** (PC dashboard, port 3000) and **Matthew** (mobile
 │  Python Skill Runtime                                   │
 │                                                         │
 │  runtime/orchestrators/   Per-division LLM orchestrators│
+│  runtime/tools/           Shared tools + data access    │
+│  ├── data_provider.py     Market data abstraction layer │
+│  │    └── YfinanceProvider (swappable: CSV, Alpaca...)  │
+│  ├── virtual_account.py   Paper trading engine          │
+│  └── trading.py           Cycle state + agent-network   │
 │  divisions/{div}/packets/ Executive Packet outputs      │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -49,17 +56,32 @@ Built for two users: **Tyler** (PC dashboard, port 3000) and **Matthew** (mobile
 
 ---
 
-## The 7 Divisions
+## LLM Routing
 
-| Division | Commander | Order | Cron Schedule |
+| Tier | Model | Hardware | Used for |
 |---|---|---|---|
-| **Trading** | SEREN | Auric Veil | market-scan (2h), virtual-trader (18:00), backtester (18:05), trading-report (18:10) |
-| **Opportunity** | VAEL | Dawnhunt | job-intake (3h), hard-filter (auto inside job-intake), funding-finder (14:00), application-tracker (auto) |
-| **Dev Automation** | KAELEN | Iron Codex | repo-monitor (02:00), refactor-scan (02:30), security-scan (11:00), doc-update (13:00), artifact-manager (03:00), dev-digest (15:00) |
-| **Personal** | LYRIN | Ember Covenant | health-logger (18:00), perf-correlation (20:00), burnout-monitor (21:00), personal-digest (21:30) |
-| **OP-Sec** | ZETH | Nullward | device-posture (08:00), breach-check (14:00), threat-surface (19:00), cred-audit (15:00), privacy-scan (16:00), network-monitor (16:15), opsec-digest (16:30), mobile-audit-review (23:00) |
-| **Production** | LYKE | Lykeon Forge | prompt-craft, image-generate, sprite-generate, video-generate (on-demand / manual), asset-deliver (6h), production-digest (daily) |
-| **Sentinel** | VEIL | Sentinel Watch | provider-health (2h), queue-monitor (continuous) |
+| Tier 0 | Deterministic (pure Python) | CPU | device-posture, breach-check, provider-health, queue-monitor |
+| Tier 1 | Qwen2.5 7B instruct Q4_K_M | RX 9070 XT (ROCm) | Most skill inference |
+| Tier 2 | Qwen2.5 14B instruct Q4_K_M | RX 9070 XT (ROCm) | dev-automation, deep analysis |
+| Tier 2 (code) | Qwen2.5-Coder 14B Q4_K_M | RX 9070 XT (ROCm) | Dev pipeline code gen/review |
+| Tier 3 | Groq 70B / Gemini / Claude | Cloud | Escalation only |
+
+All calls are silently captured by `CaptureProvider` for BitNet fine-tuning.
+
+---
+
+## The 8 Divisions
+
+| Division | Commander | Order | Key Agents |
+|---|---|---|---|
+| **Trading** | SEREN | Auric Veil | market-scan (1h), virtual-trader (18:00), backtester (18:00), trading-report (18:00) |
+| **Opportunity** | VAEL | Dawnhunt | job-intake (3h), hard-filter (auto), funding-finder (14:00), application-tracker (10:00) |
+| **Dev Automation** | KAELEN | Iron Codex | repo-monitor (3h), refactor-scan (weekly Mon), doc-update (weekly Wed), artifact-manager (23:00), dev-digest (15:00) |
+| **Personal** | LYRIN | Ember Covenant | health-logger (18:00), perf-correlation (20:00), burnout-monitor (09:00), weekly-retrospective (Mon 08:00) |
+| **OP-Sec** | ZETH | Nullward | device-posture (08:00), threat-surface (19:00), breach-check (Sun 13:00), cred-audit (Sun 14:00), privacy-scan (Sun 15:00), security-scan (Sun 11:00), network-monitor (03:30), opsec-digest (Sun 16:00) |
+| **Production** | LYKE | Lykeon Forge | art-director (07:00), asset-catalog (12h), asset-deliver (6h), production-digest (daily), + 16 on-demand media skills |
+| **Game Dev** | ARDENT | — | game-design (09:00), gamedev-digest (21:00), game-factory (Sat 04:00), + 26 on-demand design/build/test skills |
+| **Sentinel** | — | Sentinel Watch | provider-health (2h), queue-monitor (2h+30m), agent-network-monitor (4h), sentinel-digest (6h) |
 
 Each skill outputs a standardized **Executive Packet**:
 
@@ -67,7 +89,7 @@ Each skill outputs a standardized **Executive Packet**:
 {
   "division": "trading",
   "skill": "market-scan",
-  "generated_at": "2026-03-28T18:00:00Z",
+  "generated_at": "2026-03-30T18:00:00Z",
   "status": "success|partial|failed",
   "summary": "...",
   "action_items": [{"priority": "high|normal|low", "description": "..."}],
@@ -85,7 +107,7 @@ Each skill outputs a standardized **Executive Packet**:
 
 ### PC Dashboard (`dashboard/index.html`)
 - Pixel-art Catppuccin theme
-- 7 division cards with live packet metrics pulled via `/api/packets`
+- 8 division cards with live packet metrics pulled via `/api/packets`
 - **Opportunity**: JOBS / TIER-A / TIER-B / TIER-C / TIER-D / FUNDING / SOURCES breakdown
 - **Personal**: SLEEP / BURNOUT / LOGS / CORR-PTS / CORR-STATUS from perf-correlation
 - **OP-Sec**: ANML / POST / BRCH / NET / PRIV metrics
@@ -97,7 +119,7 @@ Each skill outputs a standardized **Executive Packet**:
 ### Mobile PWA (`mobile/index.html`)
 - Biometric (WebAuthn) + PIN auth (server-side timing-safe hash)
 - 5 tabs: **Home** (division cards), **Intel** (full packets), **J_Claw** (rank/XP), **Command** (tasks/approvals), **Log** (chronicle)
-- All 7 division cards with live metrics including Sentinel (VEIL)
+- All 8 division cards with live metrics including Sentinel
 - Opportunity card: Tier A/B/C/D counts + application tracker APPS/WAITING
 - OP-Sec card: 5 metrics (ANML, POST, BRCH, NET, PRIV)
 - Red action-item badge on cards with high-priority items
@@ -106,6 +128,23 @@ Each skill outputs a standardized **Executive Packet**:
 - PM2 restart button in Settings
 - Push notifications (VAPID)
 - Real-time SSE for all events
+
+---
+
+## Market Data Layer
+
+All OHLCV data flows through a provider abstraction in `runtime/tools/data_provider.py`:
+
+```python
+from runtime.tools.data_provider import fetch_ohlcv, set_provider
+
+ohlcv = fetch_ohlcv("SPX500", "1h")   # name resolved via assets.json
+set_provider(MyBacktestProvider())     # swap backend at runtime
+```
+
+**Supported timeframes:** 1m, 5m, 15m, 1h, 4h (resampled from 1h), 1d
+
+**Intraday (1m/5m) signal adjustments:** EMA 9/21, ATR period 7, min 20 bars, strategy builder injects tight stop-loss guidance into the LLM prompt.
 
 ---
 
@@ -161,14 +200,27 @@ All media generated entirely on-device via the AMD RX 9070 XT.
 | Video | ComfyUI + AnimateDiff-Evolved | 16-frame WEBP @ 8fps, `mm_sdxl_v10_beta.ckpt` |
 | Music | HuggingFace MusicGen + torch-directml | 8 track types, WAV output |
 | Voice | Coqui XTTS v2 (CPU) | Per-commander voice cloning from reference WAVs |
+| SFX | AudioCraft / local generation | Game sound effects |
 
-Assets follow a **hot/cold TTL lifecycle**: `divisions/production/packets/` tracks total, pending, approved, delivered, hot (recent), and cold (stale) counts. Production skills are manually triggered via `/api/tasks` — they require prompt/spec inputs and are not auto-scheduled.
+Assets follow a **hot/cold TTL lifecycle**: `divisions/production/packets/` tracks total, pending, approved, delivered, hot (recent), and cold (stale) counts.
+
+---
+
+## Game Dev Division
+
+The Game Dev division (commander: ARDENT) handles the full pipeline from design to playable build:
+
+- **Design layer**: game-design, mechanic-prototype, level-design, character-designer, item-forge, enemy-designer, quest-writer, story-writer, skill-tree-builder
+- **Build layer**: code-generate, code-review, code-test, build-pipeline, scene-assemble, iteration-runner, project-init
+- **QA layer**: playtest-report, auto-playtest, visual-qa, balance-audit
+- **Asset coordination**: asset-requester (requests from Production), asset-integration (monitors delivery)
+- **Master pipeline**: `game-factory` (weekly Saturday 04:00) — chains all skills autonomously end-to-end
 
 ---
 
 ## BitNet Fine-Tuning Pipeline
 
-Every LLM call J_Claw makes is silently captured via `CaptureProvider` to `state/training-capture.jsonl`. The goal: replace all cloud API calls with locally fine-tuned domain-specific models.
+Every LLM call J_Claw makes is silently captured via `CaptureProvider` to `state/qvac-captures.jsonl`. The goal: replace all cloud API calls with locally fine-tuned domain-specific models.
 
 **Target**: BitNet b1.58 13B (TQ2_0, ~4.3 GB VRAM), fine-tuned via QVAC Fabric (Vulkan, AMD native). Expected: 130+ tok/s, zero API cost, full privacy.
 
@@ -188,11 +240,12 @@ Phase 5 — Deploy       Router updated: skill → ["bitnet", "ollama:qwen2.5:7b
 |---|---|
 | Mission Control | Node.js 20, PM2 |
 | Skills | Python 3.13 |
-| Local LLM | Ollama (Qwen2.5 7B / Coder 14B, AMD ROCm/Vulkan) |
+| Local LLM | Ollama (Qwen2.5 7B / 14B / Coder 14B, AMD ROCm) |
 | Cloud LLM | Groq 70B, Gemini, Anthropic Claude (escalation) |
 | Image/Video | ComfyUI + AnimateDiff-Evolved |
 | Music | HuggingFace Transformers + torch-directml |
 | Voice | Coqui XTTS v2 |
+| Market Data | yfinance (default) via data_provider abstraction |
 | Mobile network | Tailscale |
 | Notifications | VAPID push, Discord (Zenith bot) |
 
@@ -231,11 +284,11 @@ Mobile access via Tailscale: `http://<tailscale-ip>:3000/mobile`.
 
 - **Streak XP multiplier** — +10% per 7-day milestone, stacks to +50%
 - **Stats screen** — longest streak, XP rate/day, prestige stars
-- **jclaw-stats.json API endpoint** — last two direct state file reads (`/api/stats` for rank card data)
+- **Dashboard: Gamedev + Sentinel cards** — wire packet data into PC/mobile dashboards
 - **BitNet Phase 2** — training review + first fine-tune run (Trading domain)
 - **WebAuthn Face ID** — registration flow for Matthew's iPhone
 - **Agent-network expansion** — live P&L streaming integration
-- **Voice clone status** — Production division UI integration
+- **Market data provider upgrade** — Alpaca or Tradovate for real futures data
 
 ---
 
