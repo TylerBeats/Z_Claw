@@ -98,6 +98,9 @@ state/training-capture.jsonl
 state/training-approved.jsonl
 state/training-exports/
 
+# Twelve Data OHLCV disk cache — runtime data, not source
+divisions/trading/cache/
+
 # Division cold archives — compressed data snapshots, not source
 divisions/*/cold/*.zip
 divisions/*/cold/*.json.zip

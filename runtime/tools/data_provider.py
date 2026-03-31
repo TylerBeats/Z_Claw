@@ -6,6 +6,12 @@ Fallback provider: yfinance (used automatically when key is missing or API fails
 
 All trading skills consume fetch_ohlcv() — the provider can be swapped at
 runtime via set_provider() without touching any skill code.
+
+Cache:
+  OHLCV responses are cached to divisions/trading/cache/{symbol}_{timeframe}.json.
+  TTL is per-timeframe (1m=2min, 5m=5min, 15m=15min, 1h=30min, 4h=2h, 1d=4h).
+  This keeps all three consumers (market_scan, virtual_account, backtester)
+  hitting the API at most once per window regardless of how many cycles run.
 """
 
 import json
@@ -21,9 +27,19 @@ from typing import Optional
 log = logging.getLogger(__name__)
 
 ASSETS_FILE = Path("divisions/trading/assets.json")
+CACHE_DIR   = Path("divisions/trading/cache")
+
+# ── Cache TTL per timeframe (seconds) ────────────────────────────────────────
+_CACHE_TTL: dict[str, int] = {
+    "1m":  2  * 60,       # 2 min  — intraday, refresh frequently
+    "5m":  5  * 60,       # 5 min
+    "15m": 15 * 60,       # 15 min
+    "1h":  30 * 60,       # 30 min — one fresh fetch per half-hour session
+    "4h":  2  * 3600,     # 2 h
+    "1d":  4  * 3600,     # 4 h    — daily bars don't move intraday
+}
 
 # ── TwelveData interval map ───────────────────────────────────────────────────
-# Note: 4h is supported natively by Twelve Data (no resampling needed).
 _TD_INTERVAL_MAP: dict[str, str] = {
     "1m":  "1min",
     "5m":  "5min",
@@ -34,7 +50,6 @@ _TD_INTERVAL_MAP: dict[str, str] = {
 }
 
 # ── yfinance fallback interval map ────────────────────────────────────────────
-# Note: 1m data is limited to a 7-day rolling window by yfinance.
 _YF_TF_MAP: dict[str, tuple[str, str]] = {
     "1m":  ("1m",  "7d"),
     "5m":  ("5m",  "60d"),
@@ -43,6 +58,47 @@ _YF_TF_MAP: dict[str, tuple[str, str]] = {
     "4h":  ("1h",  "30d"),   # fetch 1h, resample → ~120 4h bars
     "1d":  ("1d",  "3mo"),
 }
+
+
+# ── Disk cache helpers ────────────────────────────────────────────────────────
+
+def _cache_path(symbol: str, timeframe: str) -> Path:
+    safe = symbol.replace("/", "-").replace("^", "").replace("=", "")
+    return CACHE_DIR / f"{safe}_{timeframe}.json"
+
+
+def _cache_read(symbol: str, timeframe: str) -> Optional[dict]:
+    """Return cached OHLCV if it exists and is still fresh, else None."""
+    path = _cache_path(symbol, timeframe)
+    if not path.exists():
+        return None
+    try:
+        with open(path, encoding="utf-8") as f:
+            entry = json.load(f)
+        ttl     = _CACHE_TTL.get(timeframe, 3600)
+        age     = time.time() - entry.get("cached_at", 0)
+        if age < ttl:
+            log.debug("data_provider: cache hit %s/%s (age %.0fs / ttl %ds)", symbol, timeframe, age, ttl)
+            return entry["ohlcv"]
+        log.debug("data_provider: cache expired %s/%s (age %.0fs)", symbol, timeframe, age)
+    except Exception as e:
+        log.warning("data_provider: cache read error %s/%s: %s", symbol, timeframe, e)
+    return None
+
+
+def _cache_write(symbol: str, timeframe: str, ohlcv: dict) -> None:
+    """Write OHLCV to disk cache."""
+    try:
+        CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        path  = _cache_path(symbol, timeframe)
+        entry = {"cached_at": time.time(), "symbol": symbol, "timeframe": timeframe, "ohlcv": ohlcv}
+        tmp   = path.with_suffix(".tmp")
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(entry, f)
+        tmp.replace(path)
+        log.debug("data_provider: cached %s/%s (%d bars)", symbol, timeframe, len(ohlcv.get("close", [])))
+    except Exception as e:
+        log.warning("data_provider: cache write error %s/%s: %s", symbol, timeframe, e)
 
 
 class BaseDataProvider(ABC):
@@ -88,39 +144,16 @@ class TwelveDataProvider(BaseDataProvider):
     OHLCV provider backed by the Twelve Data REST API.
 
     Reads divisions/trading/assets.json to map instrument names (e.g. "SPX500")
-    to Twelve Data symbols (e.g. "SPX"). Raises on missing API key so the
-    module-level singleton can fall back to yfinance automatically.
+    to Twelve Data symbols (e.g. "SPY"). Results are cached to disk so
+    all consumers share one fetch per TTL window — keeps API calls minimal.
 
     Rate limits (free tier): 8 req/min, 800 req/day.
     """
 
     API_BASE = "https://api.twelvedata.com"
-    TIMEOUT   = 15  # seconds
+    TIMEOUT  = 15
 
-    def __init__(self, api_key: str) -> None:
-        if not api_key:
-            raise ValueError("TwelveDataProvider: TWELVEDATA_API_KEY is not set")
-        self._api_key = api_key
-        self._symbol_map: dict[str, str] = self._build_symbol_map()
-
-    @staticmethod
-    def _build_symbol_map() -> dict[str, str]:
-        """Build name → td_symbol mapping from assets.json."""
-        assets = _load_assets()
-        result = {}
-        for inst in assets:
-            name = inst.get("name", "")
-            td   = inst.get("td_symbol", "")
-            if name and td:
-                result[name] = td
-        return result
-
-    def _resolve_symbol(self, symbol: str) -> str:
-        """Map instrument name to Twelve Data symbol if registered; else pass through."""
-        return self._symbol_map.get(symbol, symbol)
-
-    # Twelve Data sits behind Cloudflare — the default Python-urllib user-agent
-    # gets a 403 (CF error 1010). A browser UA bypasses this cleanly.
+    # Cloudflare blocks Python-urllib/3.x — browser UA bypasses it cleanly.
     _HEADERS = {
         "User-Agent": (
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -130,8 +163,21 @@ class TwelveDataProvider(BaseDataProvider):
         "Accept": "application/json",
     }
 
+    def __init__(self, api_key: str) -> None:
+        if not api_key:
+            raise ValueError("TwelveDataProvider: TWELVEDATA_API_KEY is not set")
+        self._api_key    = api_key
+        self._symbol_map = self._build_symbol_map()
+
+    @staticmethod
+    def _build_symbol_map() -> dict[str, str]:
+        assets = _load_assets()
+        return {inst["name"]: inst["td_symbol"] for inst in assets if inst.get("name") and inst.get("td_symbol")}
+
+    def _resolve_symbol(self, symbol: str) -> str:
+        return self._symbol_map.get(symbol, symbol)
+
     def _get(self, endpoint: str, params: dict) -> dict:
-        """Make a GET request to the Twelve Data API, return parsed JSON."""
         params["apikey"] = self._api_key
         query = "&".join(f"{k}={urllib.request.quote(str(v))}" for k, v in params.items())
         url   = f"{self.API_BASE}{endpoint}?{query}"
@@ -145,14 +191,13 @@ class TwelveDataProvider(BaseDataProvider):
         timeframe: str,
         bars: int = 500,
     ) -> Optional[dict]:
-        """
-        Fetch OHLCV from Twelve Data.
+        # Check cache first — avoids hitting the API on every skill run
+        cached = _cache_read(symbol, timeframe)
+        if cached is not None:
+            return cached
 
-        Values are returned newest-first by the API and reversed here so
-        index 0 is the oldest bar (same convention as yfinance / backtester).
-        """
-        td_symbol = self._resolve_symbol(symbol)
-        interval  = _TD_INTERVAL_MAP.get(timeframe, "1h")
+        td_symbol  = self._resolve_symbol(symbol)
+        interval   = _TD_INTERVAL_MAP.get(timeframe, "1h")
         outputsize = min(bars, 5000)
 
         try:
@@ -172,7 +217,7 @@ class TwelveDataProvider(BaseDataProvider):
 
             values = data.get("values", [])
             if not values:
-                log.warning("TwelveDataProvider: no values returned for %s/%s", td_symbol, interval)
+                log.warning("TwelveDataProvider: no values for %s/%s", td_symbol, interval)
                 return None
 
             # API returns newest-first — reverse so index 0 = oldest
@@ -192,6 +237,8 @@ class TwelveDataProvider(BaseDataProvider):
                 "TwelveDataProvider: fetched %d %s bars for %s",
                 len(ohlcv["close"]), timeframe, td_symbol,
             )
+
+            _cache_write(symbol, timeframe, ohlcv)
             return ohlcv
 
         except urllib.error.HTTPError as e:
@@ -212,12 +259,11 @@ class YfinanceProvider(BaseDataProvider):
     OHLCV provider backed by yfinance.
 
     Used as automatic fallback when TWELVEDATA_API_KEY is not configured.
-    Reads divisions/trading/assets.json to map instrument names to yfinance
-    tickers (e.g. "SPX500" → "^GSPC").
+    Results are also cached to disk on the same TTL schedule.
     """
 
     def __init__(self) -> None:
-        self._ticker_map: dict[str, str] = self._load_ticker_map()
+        self._ticker_map = self._load_ticker_map()
 
     @staticmethod
     def _load_ticker_map() -> dict[str, str]:
@@ -229,54 +275,35 @@ class YfinanceProvider(BaseDataProvider):
 
     @staticmethod
     def _resample_4h(ohlcv: dict) -> dict:
-        """Aggregate 1h OHLCV dict into 4h candles (every 4 bars)."""
-        dates  = ohlcv["timestamps"]
-        opens  = ohlcv["open"]
-        highs  = ohlcv["high"]
-        lows   = ohlcv["low"]
-        closes = ohlcv["close"]
-        vols   = ohlcv["volume"]
+        dates, opens, highs, lows, closes, vols = (
+            ohlcv["timestamps"], ohlcv["open"], ohlcv["high"],
+            ohlcv["low"], ohlcv["close"], ohlcv["volume"],
+        )
         n = len(dates)
         r_d, r_o, r_h, r_l, r_c, r_v = [], [], [], [], [], []
         i = 0
         while i < n:
             end = min(i + 4, n)
-            r_d.append(dates[i])
-            r_o.append(opens[i])
-            r_h.append(max(highs[i:end]))
-            r_l.append(min(lows[i:end]))
-            r_c.append(closes[end - 1])
-            r_v.append(sum(vols[i:end]))
+            r_d.append(dates[i]); r_o.append(opens[i])
+            r_h.append(max(highs[i:end])); r_l.append(min(lows[i:end]))
+            r_c.append(closes[end - 1]); r_v.append(sum(vols[i:end]))
             i += 4
-        return {
-            "ticker":     ohlcv["ticker"],
-            "timestamps": r_d,
-            "open":       r_o,
-            "high":       r_h,
-            "low":        r_l,
-            "close":      r_c,
-            "volume":     r_v,
-        }
+        return {"ticker": ohlcv["ticker"], "timestamps": r_d,
+                "open": r_o, "high": r_h, "low": r_l, "close": r_c, "volume": r_v}
 
-    def fetch_ohlcv(
-        self,
-        symbol: str,
-        timeframe: str,
-        bars: int = 500,
-    ) -> Optional[dict]:
+    def fetch_ohlcv(self, symbol: str, timeframe: str, bars: int = 500) -> Optional[dict]:
+        cached = _cache_read(symbol, timeframe)
+        if cached is not None:
+            return cached
+
         ticker = self._resolve_ticker(symbol)
         yf_interval, yf_period = _YF_TF_MAP.get(timeframe, ("1d", "3mo"))
         try:
             import yfinance as yf
-            df = yf.download(
-                ticker,
-                period=yf_period,
-                interval=yf_interval,
-                auto_adjust=False,
-                progress=False,
-            )
+            df = yf.download(ticker, period=yf_period, interval=yf_interval,
+                             auto_adjust=False, progress=False)
             if df.empty:
-                log.warning("YfinanceProvider: no data returned for %s", ticker)
+                log.warning("YfinanceProvider: no data for %s", ticker)
                 return None
             if hasattr(df.columns, "levels"):
                 df.columns = df.columns.get_level_values(0)
@@ -291,13 +318,11 @@ class YfinanceProvider(BaseDataProvider):
             }
             if timeframe == "4h":
                 ohlcv = self._resample_4h(ohlcv)
-            log.debug(
-                "YfinanceProvider: fetched %d %s bars for %s",
-                len(ohlcv["close"]), timeframe, ticker,
-            )
+            log.debug("YfinanceProvider: fetched %d %s bars for %s", len(ohlcv["close"]), timeframe, ticker)
+            _cache_write(symbol, timeframe, ohlcv)
             return ohlcv
         except ImportError:
-            log.error("YfinanceProvider: yfinance not installed — run: pip install yfinance pandas")
+            log.error("YfinanceProvider: yfinance not installed")
             return None
         except Exception as e:
             log.error("YfinanceProvider: fetch failed for %s: %s", ticker, e)
@@ -307,13 +332,6 @@ class YfinanceProvider(BaseDataProvider):
 # ── Module-level singleton — auto-selects provider ───────────────────────────
 
 def _init_provider() -> BaseDataProvider:
-    """
-    Select the active provider based on available credentials.
-
-    Priority:
-      1. TwelveData  — if TWELVEDATA_API_KEY is set in environment
-      2. yfinance    — automatic fallback (no key required)
-    """
     td_key = os.getenv("TWELVEDATA_API_KEY", "").strip()
     if td_key:
         try:
@@ -338,6 +356,9 @@ def set_provider(p: BaseDataProvider) -> None:
 def fetch_ohlcv(symbol: str, timeframe: str, bars: int = 500) -> Optional[dict]:
     """
     Fetch OHLCV for the given symbol and timeframe via the active provider.
+
+    Results are served from disk cache when fresh (TTL per timeframe).
+    A live API call is only made when the cache is missing or expired.
 
     Args:
         symbol:    Instrument name (e.g. "SPX500") or raw ticker.
