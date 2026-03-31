@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 
 from runtime.config import SKILL_MODELS, MODEL_14B_HOST, MODEL_CODER_7B, MODEL_8B, OLLAMA_HOST
 from runtime.ollama_client import chat, is_available
-from runtime.skills import repo_monitor, debug_agent, refactor_scan, security_scan, doc_update, artifact_manager
+from runtime.skills import repo_monitor, debug_agent, refactor_scan, security_scan, doc_update, artifact_manager, auto_fix, ci_runner
 from runtime import packet
 from runtime.tools.xp import grant_skill_xp
 
@@ -309,6 +309,54 @@ def run_artifact_manager() -> dict:
         "Artifact-manager packet written. Archived=%d Purged=%d",
         result.get("total_archived", 0), result.get("total_purged", 0)
     )
+    return pkt
+
+
+def run_auto_fix() -> dict:
+    """Apply LLM-generated fixes to high-severity findings from refactor-scan/debug-agent."""
+    log.info("=== Dev Automation Division: auto-fix run ===")
+
+    result = auto_fix.run()
+
+    pkt = packet.build(
+        division="dev-automation",
+        skill="auto-fix",
+        status=result["status"],
+        summary=result.get("summary", "Auto-fix complete."),
+        metrics=result.get("metrics", {}),
+        escalate=result.get("escalate", False),
+        escalation_reason=result.get("escalation_reason", ""),
+        action_items=result.get("action_items", []),
+    )
+
+    packet.write(pkt)
+    if result["status"] in ("success", "partial"):
+        grant_skill_xp("auto-fix")
+    log.info("Auto-fix packet written. Status=%s", result["status"])
+    return pkt
+
+
+def run_ci_runner() -> dict:
+    """Run CI syntax and test validation against recent code changes."""
+    log.info("=== Dev Automation Division: ci-runner run ===")
+
+    result = ci_runner.run()
+
+    pkt = packet.build(
+        division="dev-automation",
+        skill="ci-runner",
+        status=result["status"],
+        summary=result.get("summary", "CI run complete."),
+        metrics=result.get("metrics", {}),
+        escalate=result.get("escalate", False),
+        escalation_reason=result.get("escalation_reason", ""),
+        action_items=result.get("action_items", []),
+    )
+
+    packet.write(pkt)
+    if result["status"] == "success":
+        grant_skill_xp("ci-runner")
+    log.info("CI-runner packet written. Status=%s", result["status"])
     return pkt
 
 

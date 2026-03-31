@@ -169,6 +169,7 @@ def run(division: str, task: str, args: list) -> dict:
         from runtime.orchestrators.dev_automation import (
             run_repo_monitor, run_debug_agent, run_refactor_scan,
             run_doc_update, run_artifact_manager, run_dev_digest,
+            run_auto_fix, run_ci_runner,
         )
         if task == "repo-monitor":
             return run_repo_monitor()
@@ -187,6 +188,10 @@ def run(division: str, task: str, args: list) -> dict:
             return run_artifact_manager()
         if task == "dev-digest":
             return run_dev_digest()
+        if task == "auto-fix":
+            return run_auto_fix()
+        if task == "ci-runner":
+            return run_ci_runner()
         raise ValueError(f"Unknown task for dev-automation: {task}")
 
     # ── Dev Pipeline (new — supplements dev-automation) ───────────────────────

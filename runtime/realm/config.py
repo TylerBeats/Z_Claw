@@ -410,6 +410,12 @@ DIVISIONS = {
             "code-review":        {"xp": 10, "soldier": "The Code Arbiter",  "icon": "🔍", "anim": "circuit",  "label": "Review the Code"},
             "data-populate":      {"xp":  8, "soldier": "The Data Seeder",   "icon": "📊", "anim": "draft",    "label": "Seed the World"},
             "quest-writer":       {"xp": 12, "soldier": "The Lore Weaver",   "icon": "📜", "anim": "compose",  "label": "Weave the Quest"},
+            "project-init":       {"xp": 10, "soldier": "The Architect",       "icon": "🏗", "anim": "draft",    "label": "Init the Project"},
+            "character-designer": {"xp": 12, "soldier": "The Character Smith",  "icon": "⚔", "anim": "forge",    "label": "Forge the Character"},
+            "enemy-designer":     {"xp": 12, "soldier": "The Enemy Forger",    "icon": "💀", "anim": "slash",    "label": "Design the Enemy"},
+            "item-forge":         {"xp": 10, "soldier": "The Item Forger",     "icon": "⚗", "anim": "forge",    "label": "Forge the Item"},
+            "story-writer":       {"xp": 15, "soldier": "The Story Keeper",    "icon": "📚", "anim": "compose",  "label": "Write the Story"},
+            "skill-tree-builder": {"xp": 10, "soldier": "The Progression Sage","icon": "🌳", "anim": "circuit",  "label": "Build the Skill Tree"},
         },
         "vocabulary": {
             "quest":       "in development",
