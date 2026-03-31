@@ -70,11 +70,12 @@ def test_router_returns_deterministic_for_sentinel_health():
     assert chain == ["deterministic"]
 
 
-def test_router_chat_operator_has_claude_fallback():
+def test_router_chat_operator_has_cloud_fallback():
     from providers.router import ProviderRouter
     router = ProviderRouter()
     chain = router.get_chain("chat-operator")
-    assert "claude" in chain
+    # Chain uses groq/deepseek as cloud fallbacks (claude replaced)
+    assert "groq" in chain or "deepseek" in chain
 
 
 def test_router_health_logger_no_cloud_fallback():
@@ -99,13 +100,12 @@ def test_router_gets_deterministic_when_ollama_unavailable(monkeypatch):
         assert provider.provider_id == "deterministic"
 
 
-def test_router_skips_claude_when_key_absent(monkeypatch):
-    """debug-agent chain: ollama:coder-14b → gemini → claude. With no keys, should skip all API."""
-    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+def test_router_skips_cloud_when_keys_absent(monkeypatch):
+    """debug-agent chain: ollama:coder-14b → groq → deepseek. With no keys, should skip all API."""
+    monkeypatch.delenv("GROQ_API_KEY", raising=False)
+    monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
 
-    with patch("providers.ollama_provider.OllamaProvider.is_available", return_value=False), \
-         patch("providers.anthropic_provider._openclaw_token", return_value=""):
+    with patch("providers.ollama_provider.OllamaProvider.is_available", return_value=False):
         from providers.router import ProviderRouter
         router = ProviderRouter()
         provider = router.get_provider("debug-agent")

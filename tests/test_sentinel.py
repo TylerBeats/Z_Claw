@@ -21,21 +21,21 @@ def test_provider_health_worker_returns_structure():
     assert "total_count" in result
     assert "summary" in result
     assert isinstance(result["providers"], dict)
-    # Claude and Gemini should always be present
-    assert "claude" in result["providers"]
+    # Groq and Gemini should always be present
+    assert "groq" in result["providers"]
     assert "gemini" in result["providers"]
 
 
 def test_provider_health_no_api_keys(monkeypatch):
-    """Without API keys, claude and gemini should be unavailable."""
-    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    """Without API keys, groq and gemini should be unavailable."""
+    monkeypatch.delenv("GROQ_API_KEY", raising=False)
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
 
     with patch("runtime.ollama_client.is_available", return_value=False):
         from runtime.workers.sentinel.provider_health import ProviderHealthWorker
         result = ProviderHealthWorker().run()
 
-    assert result["providers"]["claude"]["status"] == "unavailable"
+    assert result["providers"]["groq"]["status"] == "unavailable"
     assert result["providers"]["gemini"]["status"] == "unavailable"
     assert result["healthy_count"] == 0
 
