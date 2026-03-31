@@ -97,7 +97,8 @@ DIVISIONS = {
         "skills": {
             "job-intake":     {"xp": 10, "soldier": "The Tracker",    "icon": "⟶", "anim": "arrow",  "label": "Mark the Quarry"},
             "hard-filter":    {"xp":  5, "soldier": "The Arbiter",    "icon": "⟁", "anim": "slash",  "label": "The Arbiter's Cut"},
-            "funding-finder": {"xp":  5, "soldier": "The Prospector", "icon": "◈", "anim": "scan",   "label": "Strike the Vein"},
+            "funding-finder":     {"xp":  5, "soldier": "The Prospector",    "icon": "◈", "anim": "scan",    "label": "Strike the Vein"},
+            "application-tracker": {"xp": 8, "soldier": "The Field Agent",   "icon": "⟶", "anim": "arrow",  "label": "Track the Application"},
         },
         "vocabulary": {
             "quest":       "on the hunt",
@@ -144,7 +145,7 @@ DIVISIONS = {
             "backtester":       {"xp":  5, "soldier": "The Pattern Keeper",   "icon": "◫",  "anim": "circuit", "label": "Pattern Lock"},
             "strategy-builder": {"xp": 15, "soldier": "The Strategy Forger",  "icon": "⚒",  "anim": "forge",   "label": "Forge the Strategy"},
             "strategy-tester":  {"xp": 12, "soldier": "The Strategy Analyst", "icon": "🔬", "anim": "scan",    "label": "Test the Strategy"},
-            "strategy-search":  {"xp": 10, "soldier": "The Strategy Scout",   "icon": "🔭", "anim": "scan",    "label": "Scout the Strategies"},
+            "strategy-search":  {"xp": 20, "soldier": "The Strategy Scout",   "icon": "🔭", "anim": "scan",    "label": "Scout the Strategies"},
         },
         "vocabulary": {
             "quest":       "reading the veil",
@@ -192,6 +193,8 @@ DIVISIONS = {
             "debug-agent":      {"xp":  8, "soldier": "The Debugger",         "icon": "◈", "anim": "circuit", "label": "Debug the Construct"},
             "artifact-manager": {"xp":  3, "soldier": "The Relic Keeper",     "icon": "⬡", "anim": "circuit", "label": "Temper the Pipeline"},
             "dev-digest":       {"xp":  5, "soldier": "The Chronicler",       "icon": "◉", "anim": "circuit", "label": "Codex Report"},
+            "auto-fix":         {"xp": 15, "soldier": "The Auto-Fixer",       "icon": "🔧", "anim": "circuit", "label": "Auto-Fix the Code"},
+            "ci-runner":        {"xp":  5, "soldier": "The CI Sentinel",      "icon": "✅", "anim": "scan",    "label": "Run the Pipeline"},
             "dev-pipeline":     {"xp": 10, "soldier": "The Architect",        "icon": "⬢", "anim": "circuit", "label": "Lay the Foundation"},
         },
         "vocabulary": {
@@ -352,7 +355,8 @@ DIVISIONS = {
             "vfx-compose":        {"xp": 10, "soldier": "The Particle Weaver", "icon": "✨", "anim": "sparkle",  "label": "Weave the Effect"},
             "model-trainer":      {"xp": 20, "soldier": "QVAC",               "icon": "🧠", "anim": "circuit",  "label": "Train the Mind"},
             "adapter-manager":    {"xp": 15, "soldier": "QVAC",               "icon": "🔧", "anim": "forge",    "label": "Manage the Adapters"},
-            "qa-pipeline":        {"xp": 10, "soldier": "The Quality Warden", "icon": "✅", "anim": "scan",     "label": "Run the QA Pass"},
+            "qa-pipeline":        {"xp": 12, "soldier": "The Quality Warden", "icon": "✅", "anim": "scan",     "label": "Run the QA Pass"},
+            "art-director":       {"xp":  8, "soldier": "The Art Director",   "icon": "🎨", "anim": "draft",    "label": "Direct the Vision"},
         },
         "vocabulary": {
             "quest":       "in production",
@@ -399,13 +403,13 @@ DIVISIONS = {
             "game-design":        {"xp": 15, "soldier": "The Architect",     "icon": "📐", "anim": "draft",    "label": "Blueprint the Design"},
             "level-design":       {"xp": 15, "soldier": "The World Builder", "icon": "🗺",  "anim": "compose",  "label": "Build the World"},
             "tech-spec":          {"xp": 15, "soldier": "The Tech Scribe",   "icon": "📋", "anim": "circuit",  "label": "Write the Spec"},
-            "playtest-report":    {"xp": 12, "soldier": "The Analyst",       "icon": "🎮", "anim": "scan",     "label": "Run the Playtest"},
+            "playtest-report":    {"xp": 15, "soldier": "The Analyst",       "icon": "🎮", "anim": "scan",     "label": "Run the Playtest"},
             "asset-integration":  {"xp": 10, "soldier": "The Integrator",    "icon": "🔗", "anim": "deliver",  "label": "Integrate the Asset"},
             "gamedev-digest":     {"xp": 10, "soldier": "ARDENT",            "icon": "🎯", "anim": "forge",    "label": "The Studio Report"},
             "auto-playtest":      {"xp": 12, "soldier": "The Test Runner",   "icon": "▶",  "anim": "scan",     "label": "Run the Gauntlet"},
             "code-review":        {"xp": 10, "soldier": "The Code Arbiter",  "icon": "🔍", "anim": "circuit",  "label": "Review the Code"},
             "data-populate":      {"xp":  8, "soldier": "The Data Seeder",   "icon": "📊", "anim": "draft",    "label": "Seed the World"},
-            "quest-writer":       {"xp": 10, "soldier": "The Lore Weaver",   "icon": "📜", "anim": "compose",  "label": "Weave the Quest"},
+            "quest-writer":       {"xp": 12, "soldier": "The Lore Weaver",   "icon": "📜", "anim": "compose",  "label": "Weave the Quest"},
         },
         "vocabulary": {
             "quest":       "in development",

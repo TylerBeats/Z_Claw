@@ -302,6 +302,11 @@ def run(division: str, task: str, args: list) -> dict:
                                       task_context=args[2] if len(args) > 2 else ""),
             "qa-pipeline":        lambda: prod_orch.run_qa_pipeline(
                                       commander=args[0] if args else "generic"),
+            "art-director":       lambda: prod_orch.run_art_director(
+                                      review_type=args[0] if args else "style_audit",
+                                      commander=args[1] if len(args) > 1 else "generic",
+                                      asset_types=args[2] if len(args) > 2 else "portrait,sprite",
+                                      context=args[3] if len(args) > 3 else ""),
         }
         runner = task_map.get(task)
         if not runner:

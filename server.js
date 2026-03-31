@@ -289,7 +289,7 @@ const SKILL_XP = {
   'backtester':         { division: 'trading',        amount:  5 },
   'strategy-builder':   { division: 'trading',        amount: 15 },
   'strategy-tester':    { division: 'trading',        amount: 12 },
-  'strategy-search':    { division: 'trading',        amount: 10 },
+  'strategy-search':    { division: 'trading',        amount: 20 },
   // Dev Automation — The Iron Codex
   'repo-monitor':       { division: 'dev_automation', amount: 10 },
   'refactor-scan':      { division: 'dev_automation', amount:  5 },
@@ -298,6 +298,8 @@ const SKILL_XP = {
   'artifact-manager':   { division: 'dev_automation', amount:  3 },
   'dev-digest':         { division: 'dev_automation', amount:  5 },
   'dev-pipeline':       { division: 'dev_automation', amount: 10 },
+  'auto-fix':           { division: 'dev_automation', amount: 15 },
+  'ci-runner':          { division: 'dev_automation', amount:  5 },
   // Personal — The Ember Covenant
   'health-logger':          { division: 'personal',       amount: 15 },
   'perf-correlation':       { division: 'personal',       amount: 10 },
@@ -344,14 +346,15 @@ const SKILL_XP = {
   'mechanic-prototype': { division: 'gamedev',        amount: 15 },
   'balance-audit':      { division: 'gamedev',        amount: 12 },
   'tech-spec':          { division: 'gamedev',        amount: 15 },
-  'playtest-report':    { division: 'gamedev',        amount: 12 },
+  'playtest-report':    { division: 'gamedev',        amount: 15 },
   'asset-integration':  { division: 'gamedev',        amount: 10 },
   'gamedev-digest':     { division: 'gamedev',        amount: 10 },
   'auto-playtest':      { division: 'gamedev',        amount: 12 },
   'code-review':        { division: 'gamedev',        amount: 10 },
   'data-populate':      { division: 'gamedev',        amount:  8 },
-  'quest-writer':       { division: 'gamedev',        amount: 10 },
-  'qa-pipeline':        { division: 'production',     amount: 10 },
+  'quest-writer':       { division: 'gamedev',        amount: 12 },
+  'qa-pipeline':        { division: 'production',     amount: 12 },
+  'art-director':       { division: 'production',     amount:  8 },
 };
 
 const PYTHON_EXE = 'C:/Users/Tyler/AppData/Local/Microsoft/WindowsApps/PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0/python.exe';
@@ -429,6 +432,7 @@ const SKILL_TASK_MAP = {
   'data-populate':      { divState: 'gamedev',    division: 'gamedev',    task: 'data-populate'      },
   'quest-writer':       { divState: 'gamedev',    division: 'gamedev',    task: 'quest-writer'       },
   'qa-pipeline':        { divState: 'production', division: 'production', task: 'qa-pipeline'        },
+  'art-director':       { divState: 'production', division: 'production', task: 'art-director'       },
 };
 
 function rankForLevel(level) {

@@ -35,6 +35,7 @@ from runtime.skills import (
     model_trainer,
     adapter_manager,
     qa_pipeline,
+    art_director,
 )
 
 log = logging.getLogger(__name__)
@@ -300,6 +301,16 @@ def run_adapter_manager(action: str = "status", adapter_name: str = "", task_con
     if result.get("status") in ("success", "partial"):
         grant_skill_xp("adapter-manager")
     log.info("LYKE: adapter-manager action=%s → %s", action, result.get("status"))
+    return pkt
+
+
+def run_art_director(review_type: str = "style_audit", commander: str = "generic", asset_types: str = "portrait,sprite", context: str = "") -> dict:
+    result = art_director.run(review_type=review_type, commander=commander, asset_types=asset_types, context=context)
+    pkt    = _build_packet("art-director", result)
+    packet.write(pkt)
+    if result.get("status") in ("success", "partial"):
+        grant_skill_xp("art-director")
+    log.info("LYKE: art-director %s/%s → %s", review_type, commander, result.get("status"))
     return pkt
 
 
