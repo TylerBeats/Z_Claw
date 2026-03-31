@@ -97,3 +97,10 @@ Thumbs.db
 state/training-capture.jsonl
 state/training-approved.jsonl
 state/training-exports/
+
+# Division cold archives — compressed data snapshots, not source
+divisions/*/cold/*.zip
+divisions/*/cold/*.json.zip
+
+# Personal retrospectives — runtime-generated data
+divisions/personal/retrospectives/

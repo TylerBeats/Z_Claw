@@ -357,6 +357,9 @@ DIVISIONS = {
             "adapter-manager":    {"xp": 15, "soldier": "QVAC",               "icon": "🔧", "anim": "forge",    "label": "Manage the Adapters"},
             "qa-pipeline":        {"xp": 12, "soldier": "The Quality Warden", "icon": "✅", "anim": "scan",     "label": "Run the QA Pass"},
             "art-director":       {"xp":  8, "soldier": "The Art Director",   "icon": "🎨", "anim": "draft",    "label": "Direct the Vision"},
+            "narrative-craft":    {"xp": 10, "soldier": "The Lore Weaver",    "icon": "📖", "anim": "scroll",   "label": "Craft the Narrative"},
+            "asset-optimize":     {"xp":  8, "soldier": "The Refiner",        "icon": "⚡", "anim": "circuit",  "label": "Refine the Asset"},
+            "voice-catalog":      {"xp":  5, "soldier": "The Voice Keeper",   "icon": "🎙",  "anim": "wave",     "label": "Catalog the Voices"},
         },
         "vocabulary": {
             "quest":       "in production",

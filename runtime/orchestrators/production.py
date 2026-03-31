@@ -36,6 +36,9 @@ from runtime.skills import (
     adapter_manager,
     qa_pipeline,
     art_director,
+    narrative_craft,
+    asset_optimize,
+    voice_catalog,
 )
 
 log = logging.getLogger(__name__)
@@ -388,4 +391,43 @@ def run_production_digest() -> dict:
     packet.write(pkt)
     grant_skill_xp("production-digest")
     log.info("LYKE: production-digest complete — %s", status)
+    return pkt
+
+
+def run_narrative_craft(event_type: str = "auto", commander: str = "generic") -> dict:
+    result = narrative_craft.run(event_type=event_type, commander=commander)
+    pkt    = _build_packet("narrative-craft", result)
+    packet.write(pkt)
+    if result.get("status") in ("success", "partial"):
+        grant_skill_xp("narrative-craft")
+    log.info("LYKE: narrative-craft → %s [%s/%s]", result.get("status"), event_type, commander)
+    return pkt
+
+
+def run_asset_optimize(
+    source_path: str = "",
+    scale: int = 4,
+    format: str = "webp",
+    quality: int = 85,
+) -> dict:
+    result = asset_optimize.run(
+        source_path=source_path,
+        scale=scale,
+        format=format,
+        quality=quality,
+    )
+    pkt = _build_packet("asset-optimize", result)
+    packet.write(pkt)
+    if result.get("status") in ("success", "partial"):
+        grant_skill_xp("asset-optimize")
+    log.info("LYKE: asset-optimize → %s [%s]", result.get("status"), source_path)
+    return pkt
+
+
+def run_voice_catalog() -> dict:
+    result = voice_catalog.run()
+    pkt    = _build_packet("voice-catalog", result)
+    packet.write(pkt)
+    grant_skill_xp("voice-catalog")
+    log.info("LYKE: voice-catalog → %s", result.get("summary", ""))
     return pkt
