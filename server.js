@@ -1211,6 +1211,7 @@ function handleGetTradingCycle(res) {
         return_projections: h.return_projections || null,
         mc_p95_dd:        h.mc_p95_dd != null ? Math.round(h.mc_p95_dd * 1000) / 10 : null,
         best_risk_pct:    h.best_risk_pct,
+        timeframe:        h.strategy_schema?.metadata?.timeframe || h.timeframe || null,
       };
     }
 

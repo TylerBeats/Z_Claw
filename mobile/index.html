@@ -6553,6 +6553,7 @@ function _renderTrading(d, histIdx) {
         : '<span class="pill pill-grey">HISTORY</span>'}
     </div>
     <div style="font-size:14px;font-weight:700;color:var(--teal);margin-bottom:4px;">${escHtml(s.name || 'No active strategy')}</div>
+    ${s.timeframe ? `<div style="margin-bottom:4px;"><span style="display:inline-block;padding:2px 8px;border-radius:10px;background:var(--overlay);border:1px solid var(--border);font-size:10px;font-weight:600;color:var(--lavender);letter-spacing:0.05em;">⏱ ${escHtml(s.timeframe.toUpperCase())} CHART</span></div>` : ''}
     ${tradeInfo ? `<div style="font-size:11px;color:var(--subtext);margin-bottom:2px;">📊 ${escHtml(tradeInfo)}</div>` : ''}
     ${isCurrentCycle && d.hours_since_update != null ? `<div class="card-meta">Updated ${d.hours_since_update}h ago</div>` : ''}
   </div>`;
@@ -7214,7 +7215,8 @@ function _renderTradingDetail(d) {
   // Strategy header card
   html += '<div class="detail-packet">';
   html += `<div class="detail-packet-header"><span class="detail-packet-name">Active Strategy</span><span class="pill ${d.stale ? 'pill-yellow' : 'pill-green'}">${d.stale ? 'STALE' : 'LIVE'}</span></div>`;
-  html += `<div style="font-size:14px;font-weight:600;margin-bottom:10px;color:var(--text)">${escHtml(s.name || 'None')}</div>`;
+  html += `<div style="font-size:14px;font-weight:600;margin-bottom:6px;color:var(--text)">${escHtml(s.name || 'None')}</div>`;
+  if (s.timeframe) html += `<div style="margin-bottom:10px;"><span style="display:inline-block;padding:3px 10px;border-radius:10px;background:var(--surface1);border:1px solid var(--lavender);font-size:11px;font-weight:700;color:var(--lavender);letter-spacing:0.06em;">⏱ ${escHtml(s.timeframe.toUpperCase())} CHART</span></div>`;
   html += '<div class="detail-metrics">';
   if (s.win_rate != null)       html += `<div class="detail-metric"><div class="dm-v">${s.win_rate}%</div><div class="dm-l">Win Rate</div></div>`;
   if (s.sharpe != null)         html += `<div class="detail-metric"><div class="dm-v">${s.sharpe.toFixed(3)}</div><div class="dm-l">Sharpe</div></div>`;
