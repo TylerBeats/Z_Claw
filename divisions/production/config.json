@@ -134,6 +134,70 @@
       "enabled": true,
       "last_run": null,
       "status": "idle"
+    },
+    "art-director": {
+      "schedule": "daily 07:00",
+      "skill": "art-director",
+      "enabled": true,
+      "last_run": null,
+      "status": "idle",
+      "notes": "Daily creative direction — sets visual style targets and briefs for all production agents."
+    },
+    "qa-pipeline": {
+      "schedule": "on_demand",
+      "skill": "qa-pipeline",
+      "enabled": true,
+      "last_run": null,
+      "status": "idle",
+      "notes": "Quality assurance pipeline — validates generated assets against style and spec requirements."
+    },
+    "narrative-craft": {
+      "schedule": "on_demand",
+      "skill": "narrative-craft",
+      "enabled": true,
+      "last_run": null,
+      "status": "idle",
+      "notes": "Writes narrative copy, world lore, and character dialogue for game and media assets."
+    },
+    "sfx-generate": {
+      "schedule": "on_demand",
+      "skill": "sfx-generate",
+      "enabled": true,
+      "last_run": null,
+      "status": "idle",
+      "notes": "Generates sound effects for game and media projects using AudioCraft or local synthesis."
+    },
+    "asset-optimize": {
+      "schedule": "on_demand",
+      "skill": "asset-optimize",
+      "enabled": true,
+      "last_run": null,
+      "status": "idle",
+      "notes": "Optimizes assets for target platforms — resizes, compresses, converts formats."
+    },
+    "voice-catalog": {
+      "schedule": "on_demand",
+      "skill": "voice-catalog",
+      "enabled": true,
+      "last_run": null,
+      "status": "idle",
+      "notes": "Catalogs voice reference files and synthesized voice clips for all commanders."
+    },
+    "model-trainer": {
+      "schedule": "on_demand",
+      "skill": "model-trainer",
+      "enabled": true,
+      "last_run": null,
+      "status": "idle",
+      "notes": "QVAC BitNet LoRA fine-tuning orchestrator — always human-initiated, never auto-scheduled."
+    },
+    "adapter-manager": {
+      "schedule": "on_demand",
+      "skill": "adapter-manager",
+      "enabled": true,
+      "last_run": null,
+      "status": "idle",
+      "notes": "Manages LoRA adapters — load, swap, version, and activate domain-specific fine-tunes."
     }
   }
 }
