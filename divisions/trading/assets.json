@@ -1,9 +1,34 @@
 {
-  "_comment": "Instrument registry — name, yfinance ticker, futures symbol. One source of truth for all trading skills.",
+  "_comment": "Instrument registry — one source of truth for all trading skills.",
+  "_note": "td_symbol uses ETF proxies (SPY/QQQ/DIA) on free Twelve Data tier. Upgrade to Grow/Venture plan and swap to SPX/NDX/DJI for native index data.",
   "instruments": [
-    { "name": "SPX500", "ticker": "^GSPC",  "futures": "MES" },
-    { "name": "NAS100", "ticker": "^NDX",   "futures": "MNQ" },
-    { "name": "XAUUSD", "ticker": "GC=F",   "futures": "MGC" },
-    { "name": "US30",   "ticker": "^DJI",   "futures": "MYM" }
+    {
+      "name":      "SPX500",
+      "td_symbol": "SPY",
+      "td_symbol_paid": "SPX",
+      "ticker":    "^GSPC",
+      "futures":   "MES"
+    },
+    {
+      "name":      "NAS100",
+      "td_symbol": "QQQ",
+      "td_symbol_paid": "NDX",
+      "ticker":    "^NDX",
+      "futures":   "MNQ"
+    },
+    {
+      "name":      "XAUUSD",
+      "td_symbol": "XAU/USD",
+      "td_symbol_paid": "XAU/USD",
+      "ticker":    "GC=F",
+      "futures":   "MGC"
+    },
+    {
+      "name":      "US30",
+      "td_symbol": "DIA",
+      "td_symbol_paid": "DJI",
+      "ticker":    "^DJI",
+      "futures":   "MYM"
+    }
   ]
 }
