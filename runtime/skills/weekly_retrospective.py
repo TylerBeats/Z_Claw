@@ -84,17 +84,17 @@ def _parse_game_events(jsonl_path: Path) -> list:
 
 def _calculate_week_metrics(health_entries: list, game_events: list) -> dict:
     """Pure-Python metric calculations from raw data."""
-    # XP events
-    xp_events    = [e for e in game_events if e.get("type") in ("xp_grant", "skill_xp", "xp")]
-    total_xp     = sum(e.get("amount", e.get("xp", 0)) for e in xp_events)
-
-    # Skill completions
-    skill_events = [e for e in game_events if e.get("type") in ("skill_complete", "skill_run", "skill")]
+    # Skill completions (all activity lives under "event": "skill_complete")
+    skill_events = [e for e in game_events if e.get("event") in ("skill_complete", "skill_run", "skill")]
     skills_done  = len(skill_events)
     skill_names  = list({e.get("skill", e.get("name", "")) for e in skill_events if e.get("skill") or e.get("name")})
 
+    # XP — primary field is "xp_granted" on skill_complete events
+    xp_events = skill_events + [e for e in game_events if e.get("event") in ("xp_grant", "skill_xp", "xp")]
+    total_xp  = sum(e.get("xp_granted", e.get("amount", e.get("xp", 0))) for e in xp_events)
+
     # Rank-ups
-    rankup_events = [e for e in game_events if e.get("type") in ("rank_up", "rankup", "level_up")]
+    rankup_events = [e for e in game_events if e.get("event") in ("rank_up", "rankup", "level_up")]
     rank_ups      = len(rankup_events)
 
     # Daily breakdown for streak analysis

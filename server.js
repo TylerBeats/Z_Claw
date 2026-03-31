@@ -347,6 +347,11 @@ const SKILL_XP = {
   'playtest-report':    { division: 'gamedev',        amount: 12 },
   'asset-integration':  { division: 'gamedev',        amount: 10 },
   'gamedev-digest':     { division: 'gamedev',        amount: 10 },
+  'auto-playtest':      { division: 'gamedev',        amount: 12 },
+  'code-review':        { division: 'gamedev',        amount: 10 },
+  'data-populate':      { division: 'gamedev',        amount:  8 },
+  'quest-writer':       { division: 'gamedev',        amount: 10 },
+  'qa-pipeline':        { division: 'production',     amount: 10 },
 };
 
 const PYTHON_EXE = 'C:/Users/Tyler/AppData/Local/Microsoft/WindowsApps/PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0/python.exe';
@@ -419,6 +424,11 @@ const SKILL_TASK_MAP = {
   'playtest-report':    { divState: 'gamedev',    division: 'gamedev',    task: 'playtest-report'    },
   'asset-integration':  { divState: 'gamedev',    division: 'gamedev',    task: 'asset-integration'  },
   'gamedev-digest':     { divState: 'gamedev',    division: 'gamedev',    task: 'gamedev-digest'     },
+  'auto-playtest':      { divState: 'gamedev',    division: 'gamedev',    task: 'auto-playtest'      },
+  'code-review':        { divState: 'gamedev',    division: 'gamedev',    task: 'code-review'        },
+  'data-populate':      { divState: 'gamedev',    division: 'gamedev',    task: 'data-populate'      },
+  'quest-writer':       { divState: 'gamedev',    division: 'gamedev',    task: 'quest-writer'       },
+  'qa-pipeline':        { divState: 'production', division: 'production', task: 'qa-pipeline'        },
 };
 
 function rankForLevel(level) {

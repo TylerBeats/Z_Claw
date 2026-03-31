@@ -352,6 +352,7 @@ DIVISIONS = {
             "vfx-compose":        {"xp": 10, "soldier": "The Particle Weaver", "icon": "✨", "anim": "sparkle",  "label": "Weave the Effect"},
             "model-trainer":      {"xp": 20, "soldier": "QVAC",               "icon": "🧠", "anim": "circuit",  "label": "Train the Mind"},
             "adapter-manager":    {"xp": 15, "soldier": "QVAC",               "icon": "🔧", "anim": "forge",    "label": "Manage the Adapters"},
+            "qa-pipeline":        {"xp": 10, "soldier": "The Quality Warden", "icon": "✅", "anim": "scan",     "label": "Run the QA Pass"},
         },
         "vocabulary": {
             "quest":       "in production",
@@ -401,6 +402,10 @@ DIVISIONS = {
             "playtest-report":    {"xp": 12, "soldier": "The Analyst",       "icon": "🎮", "anim": "scan",     "label": "Run the Playtest"},
             "asset-integration":  {"xp": 10, "soldier": "The Integrator",    "icon": "🔗", "anim": "deliver",  "label": "Integrate the Asset"},
             "gamedev-digest":     {"xp": 10, "soldier": "ARDENT",            "icon": "🎯", "anim": "forge",    "label": "The Studio Report"},
+            "auto-playtest":      {"xp": 12, "soldier": "The Test Runner",   "icon": "▶",  "anim": "scan",     "label": "Run the Gauntlet"},
+            "code-review":        {"xp": 10, "soldier": "The Code Arbiter",  "icon": "🔍", "anim": "circuit",  "label": "Review the Code"},
+            "data-populate":      {"xp":  8, "soldier": "The Data Seeder",   "icon": "📊", "anim": "draft",    "label": "Seed the World"},
+            "quest-writer":       {"xp": 10, "soldier": "The Lore Weaver",   "icon": "📜", "anim": "compose",  "label": "Weave the Quest"},
         },
         "vocabulary": {
             "quest":       "in development",
