@@ -6,6 +6,15 @@ Built for two users: **Tyler** (PC dashboard, port 3000) and **Matthew** (mobile
 
 ---
 
+## Recent Updates
+
+- `openclaw-gateway` restart handling was hardened so the wrapper idles when the gateway is already listening on `127.0.0.1:18789` instead of spawning duplicate crash loops.
+- J_Claw and Z_Claw trading views now sync against the live Zenith cycle payload rather than stale orchestrator-only timestamps.
+- `/api/trading/cycle` now exposes richer ranked strategy data for the dashboards, including profit, return, years tested, annualized stats, PF, and risk/drawdown metrics.
+- The linked Zenith / Algomesh stack now supports richer ranked-strategy performance views and bounded Twelve Data `5m` history backfill so local intraday caches can grow deeper when provider credits are available.
+
+---
+
 ## Hardware
 
 | Component | Spec |
@@ -52,7 +61,7 @@ Built for two users: **Tyler** (PC dashboard, port 3000) and **Matthew** (mobile
 
 **PM2 processes:**
 - `server` — Mission Control on port 3000
-- `openclaw-gateway` — Zenith/Discord bot on localhost:40000 (Ollama `zenith-expert`)
+- `openclaw-gateway` — OpenClaw gateway wrapper on localhost:18789
 
 ---
 
@@ -108,6 +117,8 @@ Each skill outputs a standardized **Executive Packet**:
 ### PC Dashboard (`dashboard/index.html`)
 - Pixel-art Catppuccin theme
 - 8 division cards with live packet metrics pulled via `/api/packets`
+- Trading card now rehydrates from live Zenith cycle/status data so `[ TRADING ]`, `LAST RUN`, and the Agent-Network block stay aligned after resets and live restarts
+- Agent-Network view includes ranked strategies with score, profit, return, annualized stats, PF, risk, EV, WR, OOS trades, DD, and confidence
 - **Opportunity**: JOBS / TIER-A / TIER-B / TIER-C / TIER-D / FUNDING / SOURCES breakdown
 - **Personal**: SLEEP / BURNOUT / LOGS / CORR-PTS / CORR-STATUS from perf-correlation
 - **OP-Sec**: ANML / POST / BRCH / NET / PRIV metrics
@@ -120,6 +131,7 @@ Each skill outputs a standardized **Executive Packet**:
 - Biometric (WebAuthn) + PIN auth (server-side timing-safe hash)
 - 5 tabs: **Home** (division cards), **Intel** (full packets), **J_Claw** (rank/XP), **Command** (tasks/approvals), **Log** (chronicle)
 - All 8 division cards with live metrics including Sentinel
+- Trading tab includes a ranked strategy surface fed from the same live Zenith payload as desktop, including PF and annualized metrics
 - Opportunity card: Tier A/B/C/D counts + application tracker APPS/WAITING
 - OP-Sec card: 5 metrics (ANML, POST, BRCH, NET, PRIV)
 - Red action-item badge on cards with high-priority items
@@ -148,6 +160,38 @@ set_provider(MyBacktestProvider())     # swap backend at runtime
 
 ---
 
+## Zenith Trading Integration
+
+J_Claw does not backtest strategies itself. The Trading division’s live strategy discovery, ranked winners, paper-account state, and cycle telemetry are served by the linked Zenith / Algomesh stack and proxied through Mission Control.
+
+Primary endpoints:
+- `/api/trading/cycle` — live cycle snapshot, active strategy, paper-account block, and `ranked_strategies` for the desktop/mobile dashboards
+- `/api/trading/cycle/status` — live run state used by dashboard start/stop controls
+- `/api/trading/cycle/run` and `/api/trading/cycle/stop` — launch and halt the linked Zenith cycle loop
+
+Dashboard-visible ranked strategy metrics now include:
+- score
+- total profit `$`
+- total return `%`
+- years tested
+- annual return `$ / yr`
+- annual return `%`
+- Sharpe and OOS Sharpe
+- PF
+- risk `%`
+- EV
+- win rate
+- OOS trades
+- drawdown
+- confidence
+
+Current intraday history note:
+- the linked Zenith `5m` proxy stack uses Twelve Data plus local cache merge/backfill logic
+- current bounded backfill defaults target about `2` years of intraday history per symbol
+- actual refresh depth still depends on available Twelve Data credits at the time of fetch
+
+---
+
 ## API Surface
 
 All state is served through `/api/*` endpoints. No client reads state files directly.
@@ -168,7 +212,7 @@ All state is served through `/api/*` endpoints. No client reads state files dire
 | `/api/briefing` | GET/POST | Daily AI briefing |
 | `/api/jobs` | GET | Pending/applied job pipeline |
 | `/api/grants` | GET | Grant opportunities |
-| `/api/trading/cycle` | GET | Active trading cycle data |
+| `/api/trading/cycle` | GET | Live Zenith trading cycle payload including active strategy, paper account, and ranked strategies |
 | `/api/trading/accounts` | GET | Trading account balances |
 | `/api/stats/summary` | GET | Gamification XP/rank summary |
 | `/api/skill` | POST | Trigger a division skill |
@@ -245,7 +289,7 @@ Phase 5 — Deploy       Router updated: skill → ["bitnet", "ollama:qwen2.5:7b
 | Image/Video | ComfyUI + AnimateDiff-Evolved |
 | Music | HuggingFace Transformers + torch-directml |
 | Voice | Coqui XTTS v2 |
-| Market Data | yfinance (default) via data_provider abstraction |
+| Market Data | yfinance in J_Claw runtime, plus linked Zenith intraday proxy feeds via Twelve Data cache/backfill |
 | Mobile network | Tailscale |
 | Notifications | VAPID push, Discord (Zenith bot) |
 
@@ -287,8 +331,8 @@ Mobile access via Tailscale: `http://<tailscale-ip>:3000/mobile`.
 - **Dashboard: Gamedev + Sentinel cards** — wire packet data into PC/mobile dashboards
 - **BitNet Phase 2** — training review + first fine-tune run (Trading domain)
 - **WebAuthn Face ID** — registration flow for Matthew's iPhone
-- **Agent-network expansion** — live P&L streaming integration
-- **Market data provider upgrade** — Alpaca or Tradovate for real futures data
+- **Agent-network expansion** — live P&L and strategy-chart streaming integration
+- **Market data provider upgrade** — futures-native data (Databento / CME) instead of ETF proxy intraday feeds
 
 ---
 

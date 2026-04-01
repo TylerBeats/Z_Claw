@@ -42,3 +42,14 @@ After:
 Conclusion:
 - No additional source patch was required for these two tasks.
 - The earlier failures were from an older runtime state before the current `openclaw` restart, not from missing task support in the current code on disk.
+
+Date: 2026-03-31
+
+This trading dashboard and Zenith integration documentation update was made by Codex, not Claude Code.
+
+Scope:
+- Synced the desktop and mobile trading views to the live Zenith cycle payload instead of relying on stale orchestrator-only status.
+- Added ranked strategy support to the J_Claw and Z_Claw dashboards through `/api/trading/cycle`, including richer per-strategy metrics such as profit, return, annualized stats, PF, and years tested.
+- Updated the dashboards to show PF in ranked strategy rows and to keep the top-level trading card aligned with live Agent-Network state.
+- Documented the current trading integration in `README.md`, including the live `/api/trading/cycle` payload, ranked strategy surfaces, and the corrected `openclaw-gateway` port.
+- Documented the linked Zenith-side updates that now feed those dashboards: richer ranked-strategy metrics, Algomesh chart inspection, and bounded Twelve Data intraday backfill for deeper 5m history once API credits are available again.
